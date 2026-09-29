@@ -1,0 +1,27 @@
+appId: com.electron.app
+productName: daily-os
+directories:
+  buildResources: build
+files:
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!electron.vite.config.{js,ts,mjs,cjs}'
+  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,CHANGELOG.md,README.md}'
+  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+asarUnpack:
+  - resources/**
+  # Módulo nativo de SQLite: tiene que quedar fuera del .asar.
+  - node_modules/better-sqlite3/**
+mac:
+  entitlementsInherit: build/entitlements.mac.plist
+  extendInfo:
+    # App de menubar: sin icono en el Dock desde el arranque.
+    LSUIElement: true
+  notarize: false
+dmg:
+  artifactName: ${name}-${version}.${ext}
+# better-sqlite3 es nativo: se recompila para la versión de Electron al empaquetar.
+npmRebuild: true
+electronDownload:
+  mirror: https://npmmirror.com/mirrors/electron/

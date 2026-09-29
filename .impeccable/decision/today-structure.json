@@ -1,0 +1,75 @@
+{
+  "title": "DayliOS · Pantalla de Hoy",
+  "question": "El mundo visual ya está fijado por tu DESIGN.md (noche + pastel + Nunito). Esto decide la composición de la ventana del menubar. Elige una, pide ajustes o vuelve a tirar.",
+  "options": [
+    {
+      "id": "triage-first",
+      "label": "Mañana primero",
+      "kicker": "THE ROLL",
+      "lineage": "Bandeja de entrada de Things 3 + stand-up matutino",
+      "thesis": "Al abrir, lo pendiente de ayer se resuelve con un toque antes de que exista el día.",
+      "palette": ["#131313", "#1C1C1E", "#FBE39A", "#A8E6CF", "#F3F1EE"],
+      "materials": ["tarjetas apiladas", "píldoras de acción"],
+      "viewport": "Arriba, una bandeja mantequilla 'De ayer · 2' con 'Traer a hoy' / 'Soltar' por tarea; debajo el contador 5/8 y la lista de hoy; campo de captura fijo abajo.",
+      "risk": "Si ayer no dejó nada, la bandeja desaparece y la pantalla queda como una lista estándar.",
+      "wireframe": {
+        "cols": 6,
+        "rows": 12,
+        "regions": [
+          { "label": "Hoy · 5/8", "x": 0, "y": 0, "w": 6, "h": 1 },
+          { "label": "De ayer (traer / soltar)", "x": 0, "y": 1, "w": 6, "h": 3, "accent": true },
+          { "label": "tareas de hoy", "x": 0, "y": 4, "w": 6, "h": 6 },
+          { "label": "+ nueva tarea  ⏎", "x": 0, "y": 10, "w": 6, "h": 1 },
+          { "label": "Hoy · Historial", "x": 0, "y": 11, "w": 6, "h": 1 }
+        ]
+      }
+    },
+    {
+      "id": "pip-meter",
+      "label": "Medidor de ocho",
+      "lineage": "Barra de progreso segmentada de Linear / batería del iPhone",
+      "thesis": "Ocho píldoras en la cabecera son el día: cada tarea completada enciende una en menta.",
+      "palette": ["#131313", "#262628", "#A8E6CF", "#FFCBA9", "#F3F1EE"],
+      "materials": ["segmentos pastel", "lista compacta"],
+      "viewport": "Cabecera con 'Martes 29' y 8 segmentos (menta = hecha, melocotón = pendiente, vacío = hueco libre); captura arriba tipo Spotlight; lista debajo con ayer plegado al final.",
+      "risk": "Lo de ayer queda más escondido; depende de que el medidor tenga suficiente presencia.",
+      "wireframe": {
+        "cols": 6,
+        "rows": 12,
+        "regions": [
+          { "label": "Martes 29", "x": 0, "y": 0, "w": 4, "h": 1 },
+          { "label": "5/8", "x": 4, "y": 0, "w": 2, "h": 1 },
+          { "label": "▮▮▮▮▮▯▯▯", "x": 0, "y": 1, "w": 6, "h": 1, "accent": true },
+          { "label": "+ escribe y ⏎", "x": 0, "y": 2, "w": 6, "h": 1 },
+          { "label": "tareas de hoy", "x": 0, "y": 3, "w": 6, "h": 6 },
+          { "label": "▸ De ayer (2)", "x": 0, "y": 9, "w": 6, "h": 2 },
+          { "label": "Hoy · Historial", "x": 0, "y": 11, "w": 6, "h": 1 }
+        ]
+      }
+    },
+    {
+      "id": "eight-slots",
+      "label": "Ocho huecos",
+      "lineage": "Planner de papel con 8 renglones numerados",
+      "thesis": "El día son 8 renglones numerados siempre visibles; los vacíos invitan a llenarse y el techo se ve.",
+      "palette": ["#131313", "#1C1C1E", "#303033", "#F6A9BD", "#A8E6CF"],
+      "materials": ["renglones numerados", "huecos punteados"],
+      "viewport": "Contador grande 5/8 arriba; 8 filas fijas 1–8, las vacías son 'Añadir…' punteadas donde escribes directamente; ayer como fila-chip sobre la lista.",
+      "risk": "Más alto que la ventana si las tareas tienen notas; 8 filas fijas ocupan espacio aun vacías.",
+      "wireframe": {
+        "cols": 6,
+        "rows": 12,
+        "regions": [
+          { "label": "5/8", "x": 0, "y": 0, "w": 3, "h": 2, "accent": true },
+          { "label": "De ayer · 2 ›", "x": 3, "y": 0, "w": 3, "h": 2 },
+          { "label": "1–5 tareas", "x": 0, "y": 2, "w": 6, "h": 5 },
+          { "label": "6–8 huecos libres", "x": 0, "y": 7, "w": 6, "h": 3 },
+          { "label": "Hoy · Historial", "x": 0, "y": 11, "w": 6, "h": 1 }
+        ]
+      }
+    }
+  ],
+  "reroll": true,
+  "buildPath": { "value": "code" },
+  "steer": true
+}

@@ -1,0 +1,221 @@
+@import '@fontsource-variable/nunito';
+@import 'tailwindcss';
+
+/* Tokens de DESIGN.md */
+@theme {
+  --color-night: #131313;
+  --color-surface: #1c1c1e;
+  --color-surface-raised: #262628;
+  --color-hairline: #303033;
+  --color-milk: #f3f1ee;
+  --color-milk-soft: #a6a29d;
+  --color-milk-faint: #6e6b67;
+  --color-ink: #1a1a1a;
+  --color-apricot: #ffcba9;
+  --color-rose: #f6a9bd;
+  --color-mint: #a8e6cf;
+  --color-butter: #fbe39a;
+  --color-coral: #f4a3a3;
+  /* Segmento pendiente: melocotón mezclado con la noche, opaco y aún pastel */
+  --color-apricot-soft: color-mix(in srgb, #ffcba9 58%, #1c1c1e);
+
+  --font-sans: 'Nunito Variable', 'Nunito', ui-rounded, system-ui, sans-serif;
+
+  --text-display: 52px;
+  --text-display--line-height: 1.08;
+  --text-display--letter-spacing: -1px;
+  --text-headline: 36px;
+  --text-headline--line-height: 1.17;
+  --text-headline--letter-spacing: -0.6px;
+  --text-body: 17px;
+  --text-body--line-height: 1.41;
+  --text-label: 17px;
+  --text-label--line-height: 1.3;
+  --text-caption: 14px;
+  --text-caption--line-height: 1.36;
+  /* Extensiones de escritorio (ventana de 400px): listas densas y micro-etiquetas */
+  --text-list: 15px;
+  --text-list--line-height: 1.36;
+  --text-micro: 13px;
+  --text-micro--line-height: 1.25;
+
+  --radius-sm: 12px;
+  --radius-md: 20px;
+  --radius-lg: 24px;
+  --radius-xl: 28px;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-night);
+    color: var(--color-milk);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    -webkit-font-smoothing: antialiased;
+    font-variant-numeric: tabular-nums;
+    user-select: none;
+    overflow: hidden;
+  }
+
+  input,
+  button,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+
+  input {
+    caret-color: var(--color-apricot);
+    user-select: text;
+  }
+
+  /* milk-faint (#6E6B67) no llega a 4.5:1 sobre surface; se reserva para trazos */
+  input::placeholder {
+    color: var(--color-milk-soft);
+    opacity: 1;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-apricot) 38%, transparent);
+    color: var(--color-milk);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-apricot);
+    outline-offset: 2px;
+  }
+
+  /* Scrollbar discreta, del color de la noche */
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-surface-raised);
+    border-radius: 999px;
+    border: 3px solid var(--color-night);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-hairline);
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Zonas con scroll: el hueco de la barra se reserva siempre para que
+     las filas queden alineadas con la cabecera (24px = 10px barra + 14px). */
+  .scroll-area {
+    scrollbar-gutter: stable;
+    padding-right: 14px;
+  }
+
+  /* Las filas se desvanecen al llegar al borde inferior en vez de cortarse */
+  .fade-bottom {
+    mask-image: linear-gradient(to bottom, black calc(100% - 20px), transparent);
+  }
+
+  input[type='date'] {
+    color-scheme: dark;
+  }
+  input[type='date']::-webkit-calendar-picker-indicator {
+    filter: invert(0.7) sepia(0.2);
+    cursor: pointer;
+  }
+}
+
+/* ---------- Medidor de ocho: la interacción firma ---------- */
+
+.seg-fill {
+  transform-origin: left center;
+  transition:
+    transform 520ms var(--ease-out-expo),
+    background-color 240ms ease-out;
+}
+
+/* Brillo único que recorre el medidor al llegar a 8/8 */
+.meter-complete::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    color-mix(in srgb, white 55%, transparent) 50%,
+    transparent 100%
+  );
+  mix-blend-mode: soft-light;
+  transform: translateX(-110%);
+  animation: sheen 1400ms var(--ease-out-expo) 120ms 1 forwards;
+}
+
+@keyframes sheen {
+  to {
+    transform: translateX(110%);
+  }
+}
+
+/* Cifra que cambia: sube desde abajo */
+.tick {
+  display: inline-block;
+  animation: tick 420ms var(--ease-out-expo);
+}
+
+@keyframes tick {
+  from {
+    transform: translateY(35%);
+    opacity: 0.2;
+    filter: blur(2px);
+  }
+}
+
+/* Entrada de filas nuevas */
+.row-in {
+  animation: row-in 360ms var(--ease-out-expo);
+}
+
+@keyframes row-in {
+  from {
+    transform: translateY(-6px);
+    opacity: 0;
+  }
+}
+
+.toast-in {
+  animation: toast-in 320ms var(--ease-out-expo);
+}
+
+@keyframes toast-in {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seg-fill {
+    transition: none;
+  }
+  .meter-complete::after,
+  .tick,
+  .row-in,
+  .toast-in {
+    animation: none;
+  }
+}
