@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
-import { addDays, DAILY_LIMIT, type DayKey, type HistoryPage } from '@shared/tasks'
+import { AlignLeft, Check } from 'lucide-react'
+import { addDays, DAILY_LIMIT, type DayKey, type HistoryPage, type Task } from '@shared/tasks'
 import { tasksApi } from '../lib/api'
 import { relativeDay } from '../lib/format'
 import { Meter } from './Meter'
+import { DayHeading } from './DayHeading'
+import { Pager } from './Pager'
+import { Markdown } from './Markdown'
 
 type Period = '7' | '30' | 'month' | 'all' | 'range'
 
@@ -38,7 +41,12 @@ function bounds(
   }
 }
 
-export function HistoryView({ today }: { today: DayKey }): React.JSX.Element {
+interface HistoryViewProps {
+  today: DayKey
+  onOpenTask: (task: Task) => void
+}
+
+export function HistoryView({ today, onOpenTask }: HistoryViewProps): React.JSX.Element {
   const [period, setPeriod] = useState<Period>('30')
   const [range, setRange] = useState({ from: addDays(today, -13), to: today })
   const [page, setPage] = useState(1)
@@ -148,46 +156,61 @@ export function HistoryView({ today }: { today: DayKey }): React.JSX.Element {
             const done = tasks.filter((t) => t.done).length
             return (
               <section key={date} aria-label={relativeDay(date, today)}>
-                <div className="mb-2 flex items-center justify-between gap-3 px-1">
-                  <h2 className="text-label font-extrabold">{relativeDay(date, today)}</h2>
-                  <div className="flex items-center gap-2.5">
-                    <Meter done={done} total={Math.min(tasks.length, DAILY_LIMIT)} size="sm" />
-                    <span className="w-8 text-right text-caption font-bold text-milk-soft">
-                      {done}/{tasks.length}
-                    </span>
-                  </div>
-                </div>
+                <DayHeading
+                  aside={
+                    <div className="flex items-center gap-2.5">
+                      <Meter done={done} total={Math.min(tasks.length, DAILY_LIMIT)} size="sm" />
+                      <span className="w-8 text-right text-caption font-bold text-milk-soft">
+                        {done}/{tasks.length}
+                      </span>
+                    </div>
+                  }
+                >
+                  {relativeDay(date, today)}
+                </DayHeading>
                 <ul className="overflow-hidden rounded-md bg-surface">
                   {tasks.map((t, i) => (
                     <li
                       key={t.id}
-                      className={`flex items-center gap-3 px-4 py-2.5 ${
-                        i > 0 ? 'shadow-[inset_0_1px_0_var(--color-hairline)]' : ''
-                      }`}
+                      className={i > 0 ? 'shadow-[inset_0_1px_0_var(--color-hairline)]' : ''}
                     >
-                      <span
-                        className={`grid size-5 shrink-0 place-items-center rounded-full ${
-                          t.done
-                            ? 'bg-mint text-ink'
-                            : 'shadow-[inset_0_0_0_1.5px_var(--color-milk-faint)]'
-                        }`}
-                        aria-label={t.done ? 'Hecha' : 'Sin hacer'}
+                      <button
+                        type="button"
+                        onClick={() => onOpenTask(t)}
+                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors outline-offset-[-2px] hover:bg-surface-raised focus-visible:bg-surface-raised"
                       >
-                        {t.done && <Check size={12} strokeWidth={3.5} />}
-                      </span>
-                      <span
-                        className={`min-w-0 flex-1 truncate text-list ${
-                          t.done ? 'text-milk' : 'text-milk-soft'
-                        }`}
-                        title={t.title}
-                      >
-                        {t.title}
-                      </span>
-                      {t.carriedFrom && (
-                        <span className="shrink-0 text-micro font-bold text-butter/80">
-                          arrastrada
+                        <span
+                          className={`grid size-5 shrink-0 place-items-center rounded-full ${
+                            t.done
+                              ? 'bg-mint text-ink'
+                              : 'shadow-[inset_0_0_0_1.5px_var(--color-milk-faint)]'
+                          }`}
+                          aria-label={t.done ? 'Hecha' : 'Sin hacer'}
+                        >
+                          {t.done && <Check size={12} strokeWidth={3.5} />}
                         </span>
-                      )}
+                        <span
+                          className={`min-w-0 flex-1 truncate text-list ${
+                            t.done ? 'text-milk' : 'text-milk-soft'
+                          }`}
+                          title={t.title}
+                        >
+                          <Markdown text={t.title} inline />
+                        </span>
+                        {t.description && (
+                          <AlignLeft
+                            size={13}
+                            strokeWidth={2.5}
+                            className="shrink-0 text-milk-soft"
+                            aria-label="Tiene descripción"
+                          />
+                        )}
+                        {t.carriedFrom && (
+                          <span className="shrink-0 text-micro font-bold text-butter/80">
+                            arrastrada
+                          </span>
+                        )}
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -197,34 +220,7 @@ export function HistoryView({ today }: { today: DayKey }): React.JSX.Element {
         </div>
       </main>
 
-      {data && data.totalPages > 1 && (
-        <nav
-          aria-label="Paginación"
-          className="flex items-center justify-between px-6 pt-2 pb-1 text-caption font-bold"
-        >
-          <button
-            type="button"
-            onClick={() => setPage((p) => p - 1)}
-            disabled={data.page <= 1}
-            aria-label="Página anterior"
-            className="grid size-9 place-items-center rounded-full bg-surface text-milk hover:bg-surface-raised disabled:text-milk-faint disabled:hover:bg-surface"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <span className="text-milk-soft">
-            Página <span className="text-milk">{data.page}</span> de {data.totalPages}
-          </span>
-          <button
-            type="button"
-            onClick={() => setPage((p) => p + 1)}
-            disabled={data.page >= data.totalPages}
-            aria-label="Página siguiente"
-            className="grid size-9 place-items-center rounded-full bg-surface text-milk hover:bg-surface-raised disabled:text-milk-faint disabled:hover:bg-surface"
-          >
-            <ChevronRight size={18} />
-          </button>
-        </nav>
-      )}
+      {data && <Pager page={data.page} totalPages={data.totalPages} onPage={setPage} />}
     </div>
   )
 }

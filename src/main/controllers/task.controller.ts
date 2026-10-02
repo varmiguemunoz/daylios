@@ -28,7 +28,11 @@ export class TaskController {
 
   create = async (req: Request, res: Response): Promise<void> => {
     const body = req.body ?? {}
-    const task = await this.service.add(text(body.date) ?? todayKey(), text(body.title) ?? '')
+    const task = await this.service.add(
+      text(body.date) ?? todayKey(),
+      text(body.title) ?? '',
+      text(body.description)
+    )
     res.status(201).json(taskView(task))
   }
 
@@ -37,6 +41,7 @@ export class TaskController {
     const patch: TaskPatch = {}
     if (typeof body.title === 'string') patch.title = body.title
     if (typeof body.done === 'boolean') patch.done = body.done
+    if (typeof body.description === 'string') patch.description = body.description
     res.json(taskView(await this.service.update(String(req.params.id), patch)))
   }
 

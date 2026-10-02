@@ -13,11 +13,15 @@ export interface Task {
   createdAt: string
   completedAt: string | null
   carriedFrom: DayKey | null
+  /** Descripción en markdown. null = sin descripción. */
+  description: string | null
 }
 
 export interface TaskPatch {
   title?: string
   done?: boolean
+  /** Cadena vacía borra la descripción. */
+  description?: string
 }
 
 export interface HistoryQuery {
@@ -59,7 +63,7 @@ export interface DaySummary {
 /** Contrato que la UI consume (vía IPC) y que implementa TaskService. */
 export interface TasksApi {
   getDay(date: DayKey): Promise<Task[]>
-  add(date: DayKey, title: string): Promise<Task>
+  add(date: DayKey, title: string, description?: string): Promise<Task>
   update(id: string, patch: TaskPatch): Promise<Task>
   remove(id: string): Promise<void>
   /** Reinserta una tarea borrada (deshacer). */

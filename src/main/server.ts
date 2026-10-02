@@ -3,8 +3,18 @@ import { writeFileSync } from 'fs'
 import { join } from 'path'
 import express from 'express'
 import type { TaskService } from './services/task.service'
+import type { NoteService } from './services/note.service'
 import { TaskController } from './controllers/task.controller'
+import { NoteController } from './controllers/note.controller'
 import { taskRoutes } from './routes/task.routes'
+import { noteRoutes } from './routes/note.routes'
+import { consultoraRoutes } from './routes/consultora.routes'
+import { ClientController } from './controllers/client.controller'
+import { ProjectController } from './controllers/project.controller'
+import { ProspectController } from './controllers/prospect.controller'
+import { MeetingController } from './controllers/meeting.controller'
+import { ContextController } from './controllers/context.controller'
+import type { Consultora } from './consultora'
 import { requireToken } from './middlewares/auth.middleware'
 import { notifyOnWrite } from './middlewares/notify.middleware'
 import { errorHandler, notFound } from './middlewares/error.middleware'
@@ -20,7 +30,7 @@ export interface Connection {
  * Al arrancar escribe `connection.json` (puerto + token, permisos 600) junto a la base de datos.
  */
 export function startServer(
-  service: TaskService,
+  services: { tasks: TaskService; notes: NoteService; consultora: Consultora },
   dir: string,
   onChange: () => void
 ): Promise<Connection> {
@@ -29,9 +39,23 @@ export function startServer(
   const app = express()
   app.disable('x-powered-by')
   app.use(requireToken(token))
-  app.use(express.json({ limit: '16kb' }))
+  // Una nota puede tener hasta 100 000 caracteres (con acentos, más bytes).
+  app.use(express.json({ limit: '512kb' }))
   app.use(notifyOnWrite(onChange))
-  app.use(taskRoutes(new TaskController(service)))
+  app.use(taskRoutes(new TaskController(services.tasks)))
+  app.use(noteRoutes(new NoteController(services.notes)))
+
+  const c = services.consultora
+  app.use(
+    '/consultora',
+    consultoraRoutes({
+      clients: new ClientController(c.clients),
+      projects: new ProjectController(c.projects),
+      prospects: new ProspectController(c.prospects),
+      meetings: new MeetingController(c.meetings, c.recordings),
+      context: new ContextController(c.context)
+    })
+  )
   app.use(notFound)
   app.use(errorHandler)
 

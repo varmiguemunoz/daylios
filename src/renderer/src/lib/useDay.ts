@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { addDays, DAILY_LIMIT, type DayKey, type Task } from '@shared/tasks'
-import { onTasksChanged, onWindowShown, tasksApi } from './api'
+import { onDataChanged, onWindowShown, tasksApi } from './api'
 
 export interface Undo {
   id: number
@@ -17,13 +17,14 @@ export interface DayState {
   undo: Undo | null
   add: (title: string) => Promise<boolean>
   toggle: (task: Task) => Promise<void>
-  rename: (task: Task, title: string) => Promise<void>
   remove: (task: Task) => Promise<void>
   bringToday: (task: Task) => Promise<void>
   bringAll: () => Promise<void>
   dismiss: (task: Task) => Promise<void>
   runUndo: () => Promise<void>
   clearUndo: () => void
+  /** Vuelve a leer hoy y ayer (p. ej. al salir del detalle de una tarea). */
+  reload: () => Promise<void>
 }
 
 /**
@@ -55,9 +56,10 @@ export function useDay(date: DayKey): DayState {
 
   // Recargar al montar, al abrir la ventana y cuando Claude cambia algo.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- setState solo tras await (async)
     void reload()
     const offShown = onWindowShown(() => void reload())
-    const offChanged = onTasksChanged(() => void reload())
+    const offChanged = onDataChanged(() => void reload())
     return () => {
       offShown()
       offChanged()
@@ -94,13 +96,6 @@ export function useDay(date: DayKey): DayState {
     const done = !task.done
     setToday((prev) => prev.map((t) => (t.id === task.id ? { ...t, done } : t)))
     await safely(() => tasksApi.update(task.id, { done }))
-  }
-
-  const rename = async (task: Task, title: string): Promise<void> => {
-    const clean = title.trim()
-    if (!clean || clean === task.title) return
-    setToday((prev) => prev.map((t) => (t.id === task.id ? { ...t, title: clean } : t)))
-    await safely(() => tasksApi.update(task.id, { title: clean }))
   }
 
   /** Borra sin confirmar y ofrece deshacer. */
@@ -152,12 +147,12 @@ export function useDay(date: DayKey): DayState {
     undo,
     add,
     toggle,
-    rename,
     remove,
     bringToday,
     bringAll,
     dismiss,
     runUndo,
-    clearUndo
+    clearUndo,
+    reload
   }
 }

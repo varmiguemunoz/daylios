@@ -1,4 +1,6 @@
 @import '@fontsource-variable/nunito';
+/* Cursiva real para *énfasis* en markdown (no oblicua sintética) */
+@import '@fontsource-variable/nunito/wght-italic.css';
 @import 'tailwindcss';
 
 /* Tokens de DESIGN.md */
@@ -29,6 +31,10 @@
   --text-headline--letter-spacing: -0.6px;
   --text-body: 17px;
   --text-body--line-height: 1.41;
+  /* Título de pantalla de detalle: títulos de tarea largos en 400px */
+  --text-title: 22px;
+  --text-title--line-height: 1.27;
+  --text-title--letter-spacing: -0.3px;
   --text-label: 17px;
   --text-label--line-height: 1.3;
   --text-caption: 14px;
@@ -74,13 +80,15 @@
     color: inherit;
   }
 
-  input {
+  input,
+  textarea {
     caret-color: var(--color-apricot);
     user-select: text;
   }
 
   /* milk-faint (#6E6B67) no llega a 4.5:1 sobre surface; se reserva para trazos */
-  input::placeholder {
+  input::placeholder,
+  textarea::placeholder {
     color: var(--color-milk-soft);
     opacity: 1;
   }
@@ -137,6 +145,181 @@
     filter: invert(0.7) sepia(0.2);
     cursor: pointer;
   }
+}
+
+/* ---------- Markdown ----------
+   .md        bloque completo (notas, descripción de tarea)
+   .md-inline títulos de tarea: solo negrita, cursiva, tachado, código, enlaces
+   Colores con significado (DESIGN.md): apricot = acción (enlaces), mint = hecho (casillas). */
+
+.md {
+  user-select: text;
+  overflow-wrap: anywhere;
+  line-height: 1.55;
+}
+.md > * + * {
+  margin-top: 0.8em;
+}
+.md h1,
+.md h2,
+.md h3,
+.md h4,
+.md h5,
+.md h6 {
+  font-weight: 800;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+.md > * + :is(h1, h2, h3, h4, h5, h6) {
+  margin-top: 1.5em;
+}
+.md h1 {
+  font-size: 26px;
+  letter-spacing: -0.4px;
+}
+.md h2 {
+  font-size: var(--text-title);
+  letter-spacing: -0.3px;
+}
+.md h3 {
+  font-size: var(--text-label);
+}
+.md :is(h4, h5, h6) {
+  font-size: var(--text-caption);
+  color: var(--color-milk-soft);
+}
+.md strong,
+.md-inline strong {
+  font-weight: 800;
+}
+.md em,
+.md-inline em {
+  font-style: italic;
+}
+.md del,
+.md-inline del {
+  color: var(--color-milk-soft);
+  text-decoration-color: color-mix(in srgb, var(--color-milk-soft) 60%, transparent);
+}
+.md a,
+.md-inline a {
+  color: var(--color-apricot);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--color-apricot) 45%, transparent);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.md a:hover,
+.md-inline a:hover {
+  text-decoration-color: var(--color-apricot);
+}
+
+/* Código */
+.md code,
+.md-inline code {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 0.86em;
+  background: var(--color-surface-raised);
+  border-radius: 6px;
+  padding: 0.12em 0.4em;
+}
+.md pre {
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.md pre code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* Listas */
+.md ul,
+.md ol {
+  padding-left: 1.4em;
+}
+.md ul {
+  list-style: disc;
+}
+.md ol {
+  list-style: decimal;
+}
+.md li::marker {
+  color: var(--color-milk-soft);
+}
+.md li + li,
+.md li > :is(ul, ol) {
+  margin-top: 0.3em;
+}
+
+/* Listas de tareas: casillas redondas como las de DayliOS (solo lectura) */
+.md ul.contains-task-list {
+  list-style: none;
+  padding-left: 0.2em;
+}
+.md li.task-list-item > input[type='checkbox'] {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin: 0 10px 0 0;
+  vertical-align: -3px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1.5px var(--color-milk-faint);
+}
+.md li.task-list-item > input[type='checkbox']:checked {
+  box-shadow: none;
+  background: var(--color-mint)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231a1a1a' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E")
+    center / 12px no-repeat;
+}
+.md li.task-list-item:has(> input:checked) {
+  color: var(--color-milk-soft);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--color-milk-soft) 50%, transparent);
+}
+
+/* Cita: lavado de superficie, sin borde lateral de color */
+.md blockquote {
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  color: var(--color-milk-soft);
+}
+
+.md hr {
+  border: 0;
+  height: 1px;
+  background: var(--color-hairline);
+  margin: 1.6em 0;
+}
+
+/* Tablas: desplazables en horizontal si no caben en 400px */
+.md table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: var(--text-list);
+}
+.md th,
+.md td {
+  padding: 7px 12px 7px 0;
+  text-align: left;
+  box-shadow: inset 0 -1px 0 var(--color-hairline);
+}
+.md th {
+  font-size: var(--text-caption);
+  font-weight: 800;
+  color: var(--color-milk-soft);
+}
+
+.md img {
+  max-width: 100%;
+  border-radius: var(--radius-sm);
 }
 
 /* ---------- Medidor de ocho: la interacción firma ---------- */
@@ -218,4 +401,17 @@
   .toast-in {
     animation: none;
   }
+}
+
+/* Casillas marcables en la vista markdown (descripción, notas, entregables) */
+.md li.task-list-item > input[type='checkbox']:not([disabled]) {
+  cursor: pointer;
+}
+.md li.task-list-item > input[type='checkbox']:not([disabled]):not(:checked):hover {
+  box-shadow: inset 0 0 0 1.5px var(--color-apricot);
+}
+
+/* Selectores nativos en la noche */
+select {
+  color-scheme: dark;
 }

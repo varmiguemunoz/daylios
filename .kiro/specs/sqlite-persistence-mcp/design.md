@@ -60,15 +60,15 @@ Errores de negocio: `TaskError(code, message)` con `code ∈ {invalid, not_found
 
 ## API local
 
-| Método | Ruta | Cuerpo / query |
-|---|---|---|
-| GET | `/day?date=` | → resumen del día |
-| GET | `/history?from=&to=&page=&pageSize=` | → HistoryPage |
-| POST | `/tasks` | `{ title, date? }` |
-| PATCH | `/tasks/:id` | `{ title?, done? }` |
-| DELETE | `/tasks/:id` | |
-| POST | `/tasks/:id/move` | `{ date }` |
-| POST | `/carry-over` | `{ from?, to? }` (por defecto ayer → hoy) |
+| Método | Ruta                                 | Cuerpo / query                            |
+| ------ | ------------------------------------ | ----------------------------------------- |
+| GET    | `/day?date=`                         | → resumen del día                         |
+| GET    | `/history?from=&to=&page=&pageSize=` | → HistoryPage                             |
+| POST   | `/tasks`                             | `{ title, date? }`                        |
+| PATCH  | `/tasks/:id`                         | `{ title?, done? }`                       |
+| DELETE | `/tasks/:id`                         |                                           |
+| POST   | `/tasks/:id/move`                    | `{ date }`                                |
+| POST   | `/carry-over`                        | `{ from?, to? }` (por defecto ayer → hoy) |
 
 - Escucha en `127.0.0.1:0` (puerto libre). Escribe `{ port, token }` en `userData/connection.json` con modo `600`.
 - `Authorization: Bearer <token>` obligatorio; comparación en tiempo constante.
@@ -83,9 +83,11 @@ Errores de negocio: `TaskError(code, message)` con `code ∈ {invalid, not_found
 - Se compila como segunda entrada del build de `main` → `out/main/mcp.js`.
 
 Config de Claude Desktop (desarrollo):
+
 ```json
 { "mcpServers": { "daylios": { "command": "node", "args": ["<repo>/out/main/mcp.js"] } } }
 ```
+
 Empaquetada: `command` = binario de la app, `env: { "ELECTRON_RUN_AS_NODE": "1" }`, `args` = `.../app.asar/out/main/mcp.js`.
 
 ## Renderer
@@ -95,5 +97,6 @@ Empaquetada: `command` = binario de la app, `env: { "ELECTRON_RUN_AS_NODE": "1" 
 - Se quita el parámetro `?view=` de previsualización.
 
 ## Seguridad
+
 - Solo loopback + token aleatorio de 32 bytes + archivo con permisos de usuario. Otra app local con permisos del mismo usuario podría leer el token; aceptable para uso personal.
 - SQL siempre con parámetros.

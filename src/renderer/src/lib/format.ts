@@ -29,3 +29,10 @@ export function relativeDay(key: DayKey, today: DayKey): string {
 export function plural(n: number, one: string, many: string): string {
   return `${n} ${n === 1 ? one : many}`
 }
+
+const clock = new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' })
+
+/** "14:32" a partir de una fecha ISO. */
+export function timeOf(iso: string): string {
+  return clock.format(new Date(iso))
+}

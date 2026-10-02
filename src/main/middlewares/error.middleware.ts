@@ -1,8 +1,8 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express'
-import { TaskError, type TaskErrorCode } from '../services/task.service'
+import { AppError, type AppErrorCode } from '../services/app.error'
 import { errorView } from '../views/task.view'
 
-const STATUS: Record<TaskErrorCode, number> = { invalid: 400, not_found: 404, day_full: 409 }
+const STATUS: Record<AppErrorCode, number> = { invalid: 400, not_found: 404, day_full: 409 }
 
 export const notFound: RequestHandler = (_req, res) => {
   res.status(404).json(errorView('Ruta no encontrada.'))
@@ -10,7 +10,7 @@ export const notFound: RequestHandler = (_req, res) => {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
-  if (error instanceof TaskError) {
+  if (error instanceof AppError) {
     res.status(STATUS[error.code]).json(errorView(error.message, error.code))
     return
   }

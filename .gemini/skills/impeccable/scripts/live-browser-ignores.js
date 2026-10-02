@@ -35,14 +35,16 @@
  * unit tested in Node (tests/live-browser-ignores.test.mjs) without the full
  * overlay UI bundle.
  */
-(function (root) {
-  'use strict';
-  if (!root) return;
+;(function (root) {
+  'use strict'
+  if (!root) return
 
   // Keep in step with normalizeIgnoreRule / normalizeIgnoreValue in
   // cli/lib/impeccable-config.mjs.
   function normalizeIgnoreRule(rule) {
-    return String(rule || '').trim().toLowerCase();
+    return String(rule || '')
+      .trim()
+      .toLowerCase()
   }
 
   function normalizeIgnoreValue(value) {
@@ -51,44 +53,51 @@
       .replace(/^["']|["']$/g, '')
       .replace(/\+/g, ' ')
       .replace(/\s+/g, ' ')
-      .toLowerCase();
+      .toLowerCase()
   }
 
   // Glob -> RegExp. Supports `**`, `*`, `?`, and `{a,b}` alternation.
   // Keep in step with globToRegex in cli/lib/impeccable-config.mjs.
   function globToRegex(glob) {
-    let re = '^';
-    let i = 0;
+    let re = '^'
+    let i = 0
     while (i < glob.length) {
-      const c = glob[i];
+      const c = glob[i]
       if (c === '*') {
         if (glob[i + 1] === '*') {
-          re += '.*';
-          i += 2;
-          if (glob[i] === '/') i += 1;
+          re += '.*'
+          i += 2
+          if (glob[i] === '/') i += 1
         } else {
-          re += '[^/]*';
-          i += 1;
+          re += '[^/]*'
+          i += 1
         }
       } else if (c === '?') {
-        re += '[^/]';
-        i += 1;
+        re += '[^/]'
+        i += 1
       } else if (c === '{') {
-        const end = glob.indexOf('}', i);
-        if (end === -1) { re += '\\{'; i += 1; continue; }
-        const parts = glob.slice(i + 1, end).split(',').map((p) => p.replace(/[.+^$()|[\]\\]/g, '\\$&'));
-        re += `(?:${parts.join('|')})`;
-        i = end + 1;
+        const end = glob.indexOf('}', i)
+        if (end === -1) {
+          re += '\\{'
+          i += 1
+          continue
+        }
+        const parts = glob
+          .slice(i + 1, end)
+          .split(',')
+          .map((p) => p.replace(/[.+^$()|[\]\\]/g, '\\$&'))
+        re += `(?:${parts.join('|')})`
+        i = end + 1
       } else if (/[.+^$()|[\]\\]/.test(c)) {
-        re += `\\${c}`;
-        i += 1;
+        re += `\\${c}`
+        i += 1
       } else {
-        re += c;
-        i += 1;
+        re += c
+        i += 1
       }
     }
-    re += '$';
-    return new RegExp(re);
+    re += '$'
+    return new RegExp(re)
   }
 
   // The project-relative paths this page could be known as. Ignore globs are
@@ -116,25 +125,25 @@
   // prototype/index.html from applying anywhere. When the globs share no
   // common root, no prefix is asserted and only the URL path itself matches.
   function pageCandidates(pathname, roots, pageFiles) {
-    let pagePath = String(pathname || '');
+    let pagePath = String(pathname || '')
     try {
-      pagePath = decodeURIComponent(pagePath);
+      pagePath = decodeURIComponent(pagePath)
     } catch {
       // Malformed percent-escape: match on the raw path rather than throwing.
     }
-    pagePath = pagePath.replace(/^\/+/, '');
+    pagePath = pagePath.replace(/^\/+/, '')
     // A directory URL serves that directory's index, and the ignore globs
     // name files. Without this, /news/ never matches prototype/news/index.html.
-    if (pagePath === '' || pagePath.endsWith('/')) pagePath += 'index.html';
+    if (pagePath === '' || pagePath.endsWith('/')) pagePath += 'index.html'
 
-    const candidates = new Set();
+    const candidates = new Set()
     const addSuffixes = (fullPath) => {
-      const parts = fullPath.split('/').filter(Boolean);
+      const parts = fullPath.split('/').filter(Boolean)
       for (let i = 0; i < parts.length; i++) {
-        candidates.add(parts.slice(i).join('/'));
+        candidates.add(parts.slice(i).join('/'))
       }
-    };
-    addSuffixes(pagePath);
+    }
+    addSuffixes(pagePath)
 
     // The served page list names the real files the inject config serves.
     // A URL that suffix-matches exactly one of them has an unambiguous
@@ -143,43 +152,43 @@
     // borrow src/foo.html's waivers while actually serving public/foo.html).
     // Zero matches or several fall through to the common-ancestor fallback:
     // ambiguity resolves toward showing the finding.
-    const knownPages = [];
+    const knownPages = []
     for (const entry of Array.isArray(pageFiles) ? pageFiles : []) {
-      if (typeof entry !== 'string' || !entry) continue;
-      if (entry === pagePath || entry.endsWith('/' + pagePath)) knownPages.push(entry);
+      if (typeof entry !== 'string' || !entry) continue
+      if (entry === pagePath || entry.endsWith('/' + pagePath)) knownPages.push(entry)
     }
     if (knownPages.length === 1) {
-      addSuffixes(knownPages[0]);
-      return [...candidates];
+      addSuffixes(knownPages[0])
+      return [...candidates]
     }
 
-    const prefixes = [];
+    const prefixes = []
     for (const entry of Array.isArray(roots) ? roots : []) {
-      if (typeof entry !== 'string') continue;
-      prefixes.push(entry.split('/').filter(Boolean));
+      if (typeof entry !== 'string') continue
+      prefixes.push(entry.split('/').filter(Boolean))
     }
-    let common = prefixes.length > 0 ? prefixes[0] : [];
+    let common = prefixes.length > 0 ? prefixes[0] : []
     for (const segments of prefixes.slice(1)) {
-      let i = 0;
-      while (i < common.length && i < segments.length && common[i] === segments[i]) i += 1;
-      common = common.slice(0, i);
+      let i = 0
+      while (i < common.length && i < segments.length && common[i] === segments[i]) i += 1
+      common = common.slice(0, i)
     }
 
-    if (common.length > 0) addSuffixes(common.join('/') + '/' + pagePath);
-    return [...candidates];
+    if (common.length > 0) addSuffixes(common.join('/') + '/' + pagePath)
+    return [...candidates]
   }
 
   function matchesScope(globs, candidates) {
     return globs.some((glob) => {
-      let re;
+      let re
       try {
-        re = globToRegex(String(glob));
+        re = globToRegex(String(glob))
       } catch {
         // Malformed glob: skip it, as matchesAnyGlob does in the CLI.
-        return false;
+        return false
       }
-      return candidates.some((candidate) => re.test(candidate));
-    });
+      return candidates.some((candidate) => re.test(candidate))
+    })
   }
 
   /**
@@ -193,50 +202,51 @@
    * @returns {{ disabledRules: string[], disabledValues: Array<{rule: string, value: string}>, skipScan: boolean }}
    */
   function resolveDetectIgnores({ ignores, pathname } = {}) {
-    const config = ignores && typeof ignores === 'object' ? ignores : {};
-    const asArray = (value) => (Array.isArray(value) ? value : []);
-    const candidates = pageCandidates(pathname, config.roots, config.pageFiles);
+    const config = ignores && typeof ignores === 'object' ? ignores : {}
+    const asArray = (value) => (Array.isArray(value) ? value : [])
+    const candidates = pageCandidates(pathname, config.roots, config.pageFiles)
 
     // detector.ignoreFiles waives whole files. When any glob names this
     // page, the scan itself is skipped; rule and value lists are returned
     // empty because nothing will run.
-    const ignoreFileGlobs = asArray(config.ignoreFiles)
-      .filter((glob) => typeof glob === 'string' && glob.trim());
+    const ignoreFileGlobs = asArray(config.ignoreFiles).filter(
+      (glob) => typeof glob === 'string' && glob.trim()
+    )
     if (ignoreFileGlobs.length > 0 && matchesScope(ignoreFileGlobs, candidates)) {
-      return { disabledRules: [], disabledValues: [], skipScan: true };
+      return { disabledRules: [], disabledValues: [], skipScan: true }
     }
 
     const disabledRules = new Set(
       asArray(config.ignoreRules)
         .filter((rule) => typeof rule === 'string')
         .map(normalizeIgnoreRule)
-        .filter(Boolean),
-    );
-    const disabledValues = [];
+        .filter(Boolean)
+    )
+    const disabledValues = []
 
     for (const entry of asArray(config.ignoreValues)) {
-      if (!entry || typeof entry !== 'object') continue;
-      const rule = normalizeIgnoreRule(entry.rule);
-      const value = normalizeIgnoreValue(entry.value);
-      if (!rule || !value) continue;
+      if (!entry || typeof entry !== 'object') continue
+      const rule = normalizeIgnoreRule(entry.rule)
+      const value = normalizeIgnoreValue(entry.value)
+      if (!rule || !value) continue
       const files = [
         ...(typeof entry.file === 'string' && entry.file.trim() ? [entry.file.trim()] : []),
-        ...asArray(entry.files).filter((glob) => typeof glob === 'string' && glob.trim()),
-      ];
+        ...asArray(entry.files).filter((glob) => typeof glob === 'string' && glob.trim())
+      ]
       if (value === '*') {
         // Wildcards suppress their rule only inside the files they name.
-        if (files.length > 0 && matchesScope(files, candidates)) disabledRules.add(rule);
-        continue;
+        if (files.length > 0 && matchesScope(files, candidates)) disabledRules.add(rule)
+        continue
       }
-      if (files.length > 0 && !matchesScope(files, candidates)) continue;
-      disabledValues.push({ rule, value });
+      if (files.length > 0 && !matchesScope(files, candidates)) continue
+      disabledValues.push({ rule, value })
     }
 
-    return { disabledRules: [...disabledRules], disabledValues, skipScan: false };
+    return { disabledRules: [...disabledRules], disabledValues, skipScan: false }
   }
 
   root.__IMPECCABLE_LIVE_IGNORES__ = {
     version: 1,
-    resolveDetectIgnores,
-  };
-})(typeof window !== 'undefined' ? window : globalThis);
+    resolveDetectIgnores
+  }
+})(typeof window !== 'undefined' ? window : globalThis)

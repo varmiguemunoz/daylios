@@ -13,11 +13,16 @@ asarUnpack:
   - resources/**
   # Módulo nativo de SQLite: tiene que quedar fuera del .asar.
   - node_modules/better-sqlite3/**
+  # Binario de ffmpeg para extraer el audio de las grabaciones.
+  - node_modules/ffmpeg-static/**
 mac:
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     # App de menubar: sin icono en el Dock desde el arranque.
     LSUIElement: true
+    # Grabación de reuniones (micrófono; la grabación de pantalla la pide macOS la primera vez)
+    NSMicrophoneUsageDescription: DayliOS graba el micrófono durante las reuniones que tú inicias.
+    NSAudioCaptureUsageDescription: DayliOS graba el audio del sistema durante las reuniones que tú inicias.
   notarize: false
 dmg:
   artifactName: ${name}-${version}.${ext}

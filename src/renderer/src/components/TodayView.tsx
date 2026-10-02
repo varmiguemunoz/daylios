@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { CornerDownLeft, Plus } from 'lucide-react'
-import { DAILY_LIMIT, type DayKey } from '@shared/tasks'
+import { DAILY_LIMIT, type DayKey, type Task } from '@shared/tasks'
 import type { DayState } from '../lib/useDay'
 import { longDate, plural, weekdayName } from '../lib/format'
 import { onWindowShown } from '../lib/api'
@@ -11,6 +11,7 @@ import { YesterdayTray } from './YesterdayTray'
 interface TodayViewProps {
   date: DayKey
   day: DayState
+  onOpenTask: (task: Task) => void
 }
 
 function statusLine(done: number, total: number): string {
@@ -23,7 +24,7 @@ function statusLine(done: number, total: number): string {
   return `${plural(total, 'planificada', 'planificadas')} · ${slots}`
 }
 
-export function TodayView({ date, day }: TodayViewProps): React.JSX.Element {
+export function TodayView({ date, day, onOpenTask }: TodayViewProps): React.JSX.Element {
   const [draft, setDraft] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -153,7 +154,7 @@ export function TodayView({ date, day }: TodayViewProps): React.JSX.Element {
                 key={task.id}
                 task={task}
                 onToggle={() => void day.toggle(task)}
-                onRename={(title) => void day.rename(task, title)}
+                onOpen={() => onOpenTask(task)}
                 onRemove={() => void day.remove(task)}
               />
             ))}

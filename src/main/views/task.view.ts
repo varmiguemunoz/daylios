@@ -9,7 +9,8 @@ export function taskView(t: Task): Task {
     position: t.position,
     createdAt: t.createdAt,
     completedAt: t.completedAt,
-    carriedFrom: t.carriedFrom
+    carriedFrom: t.carriedFrom,
+    description: t.description ?? null
   }
 }
 

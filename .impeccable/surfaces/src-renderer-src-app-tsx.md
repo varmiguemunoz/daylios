@@ -1,7 +1,7 @@
 ---
 version: 1
-slug: "src-renderer-src-app-tsx"
-primary_target: "src/renderer/src/App.tsx"
+slug: 'src-renderer-src-app-tsx'
+primary_target: 'src/renderer/src/App.tsx'
 related_targets: []
 ---
 

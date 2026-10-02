@@ -35,10 +35,13 @@ A single-day ledger with a hard ceiling of eight, designed to be read by an AI a
 
 - Today view is primary; a zone for yesterday's incomplete tasks appears at the start.
 - History screen: all tasks, paginated, filterable by period.
+- Task detail: click a task to edit its title (inline markdown) and a markdown description.
+- Notes: a third tab listing markdown notes by day (same skeleton as History), with a full-screen editor (Write / View).
 - Add / complete / edit / delete must be very fast (keyboard-first).
 - Visible day counter against the ceiling of 8.
 - Local SQLite storage; files/MCP server readable by Claude.
-- Explicitly out of scope: projects, sprints, complex tags, multiple views beyond Today and History.
+- Consultora window (separate, 1100×760): clients with document folders, projects (objective, deliverables, notes), meetings (screen + mic + system audio recording, OpenAI transcription and structured summary), and a sales pipeline with configurable stages. Its purpose is giving Claude real, current context of Ali Muñoz Advisory via MCP.
+- Explicitly out of scope: sprints, complex tags, task views beyond Today, History and Notes; note search, folders or tags; Zoom/Meet/Teams, email, invoicing or multi-user integrations.
 - UI language: Spanish (inferred from the owner's brief; confirm).
 
 ## Brand Commitments

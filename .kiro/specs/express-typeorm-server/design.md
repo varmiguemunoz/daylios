@@ -17,23 +17,23 @@ La app (proceso main de Electron) es la única que abre la base. UI y Claude pas
 
 ## Estructura (`src/main/`)
 
-| Archivo | Rol | Qué contiene |
-|---|---|---|
-| `index.ts` | Arranque | Abre la base, crea servicio, ventana, IPC y servidor |
-| `window.ts` | Electron | Ventana popover + icono del menubar (sin cambios) |
-| `ipc.ts` | Adaptador UI | Un `ipcMain.handle` por método, escrito explícito |
-| `server.ts` | Express | Middlewares + rutas + `listen` + `connection.json` |
-| `db/data-source.ts` | Persistencia | `DataSource` de TypeORM (better-sqlite3, migraciones al arrancar) |
-| `db/migrations/CreateTasks.ts` | Esquema | Crea `tasks` con `Table` de TypeORM (`ifNotExist`) |
-| `models/task.model.ts` | **M** | `EntitySchema<Task>`: columnas e índice |
-| `views/task.view.ts` | **V** | Forma del JSON: `taskView`, `dayView`, `errorView` |
-| `controllers/task.controller.ts` | **C** | Lee `req`, llama al servicio, responde con la vista |
-| `routes/task.routes.ts` | Rutas | Método + ruta → método del controlador |
-| `services/task.service.ts` | Reglas | Validación, techo 8, mover, arrastrar, historial, `TaskError` |
-| `guards/transaction.guard.ts` | Guard | Transacción + cola: todo o nada, de una en una |
-| `middlewares/auth.middleware.ts` | Seguridad | Token Bearer, comparación en tiempo constante |
-| `middlewares/notify.middleware.ts` | UI | Avisa a la ventana tras escrituras exitosas |
-| `middlewares/error.middleware.ts` | Errores | `TaskError` → 400/404/409; JSON roto → 400; resto → 500 |
+| Archivo                            | Rol          | Qué contiene                                                      |
+| ---------------------------------- | ------------ | ----------------------------------------------------------------- |
+| `index.ts`                         | Arranque     | Abre la base, crea servicio, ventana, IPC y servidor              |
+| `window.ts`                        | Electron     | Ventana popover + icono del menubar (sin cambios)                 |
+| `ipc.ts`                           | Adaptador UI | Un `ipcMain.handle` por método, escrito explícito                 |
+| `server.ts`                        | Express      | Middlewares + rutas + `listen` + `connection.json`                |
+| `db/data-source.ts`                | Persistencia | `DataSource` de TypeORM (better-sqlite3, migraciones al arrancar) |
+| `db/migrations/CreateTasks.ts`     | Esquema      | Crea `tasks` con `Table` de TypeORM (`ifNotExist`)                |
+| `models/task.model.ts`             | **M**        | `EntitySchema<Task>`: columnas e índice                           |
+| `views/task.view.ts`               | **V**        | Forma del JSON: `taskView`, `dayView`, `errorView`                |
+| `controllers/task.controller.ts`   | **C**        | Lee `req`, llama al servicio, responde con la vista               |
+| `routes/task.routes.ts`            | Rutas        | Método + ruta → método del controlador                            |
+| `services/task.service.ts`         | Reglas       | Validación, techo 8, mover, arrastrar, historial, `TaskError`     |
+| `guards/transaction.guard.ts`      | Guard        | Transacción + cola: todo o nada, de una en una                    |
+| `middlewares/auth.middleware.ts`   | Seguridad    | Token Bearer, comparación en tiempo constante                     |
+| `middlewares/notify.middleware.ts` | UI           | Avisa a la ventana tras escrituras exitosas                       |
+| `middlewares/error.middleware.ts`  | Errores      | `TaskError` → 400/404/409; JSON roto → 400; resto → 500           |
 
 ## Decisiones
 
@@ -50,17 +50,18 @@ La app (proceso main de Electron) es la única que abre la base. UI y Claude pas
 
 ## API (sin cambios de contrato)
 
-| Método | Ruta | Cuerpo / query | Respuesta |
-|---|---|---|---|
-| GET | `/day?date=` | | `dayView` |
-| GET | `/history?from=&to=&page=&pageSize=` | | `HistoryPage` |
-| POST | `/tasks` | `{ title, date? }` | 201 `taskView` |
-| PATCH | `/tasks/:id` | `{ title?, done? }` | `taskView` |
-| DELETE | `/tasks/:id` | | `{ ok: true }` |
-| POST | `/tasks/:id/move` | `{ date }` | `taskView` |
-| POST | `/carry-over` | `{ from?, to? }` (ayer → hoy) | `{ moved, left }` |
+| Método | Ruta                                 | Cuerpo / query                | Respuesta         |
+| ------ | ------------------------------------ | ----------------------------- | ----------------- |
+| GET    | `/day?date=`                         |                               | `dayView`         |
+| GET    | `/history?from=&to=&page=&pageSize=` |                               | `HistoryPage`     |
+| POST   | `/tasks`                             | `{ title, date? }`            | 201 `taskView`    |
+| PATCH  | `/tasks/:id`                         | `{ title?, done? }`           | `taskView`        |
+| DELETE | `/tasks/:id`                         |                               | `{ ok: true }`    |
+| POST   | `/tasks/:id/move`                    | `{ date }`                    | `taskView`        |
+| POST   | `/carry-over`                        | `{ from?, to? }` (ayer → hoy) | `{ moved, left }` |
 
 ## Empaquetado
+
 - `better-sqlite3` es nativo: `postinstall: electron-builder install-app-deps` lo compila para Electron;
   `npmRebuild: true` y `asarUnpack` lo dejan fuera del `.asar`.
 - electron-vite externaliza `dependencies` en el build de main, así TypeORM y Express se cargan de `node_modules`.

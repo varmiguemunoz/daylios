@@ -20,21 +20,11 @@ import {
 } from '@shared/tasks'
 import { TaskModel } from '../models/task.model'
 import { transactionGuard } from '../guards/transaction.guard'
+import { AppError } from './app.error'
+import { pageByDay } from './page-by-day'
 
 const MAX_TITLE = 200
-const MAX_PAGE_SIZE = 60
-
-export type TaskErrorCode = 'invalid' | 'not_found' | 'day_full'
-
-/** Error de negocio con un mensaje listo para mostrar (UI o Claude). */
-export class TaskError extends Error {
-  constructor(
-    readonly code: TaskErrorCode,
-    message: string
-  ) {
-    super(message)
-  }
-}
+const MAX_DESCRIPTION = 20_000
 
 type Tasks = Repository<Task>
 
@@ -50,30 +40,17 @@ export class TaskService implements TasksApi {
   async history(q: HistoryQuery): Promise<HistoryPage> {
     const from = q.from ? checkDay(q.from) : undefined
     const to = q.to ? checkDay(q.to) : undefined
-    const pageSize = clamp(Math.floor(q.pageSize) || 7, 1, MAX_PAGE_SIZE)
 
     // Uso personal (máx. 8 tareas/día): traer el periodo y agrupar en memoria es simple y rápido.
     const tasks = await this.tasks().find({
       where: period(from, to),
       order: { date: 'DESC', position: 'ASC' }
     })
-
-    const byDay = new Map<DayKey, Task[]>()
-    for (const task of tasks) {
-      const list = byDay.get(task.date)
-      if (list) list.push(task)
-      else byDay.set(task.date, [task])
-    }
-    const days = [...byDay].map(([date, list]) => ({ date, tasks: list }))
-
-    const totalPages = Math.max(1, Math.ceil(days.length / pageSize))
-    const page = clamp(Math.floor(q.page) || 1, 1, totalPages)
+    const { days, ...pages } = pageByDay(tasks, q.page, q.pageSize)
 
     return {
-      days: days.slice((page - 1) * pageSize, page * pageSize),
-      page,
-      totalPages,
-      totalDays: days.length,
+      ...pages,
+      days: days.map(({ date, items }) => ({ date, tasks: items })),
       totalTasks: tasks.length,
       doneTasks: tasks.filter((t) => t.done).length
     }
@@ -81,9 +58,10 @@ export class TaskService implements TasksApi {
 
   // ---- escrituras ----
 
-  async add(date: DayKey, title: string): Promise<Task> {
+  async add(date: DayKey, title: string, description?: string): Promise<Task> {
     const day = checkDay(date)
     const clean = checkTitle(title)
+    const details = checkDescription(description ?? '')
     return this.write(async (tasks) => {
       await assertRoom(tasks, day)
       const task: Task = {
@@ -94,7 +72,8 @@ export class TaskService implements TasksApi {
         position: await nextPosition(tasks, day),
         createdAt: new Date().toISOString(),
         completedAt: null,
-        carriedFrom: null
+        carriedFrom: null,
+        description: details
       }
       await tasks.insert(task)
       return task
@@ -105,6 +84,7 @@ export class TaskService implements TasksApi {
     return this.write(async (tasks) => {
       const task = await findOrFail(tasks, id)
       if (patch.title !== undefined) task.title = checkTitle(patch.title)
+      if (patch.description !== undefined) task.description = checkDescription(patch.description)
       if (patch.done !== undefined && patch.done !== task.done) {
         task.done = patch.done
         task.completedAt = patch.done ? new Date().toISOString() : null
@@ -128,7 +108,7 @@ export class TaskService implements TasksApi {
       const existing = await tasks.findOneBy({ id: task.id })
       if (existing) return existing
       await assertRoom(tasks, day)
-      const restored: Task = { ...task, date: day, title }
+      const restored: Task = { ...task, date: day, title, description: task.description ?? null }
       await tasks.insert(restored)
       return restored
     })
@@ -143,7 +123,7 @@ export class TaskService implements TasksApi {
   async carryOver(from: DayKey, to: DayKey): Promise<CarryOverResult> {
     const source = checkDay(from)
     const target = checkDay(to)
-    if (source === target) throw new TaskError('invalid', 'El día de origen y destino es el mismo.')
+    if (source === target) throw new AppError('invalid', 'El día de origen y destino es el mismo.')
 
     return this.write(async (tasks) => {
       const pending = (await listDay(tasks, source)).filter((t) => !t.done)
@@ -174,13 +154,13 @@ function listDay(tasks: Tasks, date: DayKey): Promise<Task[]> {
 
 async function findOrFail(tasks: Tasks, id: unknown): Promise<Task> {
   const task = typeof id === 'string' ? await tasks.findOneBy({ id }) : null
-  if (!task) throw new TaskError('not_found', 'No existe esa tarea.')
+  if (!task) throw new AppError('not_found', 'No existe esa tarea.')
   return task
 }
 
 async function assertRoom(tasks: Tasks, date: DayKey): Promise<void> {
   if ((await tasks.countBy({ date })) >= DAILY_LIMIT) {
-    throw new TaskError('day_full', `El ${date} ya tiene ${DAILY_LIMIT} tareas.`)
+    throw new AppError('day_full', `El ${date} ya tiene ${DAILY_LIMIT} tareas.`)
   }
 }
 
@@ -210,17 +190,24 @@ function period(from?: DayKey, to?: DayKey): FindOptionsWhere<Task> {
 }
 
 function checkDay(date: unknown): DayKey {
-  if (!isDayKey(date)) throw new TaskError('invalid', 'La fecha debe tener formato YYYY-MM-DD.')
+  if (!isDayKey(date)) throw new AppError('invalid', 'La fecha debe tener formato YYYY-MM-DD.')
   return date
 }
 
 function checkTitle(value: unknown): string {
   const title = typeof value === 'string' ? value.trim() : ''
-  if (!title) throw new TaskError('invalid', 'El título no puede estar vacío.')
+  if (!title) throw new AppError('invalid', 'El título no puede estar vacío.')
   if (title.length > MAX_TITLE) {
-    throw new TaskError('invalid', `El título no puede pasar de ${MAX_TITLE} caracteres.`)
+    throw new AppError('invalid', `El título no puede pasar de ${MAX_TITLE} caracteres.`)
   }
   return title
 }
 
-const clamp = (n: number, min: number, max: number): number => Math.min(Math.max(n, min), max)
+/** Texto vacío = sin descripción (null). */
+function checkDescription(value: unknown): string | null {
+  if (typeof value !== 'string') throw new AppError('invalid', 'La descripción debe ser texto.')
+  if (value.length > MAX_DESCRIPTION) {
+    throw new AppError('invalid', `La descripción no puede pasar de ${MAX_DESCRIPTION} caracteres.`)
+  }
+  return value.trim() ? value : null
+}

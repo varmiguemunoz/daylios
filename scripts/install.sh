@@ -128,6 +128,9 @@ cat <<INFO
              (copia de seguridad: claude_desktop_config.json.bak)
 
   → Cierra Claude por completo (⌘Q) y ábrelo de nuevo para que cargue el MCP.
+  → Consultora: clic derecho en el icono del menubar → «Abrir Consultora».
+    En Ajustes pega tu API key de OpenAI y elige la carpeta de clientes.
+    La primera grabación pide permisos de Micrófono y Grabación de pantalla.
   → "Salir" en el menubar cierra la app, pero el servicio la vuelve a abrir en ~10 s.
     Para detenerla de verdad: npm run service:uninstall
 

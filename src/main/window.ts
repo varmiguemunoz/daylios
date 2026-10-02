@@ -49,7 +49,10 @@ export function createMenubarWindow(): BrowserWindow {
 }
 
 /** Icono del menubar: clic abre/cierra, clic derecho muestra el menú. */
-export function createTray(win: BrowserWindow): { tray: Tray; show: () => void } {
+export function createTray(
+  win: BrowserWindow,
+  openConsultora: () => void
+): { tray: Tray; show: () => void } {
   const image = nativeImage.createFromPath(trayIcon)
   image.setTemplateImage(true)
   const tray = new Tray(image)
@@ -64,6 +67,7 @@ export function createTray(win: BrowserWindow): { tray: Tray; show: () => void }
 
   const menu = Menu.buildFromTemplate([
     { label: 'Abrir DayliOS', click: show },
+    { label: 'Abrir Consultora', click: openConsultora },
     { type: 'separator' },
     { label: 'Salir', role: 'quit' }
   ])
