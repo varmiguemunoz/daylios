@@ -7,7 +7,7 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "leads-hub"
-database_id = "REEMPLAZAR-CON-EL-ID-DE-D1"
+database_id = "a75fe7da-d1c9-4f3d-95ee-03558c00a060"
 
 [observability]
 enabled = true
