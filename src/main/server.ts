@@ -16,6 +16,9 @@ import { MeetingController } from './controllers/meeting.controller'
 import { ContextController } from './controllers/context.controller'
 import { ContactController } from './controllers/contact.controller'
 import type { Consultora } from './consultora'
+import type { Marketing } from './marketing'
+import { MarketingController } from './controllers/marketing.controller'
+import { marketingRoutes } from './routes/marketing.routes'
 import { requireToken } from './middlewares/auth.middleware'
 import { notifyOnWrite } from './middlewares/notify.middleware'
 import { errorHandler, notFound } from './middlewares/error.middleware'
@@ -31,7 +34,7 @@ export interface Connection {
  * Al arrancar escribe `connection.json` (puerto + token, permisos 600) junto a la base de datos.
  */
 export function startServer(
-  services: { tasks: TaskService; notes: NoteService; consultora: Consultora },
+  services: { tasks: TaskService; notes: NoteService; consultora: Consultora; marketing: Marketing },
   dir: string,
   onChange: () => void
 ): Promise<Connection> {
@@ -58,6 +61,7 @@ export function startServer(
       contacts: new ContactController(c.contacts)
     })
   )
+  app.use('/marketing', marketingRoutes(new MarketingController(services.marketing)))
   app.use(notFound)
   app.use(errorHandler)
 

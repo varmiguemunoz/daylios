@@ -10,6 +10,7 @@
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "test": "ELECTRON_RUN_AS_NODE=1 electron node_modules/vitest/vitest.mjs run",
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
     "build": "npm run typecheck && electron-vite build",
@@ -27,6 +28,7 @@
     "ffmpeg-static": "^5.2.0",
     "openai": "^5.0.0",
     "reflect-metadata": "^0.2.2",
+    "resend": "6.32.0",
     "typeorm": "^0.3.27",
     "uiohook-napi": "^1.5.4",
     "zod": "^3.25.76"
@@ -57,6 +59,7 @@
     "remark-gfm": "^4.0.1",
     "tailwindcss": "4.3.3",
     "typescript": "^5.9.3",
-    "vite": "^7.2.6"
+    "vite": "^7.2.6",
+    "vitest": "5.0.3"
   }
 }

@@ -53,4 +53,8 @@ export function consultoraRoutes(c: ConsultoraControllers): Router {
     .get('/contacts/:id', c.contacts.get)
     .patch('/contacts/:id', c.contacts.update)
     .delete('/contacts/:id', c.contacts.remove)
+    .post('/contacts/:id/subscribe', c.contacts.subscribe)
+    .post('/contacts/:id/unsubscribe', c.contacts.unsubscribe)
+    .post('/contacts/:id/tags', c.contacts.tag)
+    .post('/contacts/:id/promote', c.contacts.promote)
 }

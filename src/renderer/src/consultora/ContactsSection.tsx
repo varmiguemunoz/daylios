@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import type { Contact } from '@shared/consultora'
+import { contactLabel } from '@shared/marketing'
 import { api, attempt, type Go } from './lib'
 import { Button, Empty, ErrorNote, List, Row, Section } from './ui'
 
@@ -66,10 +67,14 @@ export function ContactsSection({
           {contacts.map((c) => (
             <Row key={c.id} onClick={() => go({ name: 'contact', id: c.id })}>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-list font-bold">{c.name}</span>
-                {c.role && <span className="block truncate text-caption text-milk-soft">{c.role}</span>}
+                <span className="block truncate text-list font-bold">{contactLabel(c)}</span>
+                {c.role && (
+                  <span className="block truncate text-caption text-milk-soft">{c.role}</span>
+                )}
               </span>
-              <span className="shrink-0 truncate text-caption text-milk-soft">{c.email ?? c.phone ?? ''}</span>
+              <span className="shrink-0 truncate text-caption text-milk-soft">
+                {c.email ?? c.phone ?? ''}
+              </span>
             </Row>
           ))}
         </List>

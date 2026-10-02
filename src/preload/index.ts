@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { TasksApi } from '../shared/tasks'
 import type { NotesApi } from '../shared/notes'
 import type { ConsultoraApi, StopInfo } from '../shared/consultora'
+import type { MarketingApi } from '../shared/marketing'
 
 /** Cada método llama a su canal en main (ver src/main/ipc.ts). */
 const tasks: TasksApi = {
@@ -61,6 +62,10 @@ const consultora: ConsultoraApi = {
   createContact: call('createContact'),
   updateContact: call('updateContact'),
   removeContact: call('removeContact'),
+  subscribeContact: call('subscribeContact'),
+  unsubscribeContact: call('unsubscribeContact'),
+  tagContact: call('tagContact'),
+  promoteContact: call('promoteContact'),
   pickRecording: call('pickRecording'),
   importRecording: call('importRecording'),
   listMeetings: call('listMeetings'),
@@ -75,6 +80,37 @@ const consultora: ConsultoraApi = {
   listDocuments: call('listDocuments'),
   readDocument: call('readDocument'),
   appendNote: call('appendNote')
+}
+
+/** Email marketing: un canal `marketing:<método>` por método (ver src/main/ipc.marketing.ts). */
+const callMarketing =
+  (method: keyof MarketingApi) =>
+  (...args: unknown[]) =>
+    ipcRenderer.invoke(`marketing:${method}`, ...args)
+
+const marketing: MarketingApi = {
+  listTags: callMarketing('listTags'),
+  renameTag: callMarketing('renameTag'),
+  status: callMarketing('status'),
+  syncNow: callMarketing('syncNow'),
+  testResend: callMarketing('testResend'),
+  listSources: callMarketing('listSources'),
+  createSource: callMarketing('createSource'),
+  updateSource: callMarketing('updateSource'),
+  rotateSourceSecret: callMarketing('rotateSourceSecret'),
+  removeSource: callMarketing('removeSource'),
+  testHub: callMarketing('testHub'),
+  listRules: callMarketing('listRules'),
+  createRule: callMarketing('createRule'),
+  updateRule: callMarketing('updateRule'),
+  removeRule: callMarketing('removeRule'),
+  reorderRules: callMarketing('reorderRules'),
+  listSequences: callMarketing('listSequences'),
+  setSequenceStatus: callMarketing('setSequenceStatus'),
+  listNewsletters: callMarketing('listNewsletters'),
+  getNewsletter: callMarketing('getNewsletter'),
+  newsletterContext: callMarketing('newsletterContext'),
+  setNewsletterPaused: callMarketing('setNewsletterPaused')
 }
 
 /** Grabación de reuniones: el renderer captura, main escribe el archivo y procesa. */
@@ -120,6 +156,7 @@ contextBridge.exposeInMainWorld('api', {
   tasks,
   notes,
   consultora,
+  marketing,
   recording,
   permissions,
   voice,

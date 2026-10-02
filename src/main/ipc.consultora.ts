@@ -71,6 +71,10 @@ export function registerConsultoraIpc(c: Consultora, notify: () => void, voice: 
   write('consultora:createContact', (input) => c.contacts.create(input))
   write('consultora:updateContact', (id: string, patch) => c.contacts.update(id, patch))
   write('consultora:removeContact', (id: string) => c.contacts.remove(id))
+  write('consultora:subscribeContact', (id: string) => c.contacts.subscribe(id))
+  write('consultora:unsubscribeContact', (id: string) => c.contacts.unsubscribe(id))
+  write('consultora:tagContact', (id: string, change) => c.contacts.tag(id, change ?? {}))
+  write('consultora:promoteContact', (id: string, stage?: string) => c.contacts.promote(id, stage))
 
   ipcMain.handle('consultora:pickRecording', async (event) => {
     const options: Electron.OpenDialogOptions = {

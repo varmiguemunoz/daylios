@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, powerMonitor } from 'electron'
 import { optimizer } from '@electron-toolkit/utils'
 import { openDatabase } from './db/data-source'
 import { loadConfig } from './config'
@@ -7,6 +7,10 @@ import { NoteService } from './services/note.service'
 import { createConsultora } from './consultora'
 import { registerIpc } from './ipc'
 import { registerConsultoraIpc } from './ipc.consultora'
+import { createMarketing } from './marketing'
+import { registerMarketingIpc } from './ipc.marketing'
+import { resendFromConfig } from './services/resend.provider'
+import { hubFromConfig } from './services/hub.client'
 import { startServer } from './server'
 import { createMenubarWindow, createTray } from './window'
 import { allowScreenCapture, showConsultora } from './consultora-window'
@@ -66,6 +70,11 @@ async function start(): Promise<void> {
 
   registerIpc(tasks, notes)
   registerConsultoraIpc(consultora, notify, voice)
+  // Email marketing: la cola hacia Resend (y el hub) se sincroniza sola cada minuto y al despertar.
+  const marketing = createMarketing(db, resendFromConfig, hubFromConfig, notify)
+  registerMarketingIpc(marketing, notify)
+  marketing.sync.start()
+  powerMonitor.on('resume', () => void marketing.sync.tick())
   allowScreenCapture()
   ipcMain.on('window:hide', () => win.hide())
   ipcMain.on('window:openConsultora', () => {
@@ -78,7 +87,7 @@ async function start(): Promise<void> {
   if (!app.isPackaged) win.once('ready-to-show', show)
 
   // Claude cambió algo: las ventanas recargan lo que estén mostrando.
-  await startServer({ tasks, notes, consultora }, dataDir, notify)
+  await startServer({ tasks, notes, consultora, marketing }, dataDir, notify)
 }
 
 // La app vive en el menubar: cerrar la ventana no la termina.

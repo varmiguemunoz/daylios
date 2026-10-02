@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto'
-import { In, IsNull, Not, type DataSource } from 'typeorm'
+import { In, IsNull, Not, type DataSource, type EntityManager } from 'typeorm'
 import {
   STAGE_KINDS,
   type Client,
@@ -70,33 +70,7 @@ export class ProspectService {
   }
 
   create(input: ProspectInput): Promise<Prospect> {
-    return transactionGuard(this.db, async (manager) => {
-      const stages = manager.getRepository(StageModel)
-      const stage = input.stage
-        ? await findByRef(stages, input.stage, 'name', 'la etapa')
-        : await stages.findOne({ where: { kind: 'open' }, order: { position: 'ASC' } })
-      if (!stage) throw new AppError('invalid', 'No hay etapas abiertas en el pipeline.')
-
-      const stamp = now()
-      const prospect: Prospect = {
-        id: randomUUID(),
-        company: requiredText(input.company, 'La empresa'),
-        contactMd: markdown(input.contactMd, 'El contacto'),
-        valueUsd: optionalAmount(input.valueUsd, 'El valor'),
-        source: optionalText(input.source, 'El origen'),
-        stageId: stage.id,
-        // Nuevo = arriba de su columna
-        position: -1,
-        notesMd: markdown(input.notesMd, 'Las notas'),
-        nextStep: optionalText(input.nextStep, 'El próximo paso'),
-        nextStepDate: optionalDay(input.nextStepDate, 'La fecha del próximo paso'),
-        clientId: null,
-        createdAt: stamp,
-        updatedAt: stamp
-      }
-      await manager.getRepository(ProspectModel).insert(prospect)
-      return prospect
-    })
+    return transactionGuard(this.db, (manager) => insertProspect(manager, input))
   }
 
   /** Edita datos. Para cambiar de etapa usa `move` (gestiona el paso a cliente). */
@@ -203,3 +177,35 @@ export class ProspectService {
 }
 
 const sum = (list: Prospect[]): number => list.reduce((total, p) => total + (p.valueUsd ?? 0), 0)
+
+/**
+ * Inserta un prospecto (sin transacción propia). Sin etapa = primera abierta.
+ * Exportada para que «pasar a pipeline» de un contacto lo cree en su misma transacción.
+ */
+export async function insertProspect(manager: EntityManager, input: ProspectInput): Promise<Prospect> {
+  const stages = manager.getRepository(StageModel)
+  const stage = input.stage
+    ? await findByRef(stages, input.stage, 'name', 'la etapa')
+    : await stages.findOne({ where: { kind: 'open' }, order: { position: 'ASC' } })
+  if (!stage) throw new AppError('invalid', 'No hay etapas abiertas en el pipeline.')
+
+  const stamp = now()
+  const prospect: Prospect = {
+    id: randomUUID(),
+    company: requiredText(input.company, 'La empresa'),
+    contactMd: markdown(input.contactMd, 'El contacto'),
+    valueUsd: optionalAmount(input.valueUsd, 'El valor'),
+    source: optionalText(input.source, 'El origen'),
+    stageId: stage.id,
+    // Nuevo = arriba de su columna
+    position: -1,
+    notesMd: markdown(input.notesMd, 'Las notas'),
+    nextStep: optionalText(input.nextStep, 'El próximo paso'),
+    nextStepDate: optionalDay(input.nextStepDate, 'La fecha del próximo paso'),
+    clientId: null,
+    createdAt: stamp,
+    updatedAt: stamp
+  }
+  await manager.getRepository(ProspectModel).insert(prospect)
+  return prospect
+}

@@ -46,7 +46,9 @@ src/preload/           puente seguro window.api
 src/renderer/          UI React
 ```
 
-Specs (SDD) en `.kiro/specs/`. Consultora: `.kiro/specs/consultora-context/`.
+Specs (SDD) en `.kiro/specs/`. Consultora: `.kiro/specs/consultora-context/`. Email marketing: `.kiro/specs/email-automations/`.
+
+Tests: `npm test` (Vitest dentro de Electron, porque better-sqlite3 está compilado para su ABI; base SQLite en memoria con las migraciones reales y un Resend falso). Incluye la lógica del Worker `workers/leads-hub`.
 
 La app es la única que abre la base de datos. La UI y Claude pasan por el mismo servicio, así que las reglas (techo de 8, validación) son idénticas. Si Claude cambia algo, la ventana se refresca sola.
 
@@ -76,6 +78,46 @@ Se guardan en `~/Library/Application Support/daily-os/settings.json` (permisos 6
 La primera grabación pide **Micrófono** y **Grabación de pantalla y audio del sistema** (Ajustes del Sistema → Privacidad). La carpeta raíz en el Escritorio también puede pedir acceso. La app lleva firma local (ad-hoc): tras reinstalar, macOS puede volver a pedirlos.
 
 Grabaciones: `CLIENTS_DOCS_PATH/_reuniones/` hasta que se asocian a un cliente; entonces se mueven a `<Cliente>/Reuniones/`. Coste orientativo: 1 h ≈ 0,36 USD de transcripción.
+
+## Email marketing (leads, secuencias, newsletter)
+
+Un GoHighLevel pequeño dentro de la Consultora: **Contactos** (personas de clientes y prospectos, y leads de email en la misma base) y el grupo **Email**: Fuentes, Reglas, Secuencias y Newsletters. Spec: `.kiro/specs/email-automations/`.
+
+```
+Formulario / Zapier / Make ──POST /in/<fuente>──▶ Worker leads-hub (Cloudflare, siempre encendido)
+                                                   │ escribe en Resend: contacto, segments, eventos
+                                                   └─ cola D1 ──▶ DayliOS la descarga cada minuto
+Resend: Automations (secuencias) · Broadcasts (newsletter) · webhooks de bajas/rebotes ──▶ Worker
+Claude Cowork ──MCP──▶ DayliOS ──▶ Resend (newsletter diario, secuencias, tags)
+```
+
+- **Solo opt-in.** Un contacto creado a mano queda «Sin marketing»; suscribirlo pide confirmar que dio su permiso. Los leads de una fuente entran suscritos y guardan fuente y fecha como prueba de consentimiento.
+- **Tags**: cada lead lleva `origen-<fuente>` y los tags por defecto de la fuente. Cada tag es un Segment de Resend (`tag:<slug>`). Al entrar en un tag, un suscrito dispara el evento `tag.<slug>`; uno nuevo, `lead.created`.
+- **Reglas**: «cuando entra el tag X → añadir/quitar tag, disparar evento, pasar a pipeline». Corren en el Worker al recibir un lead y en la app al etiquetar.
+- **Secuencias**: Automations de Resend. Se crean en su dashboard o pidiéndoselas a Claude (`save_sequence`). Resend no deja editar una activa: hay que pausarla.
+- **Newsletter**: lo escribe y lo envía Claude (`send_newsletter`). Salvaguardas: pausa global, máximo uno por día, tag con suscritos, copia previa a tu email, enlace de baja obligatorio e historial. Si algún suscrito del tag aún no está sincronizado con Resend, no se envía.
+- **Sin conexión**: todo cambio hacia Resend pasa por una cola local con reintentos (1 min → 6 h). Ajustes → Email muestra lo pendiente.
+
+### Puesta en marcha
+
+1. **Resend** (plan pago para pasar de 100 emails/día): dominio verificado (SPF, DKIM, DMARC) y una API key con acceso completo.
+2. **Consultora → Ajustes → Email (Resend)**: API key, remitente (`hola@tudominio.com`), nombre, «responder a» y tu email (recibe la copia de cada newsletter).
+3. **Worker**: sigue `workers/leads-hub/README.md` (crear D1, secretos y desplegar).
+4. **Ajustes → Hub de leads**: URL del Worker y el mismo `ADMIN_TOKEN`. «Probar conexión».
+5. **Resend → Webhooks**: `https://<worker>/resend/webhook` con `contact.updated`, `email.bounced` y `email.complained`. Copia el signing secret al Worker (`RESEND_WEBHOOK_SECRET`).
+6. **Fuentes**: crea una por cada sitio que manda leads y pega su URL y secreto en la herramienta (cabecera `Authorization: Bearer <secreto>`, o `?key=<secreto>`). Formato:
+
+```json
+{ "email": "ana@ejemplo.com", "name": "Ana", "tags": ["webinar"], "fields": { "company": "Acme" } }
+```
+
+### Newsletter diario con Claude Cowork
+
+Tarea programada (por ejemplo, de lunes a viernes a las 08:00):
+
+> Usa get_newsletter_context. Si está en pausa o ya se envió hoy, termina sin hacer nada. Elige el tag con suscritos que toque hoy (alterna entre ellos) y escribe un newsletter breve y útil en español para educar a esos contactos sobre integración de software y AI: un tema que no aparezca en los últimos asuntos, un asunto claro de menos de 60 caracteres, 3–5 párrafos cortos en HTML simple y una sola llamada a la acción. Sin datos inventados ni promesas. Envíalo con send_newsletter. Si falla, explica el error.
+
+Las tareas programadas y la app corren con el Mac despierto. Las secuencias y la recepción de leads no dependen del Mac.
 
 ## Tareas: tags y esfuerzo
 
@@ -161,6 +203,19 @@ Consultora (las referencias aceptan id o nombre):
 | `move_prospect`                                  | Cambiar de etapa (ganado = cliente nuevo + carpeta)                                                        |
 | `create_meeting` · `update_meeting`              | Reunión sin grabación (con `process` para resumir notas) · editar                                          |
 | `append_note`                                    | Nota fechada al final de un cliente, proyecto, prospecto o reunión                                         |
+
+Contactos y email marketing:
+
+| Herramienta                                                       | Qué hace                                                                                                   |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `list_contacts` · `get_contact` · `save_contact`                  | Contactos con filtros (tag, estado, fuente, texto), paginados · ficha con línea de tiempo · crear o editar |
+| `tag_contact`                                                     | Añadir o quitar tags (dispara reglas y, si está suscrito, `tag.<slug>` en Resend)                          |
+| `set_contact_subscription`                                        | Suscribir (solo con su permiso) o dar de baja                                                              |
+| `promote_contact`                                                 | Pasar a pipeline (crea el prospecto)                                                                       |
+| `list_tags` · `list_sources`                                      | Tags con nº de suscritos · fuentes con leads recibidos                                                     |
+| `list_rules` · `save_rule` · `delete_rule`                        | Reglas por tag                                                                                             |
+| `list_sequences` · `save_sequence` · `set_sequence_status`        | Secuencias de Resend: listar · crear o reescribir (evento → espera → email…) · activar o pausar            |
+| `get_newsletter_context` · `send_newsletter` · `list_newsletters` | Antes de escribir · enviar el de hoy (uno por día) · historial                                             |
 
 ## Atajos
 

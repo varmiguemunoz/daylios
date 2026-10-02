@@ -1,6 +1,7 @@
 import type { TasksApi } from '../shared/tasks'
 import type { Note, NotesApi, VoiceResult } from '../shared/notes'
 import type { ConsultoraApi, Meeting, StopInfo } from '../shared/consultora'
+import type { MarketingApi } from '../shared/marketing'
 
 declare global {
   interface Window {
@@ -8,6 +9,7 @@ declare global {
       tasks: TasksApi
       notes: NotesApi
       consultora: ConsultoraApi
+      marketing: MarketingApi
       recording: {
         start: () => Promise<Meeting>
         chunk: (id: string, data: Uint8Array) => Promise<void>

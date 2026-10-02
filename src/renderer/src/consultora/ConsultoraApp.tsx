@@ -4,6 +4,10 @@ import {
   Users,
   CalendarClock,
   SquareKanban,
+  Waypoints,
+  Workflow,
+  MailPlus,
+  Newspaper,
   Search as SearchIcon,
   Settings as SettingsIcon
 } from 'lucide-react'
@@ -20,14 +24,35 @@ import { Settings } from './screens/Settings'
 import { Search } from './screens/Search'
 import { Contacts } from './screens/Contacts'
 import { Contact } from './screens/Contact'
+import { Sources } from './screens/Sources'
+import { Rules } from './screens/Rules'
+import { Sequences } from './screens/Sequences'
+import { Newsletters } from './screens/Newsletters'
 
-type Section = 'clients' | 'contacts' | 'meetings' | 'pipeline' | 'settings'
+type Section =
+  | 'clients'
+  | 'contacts'
+  | 'meetings'
+  | 'pipeline'
+  | 'sources'
+  | 'rules'
+  | 'sequences'
+  | 'newsletters'
+  | 'settings'
 
 const SECTIONS: { id: Section; label: string; icon: typeof Briefcase }[] = [
   { id: 'clients', label: 'Clientes', icon: Briefcase },
   { id: 'contacts', label: 'Contactos', icon: Users },
   { id: 'meetings', label: 'Reuniones', icon: CalendarClock },
   { id: 'pipeline', label: 'Pipeline', icon: SquareKanban }
+]
+
+/** Email marketing: de dónde entran los leads y qué se les envía. */
+const EMAIL_SECTIONS: { id: Section; label: string; icon: typeof Briefcase }[] = [
+  { id: 'sources', label: 'Fuentes', icon: Waypoints },
+  { id: 'rules', label: 'Reglas', icon: Workflow },
+  { id: 'sequences', label: 'Secuencias', icon: MailPlus },
+  { id: 'newsletters', label: 'Newsletters', icon: Newspaper }
 ]
 
 /** Nombre corto de cada pantalla, para el botón «Atrás». */
@@ -41,6 +66,10 @@ const LABEL: Record<Screen['name'], string> = {
   prospect: 'Prospecto',
   contacts: 'Contactos',
   contact: 'Contacto',
+  sources: 'Fuentes',
+  rules: 'Reglas',
+  sequences: 'Secuencias',
+  newsletters: 'Newsletters',
   settings: 'Ajustes',
   search: 'Búsqueda'
 }
@@ -55,6 +84,10 @@ const SECTION_OF: Record<Screen['name'], Section | null> = {
   prospect: 'pipeline',
   contacts: 'contacts',
   contact: 'contacts',
+  sources: 'sources',
+  rules: 'rules',
+  sequences: 'sequences',
+  newsletters: 'newsletters',
   settings: 'settings',
   search: null
 }
@@ -102,6 +135,19 @@ export function ConsultoraApp(): React.JSX.Element {
         <p className="px-3 pb-4 text-label font-extrabold">Consultora</p>
         <div className="flex flex-col gap-0.5 [-webkit-app-region:no-drag]">
           {SECTIONS.map(({ id, label, icon: Icon }) => (
+            <SideItem
+              key={id}
+              active={section === id}
+              onClick={() => setStack([{ name: id }])}
+              icon={<Icon size={16} strokeWidth={2.5} />}
+            >
+              {label}
+            </SideItem>
+          ))}
+        </div>
+        <p className="px-3 pt-6 pb-2 text-micro font-bold text-milk-soft">Email</p>
+        <div className="flex flex-col gap-0.5 [-webkit-app-region:no-drag]">
+          {EMAIL_SECTIONS.map(({ id, label, icon: Icon }) => (
             <SideItem
               key={id}
               active={section === id}
@@ -194,6 +240,14 @@ function ScreenView({
       return <Contacts go={go} />
     case 'contact':
       return <Contact id={screen.id} go={go} back={back} backLabel={backLabel} />
+    case 'sources':
+      return <Sources go={go} />
+    case 'rules':
+      return <Rules />
+    case 'sequences':
+      return <Sequences go={go} />
+    case 'newsletters':
+      return <Newsletters />
     case 'settings':
       return <Settings />
     case 'search':

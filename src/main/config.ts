@@ -17,7 +17,21 @@ interface StoredSettings {
   summaryLanguage: string
   voiceShortcut: string
   voiceEnabled: boolean
+  // ---- Email marketing ----
+  resendApiKey: string
+  /** Remitente verificado en Resend, p. ej. hola@tudominio.com */
+  fromEmail: string
+  fromName: string
+  replyTo: string
+  /** Recibe la copia previa de cada newsletter. */
+  ownerEmail: string
+  /** URL del Worker `leads-hub` (https://…workers.dev). */
+  hubUrl: string
+  hubAdminToken: string
+  newsletterPaused: boolean
 }
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const DEFAULTS: StoredSettings = {
   openaiApiKey: '',
@@ -26,7 +40,15 @@ const DEFAULTS: StoredSettings = {
   summaryModel: 'gpt-4o-mini',
   summaryLanguage: 'es',
   voiceShortcut: 'Alt+Space',
-  voiceEnabled: true
+  voiceEnabled: true,
+  resendApiKey: '',
+  fromEmail: '',
+  fromName: '',
+  replyTo: '',
+  ownerEmail: '',
+  hubUrl: '',
+  hubAdminToken: '',
+  newsletterPaused: false
 }
 
 let file = ''
@@ -54,8 +76,24 @@ export const config = {
   summaryModel: (): string => current.summaryModel,
   summaryLanguage: (): string => current.summaryLanguage,
   voiceShortcut: (): string => current.voiceShortcut,
-  voiceEnabled: (): boolean => current.voiceEnabled
+  voiceEnabled: (): boolean => current.voiceEnabled,
+  resendKey: (): string => current.resendApiKey,
+  /** "Nombre <email>" o solo el email. Vacío si falta el email. */
+  from: (): string =>
+    current.fromEmail
+      ? current.fromName
+        ? `${current.fromName.replace(/[<>"]/g, '')} <${current.fromEmail}>`
+        : current.fromEmail
+      : '',
+  replyTo: (): string => current.replyTo,
+  ownerEmail: (): string => current.ownerEmail,
+  hubUrl: (): string => current.hubUrl.replace(/\/+$/, ''),
+  hubToken: (): string => current.hubAdminToken,
+  newsletterPaused: (): boolean => current.newsletterPaused
 }
+
+/** Últimos 4 caracteres de un secreto, para reconocerlo sin mostrarlo. */
+const hint = (secret: string): string => (secret ? `…${secret.slice(-4)}` : '')
 
 /** Lo que la ventana puede ver: nunca la API key completa. */
 export function publicSettings(): Settings {
@@ -68,7 +106,17 @@ export function publicSettings(): Settings {
     summaryModel: current.summaryModel,
     summaryLanguage: current.summaryLanguage,
     voiceShortcut: current.voiceShortcut,
-    voiceEnabled: current.voiceEnabled
+    voiceEnabled: current.voiceEnabled,
+    hasResendKey: Boolean(current.resendApiKey),
+    resendKeyHint: hint(current.resendApiKey),
+    fromEmail: current.fromEmail,
+    fromName: current.fromName,
+    replyTo: current.replyTo,
+    ownerEmail: current.ownerEmail,
+    hubUrl: current.hubUrl,
+    hasHubToken: Boolean(current.hubAdminToken),
+    hubTokenHint: hint(current.hubAdminToken),
+    newsletterPaused: current.newsletterPaused
   }
 }
 
@@ -108,6 +156,33 @@ export function saveSettings(input: SettingsInput): Settings {
     next.voiceShortcut = clean(input.voiceShortcut, 'El atajo', 60) || DEFAULTS.voiceShortcut
   }
   if (input.voiceEnabled !== undefined) next.voiceEnabled = input.voiceEnabled === true
+
+  const email = (value: unknown, label: string): string => {
+    const text = clean(value, label, 254).toLowerCase()
+    if (text && !EMAIL.test(text)) throw new AppError('invalid', `${label} no es un email válido.`)
+    return text
+  }
+  if (input.resendApiKey !== undefined) {
+    const key = clean(input.resendApiKey, 'La API key de Resend', 400)
+    if (key && !key.startsWith('re_'))
+      throw new AppError('invalid', 'La API key de Resend empieza por «re_».')
+    next.resendApiKey = key
+  }
+  if (input.fromEmail !== undefined) next.fromEmail = email(input.fromEmail, 'El remitente')
+  if (input.fromName !== undefined)
+    next.fromName = clean(input.fromName, 'El nombre del remitente', 80)
+  if (input.replyTo !== undefined) next.replyTo = email(input.replyTo, '«Responder a»')
+  if (input.ownerEmail !== undefined) next.ownerEmail = email(input.ownerEmail, 'Tu email')
+  if (input.hubUrl !== undefined) {
+    const url = clean(input.hubUrl, 'La URL del hub', 300)
+    if (url && !/^https:\/\/[^\s/]+/.test(url))
+      throw new AppError('invalid', 'La URL del hub debe empezar por https://')
+    next.hubUrl = url.replace(/\/+$/, '')
+  }
+  if (input.hubAdminToken !== undefined) {
+    next.hubAdminToken = clean(input.hubAdminToken, 'El token del hub', 400)
+  }
+  if (input.newsletterPaused !== undefined) next.newsletterPaused = input.newsletterPaused === true
 
   writeFileSync(file, JSON.stringify(next, null, 2), { mode: 0o600 })
   chmodSync(file, 0o600)

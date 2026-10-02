@@ -1,0 +1,13 @@
+name = "leads-hub"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Crea la base con `npx wrangler d1 create leads-hub` y pega aquí el database_id que imprime.
+[[d1_databases]]
+binding = "DB"
+database_name = "leads-hub"
+database_id = "REEMPLAZAR-CON-EL-ID-DE-D1"
+
+[observability]
+enabled = true

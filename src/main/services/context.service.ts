@@ -14,6 +14,7 @@ import { ProspectModel } from '../models/prospect.model'
 import { MeetingModel } from '../models/meeting.model'
 import { StageModel } from '../models/stage.model'
 import { ContactModel } from '../models/contact.model'
+import { contactLabel } from '@shared/marketing'
 import { transactionGuard } from '../guards/transaction.guard'
 import { AppError } from './app.error'
 import { findByRef } from './ref'
@@ -127,7 +128,7 @@ export class ContextService {
       .find({ where: [{ name: like }, { email: like }, { role: like }, { notesMd: like }] })
 
     return [
-      ...contacts.map((c) => hit('contact', c.id, c.name, q, [c.name, c.role, c.email, c.notesMd])),
+      ...contacts.map((c) => hit('contact', c.id, contactLabel(c), q, [c.name, c.role, c.email, c.notesMd])),
       ...clients.map((c) =>
         hit('client', c.id, c.name, q, [c.name, c.sector, c.notesMd, c.contactsMd])
       ),

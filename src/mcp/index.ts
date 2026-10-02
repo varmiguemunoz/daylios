@@ -558,20 +558,268 @@ server.registerTool(
 
 // ---- Contactos ----
 
+const contactStatus = z
+  .enum(['none', 'subscribed', 'unsubscribed', 'bounced', 'complained'])
+  .describe('none = contacto de trabajo (sin marketing); subscribed = recibe emails')
+
 server.registerTool(
   'list_contacts',
   {
     description:
-      'Contactos (personas) con su empresa. Filtra por cliente, prospecto o texto (nombre, rol, email, empresa).',
-    inputSchema: { client: z.string().optional(), prospect: z.string().optional(), query: z.string().optional() }
+      'Contactos (personas de clientes y prospectos, y leads de email) con empresa y tags, paginados. ' +
+      'Filtra por cliente, prospecto, texto (nombre, rol, email, empresa), tag (slug), estado de suscripción o fuente.',
+    inputSchema: {
+      client: z.string().optional(),
+      prospect: z.string().optional(),
+      query: z.string().optional(),
+      tag: z.string().optional(),
+      status: contactStatus.optional(),
+      source: z.string().optional().describe('Slug de la fuente (o "manual")'),
+      page: z.number().int().min(1).optional(),
+      page_size: z.number().int().min(1).max(200).optional().describe('50 por defecto')
+    }
   },
-  ({ client, prospect, query: q }) => tool(() => api('GET', `/consultora/contacts${query({ client, prospect, q })}`))
+  ({ client, prospect, query: q, tag, status, source, page, page_size }) =>
+    tool(() =>
+      api(
+        'GET',
+        `/consultora/contacts${query({ client, prospect, q, tag, status, source, page, pageSize: page_size })}`
+      )
+    )
+)
+
+server.registerTool(
+  'tag_contact',
+  {
+    description:
+      'Añade y/o quita tags de un contacto (nombre o slug; los nuevos se crean). Los tags añadidos disparan ' +
+      'sus reglas y, si el contacto está suscrito, el evento tag.<slug> en Resend (que puede iniciar una secuencia).',
+    inputSchema: {
+      id: z.string(),
+      add: z.array(z.string()).optional(),
+      remove: z.array(z.string()).optional()
+    }
+  },
+  ({ id, add, remove }) =>
+    tool(() => api('POST', `/consultora/contacts/${enc(id)}/tags`, { add, remove }))
+)
+
+server.registerTool(
+  'set_contact_subscription',
+  {
+    description:
+      'Suscribe (subscribed: true) o da de baja (false) a un contacto de los emails de marketing. ' +
+      'Suscribir solo con su consentimiento explícito (opt-in) y exige email. Rebotes y quejas no se reactivan.',
+    inputSchema: { id: z.string(), subscribed: z.boolean() }
+  },
+  ({ id, subscribed }) =>
+    tool(() =>
+      api('POST', `/consultora/contacts/${enc(id)}/${subscribed ? 'subscribe' : 'unsubscribe'}`)
+    )
+)
+
+server.registerTool(
+  'promote_contact',
+  {
+    description:
+      'Pasa un contacto al pipeline de ventas: crea un prospecto con sus datos (empresa = fields.company, nombre o email) ' +
+      'y lo enlaza. Falla si ya tiene prospecto.',
+    inputSchema: {
+      id: z.string(),
+      stage: z.string().optional().describe('Etapa (id o nombre); vacío = primera abierta')
+    }
+  },
+  ({ id, stage }) => tool(() => api('POST', `/consultora/contacts/${enc(id)}/promote`, { stage }))
+)
+
+server.registerTool(
+  'list_sources',
+  {
+    description:
+      'Fuentes de leads (webhooks de entrada): slug, nombre, tags por defecto, leads recibidos y último recibido. ' +
+      'Cada lead que entra por una fuente lleva el tag origen-<slug>.',
+    inputSchema: {}
+  },
+  () => tool(() => api('GET', '/marketing/sources'))
+)
+
+server.registerTool(
+  'list_rules',
+  {
+    description:
+      'Reglas por tag («cuando entra el tag X → acciones»), en orden. Se aplican al recibir un lead por webhook ' +
+      'y al añadir tags con tag_contact. Las etapas de promote se guardan por id.',
+    inputSchema: {}
+  },
+  () => tool(() => api('GET', '/marketing/rules'))
+)
+
+const ruleAction = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('add_tag'), tag: z.string().min(1) }),
+  z.object({ type: z.literal('remove_tag'), tag: z.string().min(1) }),
+  z.object({
+    type: z.literal('fire_event'),
+    event: z
+      .string()
+      .regex(/^[a-zA-Z0-9._-]{1,100}$/)
+      .describe('Evento de Resend que puede disparar una secuencia')
+  }),
+  z.object({
+    type: z.literal('promote'),
+    stage: z.string().describe('Etapa del pipeline (id o nombre); "" = primera abierta')
+  })
+])
+
+server.registerTool(
+  'save_rule',
+  {
+    description:
+      'Crea una regla (sin "id") o edita una. trigger_tag = tag que la dispara al entrar. Acciones: add_tag, remove_tag, ' +
+      'fire_event (evento de Resend), promote (pasa a pipeline). Las reglas se encadenan (máx. 5 niveles). ' +
+      'Ej.: cuando entra "webinar" → add_tag "nurture" + fire_event "webinar.followup".',
+    inputSchema: {
+      id: z.string().optional(),
+      name: z.string().optional(),
+      trigger_tag: z.string().optional(),
+      actions: z.array(ruleAction).min(1).max(10).optional(),
+      active: z.boolean().optional()
+    }
+  },
+  ({ id, trigger_tag, ...fields }) =>
+    tool(() => {
+      const body = { ...fields, triggerTag: trigger_tag }
+      return id
+        ? api('PATCH', `/marketing/rules/${enc(id)}`, body)
+        : api('POST', '/marketing/rules', body)
+    })
+)
+
+server.registerTool(
+  'delete_rule',
+  {
+    description: 'Borra una regla. Para pausarla sin perderla usa save_rule con active: false.',
+    inputSchema: { id: z.string() }
+  },
+  ({ id }) => tool(() => api('DELETE', `/marketing/rules/${enc(id)}`))
+)
+
+// ---- Secuencias (Automations de Resend) ----
+
+server.registerTool(
+  'list_sequences',
+  {
+    description:
+      'Secuencias de email (Automations de Resend): nombre, estado (enabled/disabled), evento que las dispara ' +
+      '(p. ej. tag.webinar o lead.created), nº de emails y enlace al dashboard.',
+    inputSchema: {}
+  },
+  () => tool(() => api('GET', '/marketing/sequences'))
+)
+
+server.registerTool(
+  'save_sequence',
+  {
+    description:
+      'Crea (sin "id") o reescribe una secuencia lineal en Resend: evento → [espera] → email → [espera] → email… ' +
+      'Cada email se guarda como template con enlace de baja. Eventos útiles: "lead.created" (lead nuevo), ' +
+      '"tag.<slug>" (entra en un tag) o el de una regla fire_event. Queda pausada salvo enabled: true. ' +
+      'Resend no deja editar una secuencia activa: pausa con set_sequence_status antes de reescribirla. ' +
+      'Solo para contactos suscritos (opt-in).',
+    inputSchema: {
+      id: z.string().optional(),
+      name: z.string().min(1),
+      event: z.string().regex(/^[a-zA-Z0-9._-]{1,100}$/),
+      emails: z
+        .array(
+          z.object({
+            wait: z
+              .string()
+              .optional()
+              .describe('Espera antes de este email: "1 day", "3 hours", "30 minutes", "2 weeks"'),
+            subject: z.string().min(1).max(200),
+            html: z.string().min(1).describe('HTML del email')
+          })
+        )
+        .min(1)
+        .max(20),
+      enabled: z.boolean().optional()
+    }
+  },
+  (args) => tool(() => api('POST', '/marketing/sequences', args))
+)
+
+server.registerTool(
+  'set_sequence_status',
+  {
+    description: 'Activa (enabled: true) o pausa (false) una secuencia de Resend.',
+    inputSchema: { id: z.string(), enabled: z.boolean() }
+  },
+  ({ id, enabled }) =>
+    tool(() => api('POST', `/marketing/sequences/${enc(id)}/status`, { enabled }))
+)
+
+// ---- Newsletter ----
+
+server.registerTool(
+  'get_newsletter_context',
+  {
+    description:
+      'Antes de escribir el newsletter: si está en pausa, si ya se envió hoy, los últimos asuntos (para no repetir temas) ' +
+      'y los tags con suscritos (la audiencia posible).',
+    inputSchema: {}
+  },
+  () => tool(() => api('GET', '/marketing/newsletters/context'))
+)
+
+server.registerTool(
+  'send_newsletter',
+  {
+    description:
+      'Envía el newsletter de hoy a los suscritos de un tag (Broadcast de Resend). Máximo uno por día; ' +
+      'falla si está en pausa, si el tag no tiene suscritos o si ya se envió hoy. Antes manda una copia al dueño. ' +
+      'Se añade el enlace de baja si el HTML no lo trae ({{{RESEND_UNSUBSCRIBE_URL}}}). ' +
+      'Escribe en el idioma de la audiencia, con un asunto claro y sin promesas falsas.',
+    inputSchema: {
+      tag: z.string().describe('Slug del tag (ver get_newsletter_context)'),
+      subject: z.string().min(1).max(200),
+      html: z.string().min(1).describe('HTML completo del email'),
+      scheduled_at: z
+        .string()
+        .optional()
+        .describe('Programar: ISO 8601 o "tomorrow at 9am". Vacío = ahora')
+    }
+  },
+  ({ tag, subject, html, scheduled_at }) =>
+    tool(() =>
+      api('POST', '/marketing/newsletters', { tag, subject, html, scheduledAt: scheduled_at })
+    )
+)
+
+server.registerTool(
+  'list_newsletters',
+  {
+    description:
+      'Historial de newsletters (día, tag, asunto, estado: sent, scheduled, sending, failed y error).',
+    inputSchema: { limit: z.number().int().min(1).max(200).optional() }
+  },
+  ({ limit }) => tool(() => api('GET', `/marketing/newsletters${query({ limit })}`))
+)
+
+server.registerTool(
+  'list_tags',
+  {
+    description:
+      'Tags de contactos (slug, nombre) con cuántos contactos y suscritos tiene cada uno.',
+    inputSchema: {}
+  },
+  () => tool(() => api('GET', '/marketing/tags'))
 )
 
 server.registerTool(
   'get_contact',
   {
-    description: 'Un contacto: datos, empresa, notas y reuniones donde aparece como participante.',
+    description:
+      'Un contacto: datos, empresa, tags, estado de suscripción, fuente, campos, línea de tiempo y reuniones donde aparece.',
     inputSchema: { id: z.string() }
   },
   ({ id }) => tool(() => api('GET', `/consultora/contacts/${enc(id)}`))
@@ -581,7 +829,9 @@ server.registerTool(
   'save_contact',
   {
     description:
-      'Crea un contacto (sin "id") o edita uno. client / prospect = id o nombre de la empresa ("" quita la relación).',
+      'Crea un contacto (sin "id") o edita uno. Nombre o email obligatorio; el email es único. ' +
+      'client / prospect = id o nombre de la empresa ("" quita la relación). ' +
+      'Crear no lo suscribe a emails: usa set_contact_subscription. Para tags usa tag_contact.',
     inputSchema: {
       id: z.string().optional(),
       name: z.string().optional(),
@@ -590,13 +840,19 @@ server.registerTool(
       phone: z.string().optional(),
       linkedin: z.string().optional(),
       notesMd: z.string().optional(),
+      fields: z
+        .record(z.union([z.string(), z.number(), z.boolean(), z.null()]))
+        .optional()
+        .describe('Campos libres (reemplaza todos)'),
       client: z.string().optional(),
       prospect: z.string().optional()
     }
   },
   ({ id, ...fields }) =>
     tool(() =>
-      id ? api('PATCH', `/consultora/contacts/${enc(id)}`, fields) : api('POST', '/consultora/contacts', fields)
+      id
+        ? api('PATCH', `/consultora/contacts/${enc(id)}`, fields)
+        : api('POST', '/consultora/contacts', fields)
     )
 )
 

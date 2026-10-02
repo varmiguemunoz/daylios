@@ -3,6 +3,8 @@
  * Compartido entre main, preload, renderer y MCP. Solo tipos, contrato y utilidades puras.
  */
 
+import type { ContactEvent, ContactFields, ContactStatus, TagRef } from './marketing'
+
 export type ClientStatus = 'activo' | 'historico'
 export type ProjectStatus = 'activo' | 'pausa' | 'cerrado'
 export type StageKind = 'open' | 'won' | 'lost'
@@ -104,14 +106,25 @@ export interface Meeting {
 
 export interface Contact {
   id: string
-  name: string
+  /** Opcional: un lead puede llegar solo con email. La UI muestra `contactLabel()`. */
+  name: string | null
   role: string | null
+  /** Minúsculas; único entre los contactos que lo tienen. */
   email: string | null
   phone: string | null
   linkedin: string | null
   notesMd: string
   clientId: string | null
   prospectId: string | null
+  /** Suscripción a emails de marketing (`none` = contacto de trabajo). */
+  status: ContactStatus
+  /** Slug de la fuente por la que entró, o `manual`. */
+  source: string | null
+  fields: ContactFields
+  /** Momento del opt-in (prueba de consentimiento). */
+  consentAt: string | null
+  syncError: string | null
+  syncedAt: string | null
   createdAt: string
   updatedAt: string
 }
@@ -131,7 +144,7 @@ export type ProspectInput = Partial<
   >
 > & { stage?: string }
 export type ContactInput = Partial<
-  Pick<Contact, 'name' | 'role' | 'email' | 'phone' | 'linkedin' | 'notesMd'>
+  Pick<Contact, 'name' | 'role' | 'email' | 'phone' | 'linkedin' | 'notesMd' | 'fields'>
 > & {
   /** id o nombre; '' quita la relación. */
   client?: string
@@ -183,14 +196,38 @@ export interface DocFile {
   modifiedAt: string
 }
 
-/** Contacto con el nombre de su cliente o prospecto (para listas). */
+/** Contacto con el nombre de su cliente o prospecto y sus tags (para listas). */
 export interface ContactBrief extends Contact {
   organization: string | null
+  tags: TagRef[]
 }
 
 export interface ContactDetail extends ContactBrief {
   /** Reuniones donde aparece como participante (por nombre). */
   meetings: MeetingBrief[]
+  /** Línea de tiempo, más reciente primero (máx. 100). */
+  events: ContactEvent[]
+}
+
+export interface ContactFilter {
+  client?: string
+  prospect?: string
+  /** Nombre, rol, email o empresa. */
+  query?: string
+  /** Slug del tag. */
+  tag?: string
+  status?: ContactStatus
+  /** Slug de la fuente. */
+  source?: string
+  page?: number
+  pageSize?: number
+}
+
+export interface ContactsPage {
+  contacts: ContactBrief[]
+  page: number
+  totalPages: number
+  total: number
 }
 
 export interface ClientDetail extends Client {
@@ -276,6 +313,17 @@ export interface Settings {
   /** Atajo global de nota de voz (formato Electron, p. ej. "Alt+Space"). */
   voiceShortcut: string
   voiceEnabled: boolean
+  // ---- Email marketing (los secretos, solo como pista) ----
+  hasResendKey: boolean
+  resendKeyHint: string
+  fromEmail: string
+  fromName: string
+  replyTo: string
+  ownerEmail: string
+  hubUrl: string
+  hasHubToken: boolean
+  hubTokenHint: string
+  newsletterPaused: boolean
 }
 
 /** Estado del atajo de nota de voz. */
@@ -301,6 +349,16 @@ export interface SettingsInput {
   summaryLanguage?: string
   voiceShortcut?: string
   voiceEnabled?: boolean
+  /** '' borra la key. */
+  resendApiKey?: string
+  fromEmail?: string
+  fromName?: string
+  replyTo?: string
+  ownerEmail?: string
+  hubUrl?: string
+  /** '' borra el token. */
+  hubAdminToken?: string
+  newsletterPaused?: boolean
 }
 
 export type NoteEntity = 'client' | 'project' | 'prospect' | 'meeting'
@@ -369,11 +427,18 @@ export interface ConsultoraApi {
     index?: number
   ): Promise<{ prospect: Prospect; client: Client | null }>
 
-  listContacts(filter: { client?: string; prospect?: string; query?: string }): Promise<ContactBrief[]>
+  listContacts(filter: ContactFilter): Promise<ContactsPage>
   getContact(id: string): Promise<ContactDetail>
   createContact(input: ContactInput): Promise<Contact>
   updateContact(id: string, patch: ContactInput): Promise<Contact>
   removeContact(id: string): Promise<void>
+  /** Suscribe a marketing (exige email; guarda el consentimiento con fuente `manual`). */
+  subscribeContact(id: string): Promise<Contact>
+  unsubscribeContact(id: string): Promise<Contact>
+  /** Añade y/o quita tags (por nombre o slug). Los tags añadidos disparan sus reglas. */
+  tagContact(id: string, change: { add?: string[]; remove?: string[] }): Promise<ContactBrief>
+  /** Crea un prospecto con este contacto en la etapa dada (vacío = primera abierta). */
+  promoteContact(id: string, stage?: string): Promise<{ contact: Contact; prospect: Prospect }>
 
   /** Selector de archivo de macOS para subir una grabación. null = cancelado. */
   pickRecording(): Promise<string | null>

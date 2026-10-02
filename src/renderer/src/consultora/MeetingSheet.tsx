@@ -57,7 +57,10 @@ export function MeetingSheet({
     if (!prospectId && s.prospectId) setProspectId(s.prospectId)
   }
 
-  const names = participants.split(',').map((p) => p.trim()).filter(Boolean)
+  const names = participants
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean)
 
   const submit = async (): Promise<void> => {
     setBusy(true)
@@ -93,10 +96,21 @@ export function MeetingSheet({
 
         <div className="mt-5 flex flex-col gap-2">
           <Field label="Título">
-            <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} onBlur={() => void suggest()} className={input} />
+            <input
+              autoFocus
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onBlur={() => void suggest()}
+              className={input}
+            />
           </Field>
           <Field label="Participantes (separados por comas)">
-            <input value={participants} onChange={(e) => setParticipants(e.target.value)} placeholder="Ana (Acme), Miguel" className={input} />
+            <input
+              value={participants}
+              onChange={(e) => setParticipants(e.target.value)}
+              placeholder="Ana (Acme), Miguel"
+              className={input}
+            />
           </Field>
           <ContactChips
             clientId={clientId || null}
@@ -110,7 +124,10 @@ export function MeetingSheet({
           <Select
             label="Cliente"
             value={clientId}
-            options={[{ value: '', label: 'Sin cliente' }, ...(refs?.clients ?? []).map((c) => ({ value: c.id, label: c.name }))]}
+            options={[
+              { value: '', label: 'Sin cliente' },
+              ...(refs?.clients ?? []).map((c) => ({ value: c.id, label: c.name }))
+            ]}
             onChange={(id) => {
               setClientId(id)
               setProjectId('')
@@ -119,13 +136,19 @@ export function MeetingSheet({
           <Select
             label="Proyecto"
             value={projectId}
-            options={[{ value: '', label: 'Sin proyecto' }, ...projects.map((p) => ({ value: p.id, label: p.name }))]}
+            options={[
+              { value: '', label: 'Sin proyecto' },
+              ...projects.map((p) => ({ value: p.id, label: p.name }))
+            ]}
             onChange={setProjectId}
           />
           <Select
             label="Prospecto"
             value={prospectId}
-            options={[{ value: '', label: 'Sin prospecto' }, ...(refs?.prospects ?? []).map((p) => ({ value: p.id, label: p.company }))]}
+            options={[
+              { value: '', label: 'Sin prospecto' },
+              ...(refs?.prospects ?? []).map((p) => ({ value: p.id, label: p.company }))
+            ]}
             onChange={setProspectId}
           />
         </div>
@@ -141,7 +164,9 @@ export function MeetingSheet({
                 aria-checked={language === lang}
                 onClick={() => setLanguage(lang)}
                 className={`h-8 rounded-full px-4 text-caption font-bold transition-colors ${
-                  language === lang ? 'bg-surface-raised text-milk' : 'text-milk-soft hover:text-milk'
+                  language === lang
+                    ? 'bg-surface-raised text-milk'
+                    : 'text-milk-soft hover:text-milk'
                 }`}
               >
                 {LANGUAGE_LABEL[lang]}
@@ -150,11 +175,17 @@ export function MeetingSheet({
           </div>
         </div>
 
-        {error && <p className="mt-3 rounded-md bg-coral/12 px-4 py-3 text-caption text-coral">{error}</p>}
+        {error && (
+          <p className="mt-3 rounded-md bg-coral/12 px-4 py-3 text-caption text-coral">{error}</p>
+        )}
 
         <div className="mt-6 flex justify-end gap-2">
           {onCancel && (
-            <button type="button" onClick={onCancel} className="h-10 rounded-full px-5 text-caption font-extrabold text-milk-soft hover:text-milk">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="h-10 rounded-full px-5 text-caption font-extrabold text-milk-soft hover:text-milk"
+            >
               Cancelar
             </button>
           )}
@@ -186,12 +217,22 @@ export function ContactChips({
   const load = useCallback(
     () =>
       clientId || prospectId
-        ? api.listContacts({ client: clientId ?? undefined, prospect: clientId ? undefined : (prospectId ?? undefined) })
+        ? api
+            .listContacts({
+              client: clientId ?? undefined,
+              prospect: clientId ? undefined : (prospectId ?? undefined),
+              pageSize: 200
+            })
+            .then((page) => page.contacts)
         : Promise.resolve([]),
     [clientId, prospectId]
   )
   const { data } = useLoad(load)
-  const missing = (data ?? []).filter((c) => !current.some((p) => p.toLowerCase().includes(c.name.toLowerCase())))
+  // Solo sugerimos personas con nombre (los participantes se escriben por nombre).
+  const missing = (data ?? []).filter(
+    (c): c is typeof c & { name: string } =>
+      !!c.name && !current.some((p) => p.toLowerCase().includes(c.name!.toLowerCase()))
+  )
   if (!missing.length) return null
   return (
     <div className="flex flex-wrap gap-1.5">

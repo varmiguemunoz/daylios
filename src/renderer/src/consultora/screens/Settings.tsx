@@ -3,6 +3,8 @@ import { ArrowDown, ArrowUp, FolderOpen, Plus, X } from 'lucide-react'
 import type { SettingsInput, Stage, StageKind } from '@shared/consultora'
 import { api, attempt, openPath, useLoad } from '../lib'
 import { Button, ErrorNote, Field, Page, Section, Select } from '../ui'
+import { EmailSettings } from './SettingsEmail'
+import { HubSettings } from './SettingsHub'
 
 type Draft = Partial<Stage> & { name: string; kind: StageKind }
 
@@ -36,6 +38,8 @@ export function Settings(): React.JSX.Element {
   return (
     <Page title="Ajustes">
       <Connection />
+      <EmailSettings />
+      <HubSettings />
       <Voice />
 
       <Section
@@ -317,7 +321,8 @@ function Voice(): React.JSX.Element {
 
   if (!voice) return <Section title="Nota de voz">{null}</Section>
 
-  const save = async (input: SettingsInput): Promise<void> => setError(await attempt(() => api.saveSettings(input)))
+  const save = async (input: SettingsInput): Promise<void> =>
+    setError(await attempt(() => api.saveSettings(input)))
   const options = SHORTCUTS.some((s) => s.value === voice.shortcut)
     ? SHORTCUTS
     : [...SHORTCUTS, { value: voice.shortcut, label: voice.shortcut }]
@@ -335,7 +340,12 @@ function Voice(): React.JSX.Element {
             />
             Activada
           </label>
-          <Select label="Atajo" value={voice.shortcut} options={options} onChange={(voiceShortcut) => void save({ voiceShortcut })} />
+          <Select
+            label="Atajo"
+            value={voice.shortcut}
+            options={options}
+            onChange={(voiceShortcut) => void save({ voiceShortcut })}
+          />
           <span className="text-caption text-milk-soft">
             {!voice.enabled
               ? 'Desactivada'
@@ -356,14 +366,20 @@ function Voice(): React.JSX.Element {
         {voice.enabled && !voice.accessibility && (
           <div className="mt-3 rounded-md bg-apricot/10 px-4 py-3 text-caption text-apricot">
             <p>
-              Para «mantener pulsado» macOS pide el permiso de <b>Accesibilidad</b> (sirve para saber cuándo sueltas la
-              tecla; DayliOS no lee lo que escribes). Actívalo para daily-os y pulsa «Ya lo activé».
+              Para «mantener pulsado» macOS pide el permiso de <b>Accesibilidad</b> (sirve para
+              saber cuándo sueltas la tecla; DayliOS no lee lo que escribes). Actívalo para daily-os
+              y pulsa «Ya lo activé».
             </p>
             <div className="mt-3 flex gap-2">
-              <Button kind="primary" onClick={() => void window.api.permissions.open('accessibility')}>
+              <Button
+                kind="primary"
+                onClick={() => void window.api.permissions.open('accessibility')}
+              >
                 Abrir Ajustes del Sistema
               </Button>
-              <Button onClick={() => void attempt(() => api.refreshVoice()).then(setError)}>Ya lo activé</Button>
+              <Button onClick={() => void attempt(() => api.refreshVoice()).then(setError)}>
+                Ya lo activé
+              </Button>
             </div>
           </div>
         )}
@@ -371,13 +387,23 @@ function Voice(): React.JSX.Element {
         {voice.pending > 0 && (
           <div className="mt-3 flex items-center justify-between gap-3 rounded-md bg-butter/10 px-4 py-3 text-caption text-butter">
             <span>
-              {voice.pending} {voice.pending === 1 ? 'nota de voz no se pudo transcribir' : 'notas de voz no se pudieron transcribir'}.
+              {voice.pending}{' '}
+              {voice.pending === 1
+                ? 'nota de voz no se pudo transcribir'
+                : 'notas de voz no se pudieron transcribir'}
+              .
             </span>
             <Button
               onClick={() =>
-                void api.retryVoiceNotes().then(({ created, failed }) =>
-                  setRetried(failed ? `${created} creadas, ${failed} siguen fallando.` : `${created} creadas.`)
-                )
+                void api
+                  .retryVoiceNotes()
+                  .then(({ created, failed }) =>
+                    setRetried(
+                      failed
+                        ? `${created} creadas, ${failed} siguen fallando.`
+                        : `${created} creadas.`
+                    )
+                  )
               }
             >
               Reintentar
@@ -387,8 +413,8 @@ function Voice(): React.JSX.Element {
         {retried && <p className="mt-2 text-caption text-milk-soft">{retried}</p>}
 
         <p className="mt-3 text-caption text-milk-soft">
-          Funciona en cualquier app. Lo que dices se transcribe y se escribe como nota en markdown en la pestaña Notas.
-          El audio se borra al terminar.
+          Funciona en cualquier app. Lo que dices se transcribe y se escribe como nota en markdown
+          en la pestaña Notas. El audio se borra al terminar.
         </p>
       </div>
       <ErrorNote message={error} />

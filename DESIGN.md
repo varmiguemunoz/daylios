@@ -374,11 +374,25 @@ The day's ceiling, drawn. Eight equal pill segments in a row.
 - **Recording:** idle «Grabar reunión» quiet pill with a rose dot; live state is a rose 15% pill with a pulsing dot and tabular timer plus «Detener». Stopping opens a centered sheet (surface, xl radius, toast float shadow) for title, participants and association.
 
 ### Tags, Effort and Drag
+
 - **Tag chip:** 20px pill (24px in detail), surface-raised, milk-soft bold, `#tag`. Tags carry no color: they are not a meaning.
 - **Effort:** three 3px bars of 8/10/12px; filled milk-soft, empty hairline. Detail uses a three-pill rail (Bajo · Medio · Alto), active = surface-raised + milk; click again clears.
 - **Drag:** dragged row/card at 40% opacity; drop target = 3px apricot line above (or below the last) item. Pipeline column under the pointer steps from 50% surface to surface.
 
+### Email Marketing (Consultora)
+
+- **Sidebar group:** a micro milk-soft «Email» label under the main sections, then Fuentes, Reglas, Secuencias, Newsletters (same side items).
+- **Subscription pill:** mint «Suscrito»; neutral «Baja»; coral «Rebotó» / «Spam». A work contact (`none`) shows nothing: calm by default.
+- **Tags:** neutral surface-raised micro pills. A tag is a label, not a state, so it never takes a pastel. The tag editor is a surface field with removable pills (rose on hover) and an inline input with native suggestions.
+- **Status filter:** chips (the Period pattern, apricot when selected); tag and source filters are pill selects next to the search pill.
+- **Consent:** subscribing by hand is two-step: «Suscribir» becomes «¿Te dio su permiso? Suscribir».
+- **Sources:** one surface card per source. URL and secret sit in night rows with system mono (they are code), each with a «Copiar» button that turns into a mint check. Rotating the secret is two-step (apricot), deleting is two-step (rose).
+- **Rules:** read as sentences («Cuando entra [tag] → añadir [tag] · disparar `evento`»). Paused rules drop to 60% opacity. Editing happens in place inside a card with a 1.5px inset apricot stroke at 40%.
+- **Newsletters:** «Pausar» quiet pill; while paused it becomes an apricot «Reanudar». History rows expand into a sandboxed preview on milk (the email's own world). Status: mint sent, apricot scheduled or sending, coral failed.
+- **Notices that need action** (connect Resend or the hub) use a 10% apricot wash with an apricot action pill.
+
 ### Voice Pill
+
 - Floating 44px pill, top center of the active display, over everything (also full-screen apps), never takes focus. Surface-raised with the toast float shadow (second and last allowed shadow use).
 - Listening: pulsing rose dot (live) + «Escuchando» milk + tabular timer milk-soft. Working: «Escribiendo la nota…» in apricot. Done: mint check + note title, 1.6s, then hides. Error: coral text.
 
