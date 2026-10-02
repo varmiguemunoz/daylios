@@ -15,6 +15,8 @@ export type Screen =
   | { name: 'meeting'; id: string }
   | { name: 'pipeline' }
   | { name: 'prospect'; id: string }
+  | { name: 'contacts' }
+  | { name: 'contact'; id: string }
   | { name: 'settings' }
   | { name: 'search'; query: string }
 

@@ -6,6 +6,7 @@ import { MeetingService } from './services/meeting.service'
 import { ContextService } from './services/context.service'
 import { AiService } from './services/ai.service'
 import { RecordingService } from './services/recording.service'
+import { ContactService } from './services/contact.service'
 
 /** Crea los servicios de la Consultora una sola vez. Los usan IPC (ventana) y Express (Claude). */
 export function createConsultora(
@@ -23,6 +24,7 @@ export function createConsultora(
     meetings,
     ai,
     context: new ContextService(db, clients),
+    contacts: new ContactService(db),
     recordings: new RecordingService(db, meetings, ai, notify, onRecording)
   }
 }
@@ -34,5 +36,6 @@ export interface Consultora {
   meetings: MeetingService
   ai: AiService
   context: ContextService
+  contacts: ContactService
   recordings: RecordingService
 }

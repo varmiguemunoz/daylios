@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto'
 import type { DataSource, EntityManager, FindOptionsWhere } from 'typeorm'
 import { toDayKey } from '@shared/tasks'
 import {
+  LANGUAGES,
   normalizeName,
   type ActionItem,
   type Meeting,
@@ -17,7 +18,7 @@ import { ProspectModel } from '../models/prospect.model'
 import { transactionGuard } from '../guards/transaction.guard'
 import { AppError } from './app.error'
 import { findByRef } from './ref'
-import { markdown, now, optionalText, requiredText } from './fields'
+import { markdown, now, oneOf, optionalText, requiredText } from './fields'
 import { actionItems, brief } from './meeting.helpers'
 import { moveInto } from './documents'
 import { pageByDay } from './page-by-day'
@@ -89,6 +90,7 @@ export class MeetingService {
         rawNotesMd: markdown(input.rawNotesMd, 'Las notas'),
         recordingPath: null,
         durationSec: null,
+        language: null,
         status: 'ready',
         error: null,
         createdAt: stamp,
@@ -114,6 +116,12 @@ export class MeetingService {
       if (patch.actionItems !== undefined) meeting.actionItems = checkActionItems(patch.actionItems)
       if (patch.rawNotesMd !== undefined)
         meeting.rawNotesMd = markdown(patch.rawNotesMd, 'Las notas')
+      if (patch.language !== undefined) {
+        const language = patch.language === null ? null : oneOf(patch.language, LANGUAGES, 'El idioma')
+        // Otro idioma = otra transcripción: se borra para que «Resumir de nuevo» vuelva a transcribir.
+        if (language !== meeting.language && meeting.recordingPath) meeting.transcriptMd = ''
+        meeting.language = language
+      }
       await associate(manager, meeting, patch)
       meeting.updatedAt = now()
       return meetings.save(meeting)

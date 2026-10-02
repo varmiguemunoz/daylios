@@ -1,14 +1,14 @@
 import { randomUUID } from 'crypto'
 import { execFile } from 'child_process'
 import { createWriteStream, type WriteStream } from 'fs'
-import { mkdir, mkdtemp, readdir, rm, stat } from 'fs/promises'
+import { copyFile, mkdir, mkdtemp, readdir, rm, stat } from 'fs/promises'
 import { tmpdir } from 'os'
-import { join } from 'path'
+import { basename, extname, join } from 'path'
 import { promisify } from 'util'
 import { Notification } from 'electron'
 import ffmpegPath from 'ffmpeg-static'
 import type { DataSource } from 'typeorm'
-import type { Meeting, StopInfo } from '@shared/consultora'
+import { LANGUAGES, type ImportInfo, type Language, type Meeting, type StopInfo } from '@shared/consultora'
 import { MeetingModel } from '../models/meeting.model'
 import { ClientModel } from '../models/client.model'
 import { ProjectModel } from '../models/project.model'
@@ -76,6 +76,7 @@ export class RecordingService {
       rawNotesMd: '',
       recordingPath: join(dir, `${fileStamp(date)}.webm`),
       durationSec: null,
+      language: null,
       status: 'recording',
       error: null,
       createdAt: stamp,
@@ -115,9 +116,66 @@ export class RecordingService {
       project: info.projectId ?? '',
       prospect: info.prospectId ?? ''
     })
-    await this.patch(meetingId, { durationSec: Math.round(info.durationSec) || null })
+    await this.patch(meetingId, {
+      durationSec: Math.round(info.durationSec) || null,
+      language: checkLanguage(info.language)
+    })
 
     return this.process(meetingId)
+  }
+
+  /**
+   * Sube una grabación que ya existía (video o audio): la copia a la carpeta de documentos
+   * (el original no se toca), crea la reunión y lanza el mismo procesado que una grabación en vivo.
+   * Fecha = fecha de creación del archivo; duración = la que reporta ffmpeg.
+   */
+  async import(source: string, info: ImportInfo): Promise<Meeting> {
+    const ext = extname(source).toLowerCase()
+    if (!IMPORT_EXTENSIONS.includes(ext)) {
+      throw new AppError('invalid', `Formato no soportado. Usa: ${IMPORT_EXTENSIONS.join(', ')}.`)
+    }
+    const file = await stat(source).catch(() => null)
+    if (!file?.isFile()) throw new AppError('not_found', 'No encuentro ese archivo.')
+
+    const dir = join(config.docsPath(), '_reuniones')
+    await mkdir(dir, { recursive: true })
+    const date = file.birthtime.getTime() > 0 ? file.birthtime : file.mtime
+    const target = join(dir, `${fileStamp(date)} ${basename(source, ext)}${ext}`)
+    await copyFile(source, target)
+
+    const stamp = now()
+    const meeting: Meeting = {
+      id: randomUUID(),
+      date: date.toISOString(),
+      title: info.title?.trim() || basename(source, ext),
+      clientId: null,
+      projectId: null,
+      prospectId: null,
+      participants: [],
+      summaryMd: '',
+      decisionsMd: '',
+      actionItems: [],
+      transcriptMd: '',
+      rawNotesMd: '',
+      recordingPath: target,
+      durationSec: await mediaDuration(target),
+      language: checkLanguage(info.language),
+      status: 'transcribing',
+      error: null,
+      createdAt: stamp,
+      updatedAt: stamp
+    }
+    await transactionGuard(this.db, (manager) => manager.getRepository(MeetingModel).insert(meeting))
+
+    // Asociación (mueve el archivo a la carpeta del cliente si hay cliente) y participantes
+    await this.meetings.update(meeting.id, {
+      participants: info.participants ?? [],
+      client: info.clientId ?? '',
+      project: info.projectId ?? '',
+      prospect: info.prospectId ?? ''
+    })
+    this.onChange()
+    return this.process(meeting.id)
   }
 
   /** Lanza el procesado en segundo plano y devuelve la reunión al momento. */
@@ -235,7 +293,7 @@ export class RecordingService {
       if (parts.length === 0) throw new AppError('invalid', 'La grabación no tiene audio.')
 
       const hint = [meeting.title, ...meeting.participants].join(', ')
-      return await this.ai.transcribe(parts, hint)
+      return await this.ai.transcribe(parts, hint, meeting.language)
     } finally {
       await rm(temp, { recursive: true, force: true })
     }
@@ -261,6 +319,25 @@ export class RecordingService {
     )
     this.onChange()
   }
+}
+
+/** Formatos que se pueden subir (ffmpeg los lee todos). */
+const IMPORT_EXTENSIONS = ['.mp4', '.mov', '.m4v', '.mkv', '.webm', '.mp3', '.m4a', '.wav']
+
+/** Idioma hablado válido o null (Whisper detecta solo). */
+function checkLanguage(value: unknown): Language | null {
+  return LANGUAGES.includes(value as Language) ? (value as Language) : null
+}
+
+/** Duración en segundos según ffmpeg («Duration: 00:12:34.56»). null si no se puede leer. */
+async function mediaDuration(file: string): Promise<number | null> {
+  // `ffmpeg -i` sin salida termina con error, pero antes imprime la duración en stderr.
+  const stderr = await run(FFMPEG, ['-hide_banner', '-i', file]).then(
+    (r) => r.stderr,
+    (e: { stderr?: string }) => e.stderr ?? ''
+  )
+  const m = /Duration: (\d+):(\d+):(\d+(?:\.\d+)?)/.exec(String(stderr))
+  return m ? Math.round(Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3])) : null
 }
 
 /** Tamaño en bytes; 0 si no existe. */

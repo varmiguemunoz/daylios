@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { TasksApi } from '../shared/tasks'
 import type { NotesApi } from '../shared/notes'
 import type { ConsultoraApi, StopInfo } from '../shared/consultora'
@@ -12,7 +12,9 @@ const tasks: TasksApi = {
   restore: (task) => ipcRenderer.invoke('tasks:restore', task),
   moveToDate: (id, date) => ipcRenderer.invoke('tasks:moveToDate', id, date),
   carryOver: (from, to) => ipcRenderer.invoke('tasks:carryOver', from, to),
-  history: (query) => ipcRenderer.invoke('tasks:history', query)
+  history: (query) => ipcRenderer.invoke('tasks:history', query),
+  reorder: (date, ids) => ipcRenderer.invoke('tasks:reorder', date, ids),
+  tags: () => ipcRenderer.invoke('tasks:tags')
 }
 
 const notes: NotesApi = {
@@ -54,6 +56,13 @@ const consultora: ConsultoraApi = {
   createProspect: call('createProspect'),
   updateProspect: call('updateProspect'),
   moveProspect: call('moveProspect'),
+  listContacts: call('listContacts'),
+  getContact: call('getContact'),
+  createContact: call('createContact'),
+  updateContact: call('updateContact'),
+  removeContact: call('removeContact'),
+  pickRecording: call('pickRecording'),
+  importRecording: call('importRecording'),
   listMeetings: call('listMeetings'),
   getMeeting: call('getMeeting'),
   createMeeting: call('createMeeting'),
@@ -118,6 +127,8 @@ contextBridge.exposeInMainWorld('api', {
   hideWindow: () => ipcRenderer.send('window:hide'),
   openConsultora: () => ipcRenderer.send('window:openConsultora'),
   openPath: (path: string) => ipcRenderer.invoke('shell:open', path),
+  /** Ruta en disco de un archivo soltado en la ventana (Electron ya no expone File.path). */
+  pathForFile: (file: File) => webUtils.getPathForFile(file),
   onWindowShown: (cb: () => void) => on('window:shown', cb),
   onDataChanged: (cb: () => void) => on('data:changed', cb)
 })

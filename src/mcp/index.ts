@@ -108,31 +108,35 @@ server.registerTool(
   {
     description:
       'Crea una tarea. Sin fecha = hoy. Falla si el día ya tiene 8 tareas. ' +
-      'El título admite markdown en línea; la descripción, markdown completo.',
+      'El título admite markdown en línea; la descripción, markdown completo. ' +
+      'Tags y esfuerzo: en el título ("Propuesta Acme #ventas !alto") o con tags / effort.',
     inputSchema: {
       title: z.string().min(1).max(200),
       date: day.optional(),
-      description: z.string().max(20000).optional().describe('Markdown')
+      description: z.string().max(20000).optional().describe('Markdown'),
+      tags: z.array(z.string()).max(5).optional().describe('Sin #, minúsculas'),
+      effort: z.enum(['alto', 'medio', 'bajo']).optional()
     }
   },
-  ({ title, date, description }) => tool(() => api('POST', '/tasks', { title, date, description }))
+  (args) => tool(() => api('POST', '/tasks', args))
 )
 
 server.registerTool(
   'update_task',
   {
     description:
-      'Edita el título, la descripción (markdown; cadena vacía la borra) y/o marca una tarea ' +
-      'como hecha (done: true) o pendiente (done: false).',
+      'Edita el título, la descripción (markdown; cadena vacía la borra), los tags (lista completa), ' +
+      'el esfuerzo (null lo quita) y/o marca una tarea como hecha (done: true) o pendiente (done: false).',
     inputSchema: {
       id: z.string(),
       title: z.string().min(1).max(200).optional(),
       description: z.string().max(20000).optional(),
+      tags: z.array(z.string()).max(5).optional(),
+      effort: z.enum(['alto', 'medio', 'bajo']).nullable().optional(),
       done: z.boolean().optional()
     }
   },
-  ({ id, title, description, done }) =>
-    tool(() => api('PATCH', `/tasks/${encodeURIComponent(id)}`, { title, description, done }))
+  ({ id, ...fields }) => tool(() => api('PATCH', `/tasks/${encodeURIComponent(id)}`, fields))
 )
 
 server.registerTool(
@@ -441,10 +445,14 @@ server.registerTool(
   {
     description:
       'Mueve un prospecto a otra etapa. Una etapa de tipo ganado lo convierte en cliente (crea cliente y carpeta).',
-    inputSchema: { prospect: ref('del prospecto'), stage: ref('de la etapa') }
+    inputSchema: {
+      prospect: ref('del prospecto'),
+      stage: ref('de la etapa'),
+      index: z.number().int().min(0).optional().describe('Posición dentro de la etapa (0 = arriba)')
+    }
   },
-  ({ prospect, stage }) =>
-    tool(() => api('POST', `/consultora/prospects/${enc(prospect)}/move`, { stage }))
+  ({ prospect, stage, index }) =>
+    tool(() => api('POST', `/consultora/prospects/${enc(prospect)}/move`, { stage, index }))
 )
 
 server.registerTool(
@@ -546,6 +554,72 @@ server.registerTool(
     }
   },
   (args) => tool(() => api('POST', '/consultora/notes/append', args))
+)
+
+// ---- Contactos ----
+
+server.registerTool(
+  'list_contacts',
+  {
+    description:
+      'Contactos (personas) con su empresa. Filtra por cliente, prospecto o texto (nombre, rol, email, empresa).',
+    inputSchema: { client: z.string().optional(), prospect: z.string().optional(), query: z.string().optional() }
+  },
+  ({ client, prospect, query: q }) => tool(() => api('GET', `/consultora/contacts${query({ client, prospect, q })}`))
+)
+
+server.registerTool(
+  'get_contact',
+  {
+    description: 'Un contacto: datos, empresa, notas y reuniones donde aparece como participante.',
+    inputSchema: { id: z.string() }
+  },
+  ({ id }) => tool(() => api('GET', `/consultora/contacts/${enc(id)}`))
+)
+
+server.registerTool(
+  'save_contact',
+  {
+    description:
+      'Crea un contacto (sin "id") o edita uno. client / prospect = id o nombre de la empresa ("" quita la relación).',
+    inputSchema: {
+      id: z.string().optional(),
+      name: z.string().optional(),
+      role: z.string().optional(),
+      email: z.string().optional(),
+      phone: z.string().optional(),
+      linkedin: z.string().optional(),
+      notesMd: z.string().optional(),
+      client: z.string().optional(),
+      prospect: z.string().optional()
+    }
+  },
+  ({ id, ...fields }) =>
+    tool(() =>
+      id ? api('PATCH', `/consultora/contacts/${enc(id)}`, fields) : api('POST', '/consultora/contacts', fields)
+    )
+)
+
+// ---- Subir una grabación existente ----
+
+server.registerTool(
+  'import_recording',
+  {
+    description:
+      'Transcribe y resume una reunión ya grabada (archivo en el Mac del dueño: mp4, mov, m4v, mkv, webm, mp3, m4a, wav). ' +
+      'language = idioma hablado: "es" o "en". Se copia a la carpeta de documentos; el procesado sigue en segundo plano ' +
+      '(consulta con get_meeting).',
+    inputSchema: {
+      path: z.string().describe('Ruta absoluta del archivo'),
+      language: z.enum(['es', 'en']),
+      title: z.string().optional(),
+      participants: z.array(z.string()).optional(),
+      clientId: z.string().optional(),
+      projectId: z.string().optional(),
+      prospectId: z.string().optional()
+    }
+  },
+  (args) => tool(() => api('POST', '/consultora/meetings/import', args))
 )
 
 void server.connect(new StdioServerTransport())

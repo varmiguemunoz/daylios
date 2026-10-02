@@ -23,6 +23,7 @@ export class ProspectController {
 
   /** `{ stage }` = id o nombre de la etapa. Ganar crea el cliente. */
   move = async (req: Request, res: Response): Promise<void> => {
-    res.json(await this.service.move(String(req.params.ref), req.body?.stage))
+    const index = typeof req.body?.index === 'number' ? req.body.index : undefined
+    res.json(await this.service.move(String(req.params.ref), req.body?.stage, index))
   }
 }

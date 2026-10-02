@@ -15,6 +15,7 @@ import {
   Section,
   Select
 } from '../ui'
+import { ContactsSection } from '../ContactsSection'
 
 /** Prospecto: etapa, valor, origen, próximo paso, contacto, notas y reuniones de venta. */
 export function Prospect({
@@ -139,22 +140,21 @@ export function Prospect({
         </Field>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
-        <Section title="Contacto">
-          <MarkdownField
-            value={p.contactMd}
-            placeholder="Quién decide, emails, LinkedIn…"
-            onSave={(contactMd) => void save({ contactMd })}
-          />
+      <ContactsSection contacts={p.contacts} prospect={p.id} go={go} />
+
+      <Section title="Notas de venta">
+        <MarkdownField
+          value={p.notesMd}
+          placeholder="Necesidad, presupuesto, objeciones, competencia…"
+          onSave={(notesMd) => void save({ notesMd })}
+        />
+      </Section>
+
+      {p.contactMd.trim() && (
+        <Section title="Notas de contacto">
+          <MarkdownField value={p.contactMd} placeholder="" onSave={(contactMd) => void save({ contactMd })} />
         </Section>
-        <Section title="Notas de venta">
-          <MarkdownField
-            value={p.notesMd}
-            placeholder="Necesidad, presupuesto, objeciones, competencia…"
-            onSave={(notesMd) => void save({ notesMd })}
-          />
-        </Section>
-      </div>
+      )}
 
       <Section title="Reuniones de venta">
         {p.meetings.length === 0 ? (

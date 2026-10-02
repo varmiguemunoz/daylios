@@ -33,7 +33,12 @@ export class TaskController {
       text(body.title) ?? '',
       text(body.description)
     )
-    res.status(201).json(taskView(task))
+    // Tags / esfuerzo explícitos (además de los que vengan en el título)
+    const extra: TaskPatch = {}
+    if (Array.isArray(body.tags)) extra.tags = [...task.tags, ...body.tags]
+    if (body.effort !== undefined) extra.effort = body.effort
+    const saved = Object.keys(extra).length ? await this.service.update(task.id, extra) : task
+    res.status(201).json(taskView(saved))
   }
 
   update = async (req: Request, res: Response): Promise<void> => {
@@ -42,6 +47,8 @@ export class TaskController {
     if (typeof body.title === 'string') patch.title = body.title
     if (typeof body.done === 'boolean') patch.done = body.done
     if (typeof body.description === 'string') patch.description = body.description
+    if (Array.isArray(body.tags)) patch.tags = body.tags
+    if (body.effort !== undefined) patch.effort = body.effort
     res.json(taskView(await this.service.update(String(req.params.id), patch)))
   }
 

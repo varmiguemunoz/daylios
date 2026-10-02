@@ -16,6 +16,7 @@ import {
   Section,
   Select
 } from '../ui'
+import { ContactsSection } from '../ContactsSection'
 
 /** Ficha de cliente: datos, proyectos, reuniones, action items abiertos, notas y documentos. */
 export function Client({
@@ -195,22 +196,22 @@ export function Client({
         )}
       </Section>
 
-      <div className="grid grid-cols-2 gap-6">
-        <Section title="Contactos">
-          <MarkdownField
-            value={c.contactsMd}
-            placeholder="Personas, roles, emails, teléfonos…"
-            onSave={(contactsMd) => void save({ contactsMd })}
-          />
+      <ContactsSection contacts={c.contacts} client={c.id} go={go} />
+
+      <Section title="Notas de contexto">
+        <MarkdownField
+          value={c.notesMd}
+          placeholder="Cómo trabajan, qué les importa, acuerdos comerciales…"
+          onSave={(notesMd) => void save({ notesMd })}
+        />
+      </Section>
+
+      {/* Texto de contactos de antes de existir la base de contactos: solo si tiene algo */}
+      {c.contactsMd.trim() && (
+        <Section title="Notas de contactos">
+          <MarkdownField value={c.contactsMd} placeholder="" onSave={(contactsMd) => void save({ contactsMd })} />
         </Section>
-        <Section title="Notas de contexto">
-          <MarkdownField
-            value={c.notesMd}
-            placeholder="Cómo trabajan, qué les importa, acuerdos comerciales…"
-            onSave={(notesMd) => void save({ notesMd })}
-          />
-        </Section>
-      </div>
+      )}
 
       <Section
         title="Documentos"

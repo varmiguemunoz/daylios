@@ -3,14 +3,32 @@ import { Plus } from 'lucide-react'
 import { todayKey } from '@shared/tasks'
 import { api, attempt, money, shortDate, useLoad, type Go } from '../lib'
 import { ErrorNote, Page } from '../ui'
+import { finalIndex, useReorder } from '../../lib/useReorder'
+import { errorMessage } from '../../lib/api'
 
-/** Tablero por etapas. Cambiar de etapa: en el detalle del prospecto (sin arrastrar en el MVP). */
+/**
+ * Tablero por etapas. Arrastra una tarjeta a otra columna para cambiar de etapa
+ * (a «ganada» = se crea el cliente) o dentro de su columna para ordenar.
+ */
 export function Pipeline({ go }: { go: Go }): React.JSX.Element {
   const load = useCallback(() => api.pipeline(), [])
   const { data, error: loadError } = useLoad(load)
   const [company, setCompany] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
   const today = todayKey()
+
+  const drag = useReorder((id, index, stageId) => {
+    const from = data?.stages.find((st) => st.id === stageId)?.prospects.findIndex((p) => p.id === id) ?? -1
+    const at = from >= 0 ? finalIndex(index, from) : index // misma columna: descontar la propia tarjeta
+    api
+      .moveProspect(id, stageId, at)
+      .then((r) => {
+        setError(null)
+        setNotice(r.client ? `Ganado: «${r.client.name}» ya es cliente y tiene su carpeta.` : null)
+      })
+      .catch((e) => setError(errorMessage(e)))
+  })
 
   const create = async (): Promise<void> => {
     if (!company?.trim()) return setCompany(null)
@@ -20,6 +38,15 @@ export function Pipeline({ go }: { go: Go }): React.JSX.Element {
     })
     setError(failed)
     if (!failed) go({ name: 'prospect', id })
+  }
+
+  /** Línea apricot de «caerá aquí» encima de la tarjeta `i` (o debajo de la última). */
+  const dropLine = (stageId: string, i: number, count: number): string => {
+    const t = drag.target
+    if (!drag.dragging || !t || t.group !== stageId) return ''
+    if (t.index === i) return 'shadow-[0_-3px_0_0_var(--color-apricot)]'
+    if (i === count - 1 && t.index === count) return 'shadow-[0_3px_0_0_var(--color-apricot)]'
+    return ''
   }
 
   return (
@@ -56,6 +83,7 @@ export function Pipeline({ go }: { go: Go }): React.JSX.Element {
           />
         </form>
       )}
+      {notice && <p className="mt-4 rounded-md bg-mint/15 px-4 py-3 text-caption text-mint">{notice}</p>}
       <ErrorNote message={error ?? loadError} />
 
       <div className="no-scrollbar -mr-10 mt-6 flex gap-3 overflow-x-auto pr-10 pb-2">
@@ -72,8 +100,13 @@ export function Pipeline({ go }: { go: Go }): React.JSX.Element {
                 <span className="text-micro font-bold text-milk-soft">{money(stage.valueUsd)}</span>
               )}
             </div>
-            <div className="flex min-h-24 flex-col gap-1.5 rounded-md bg-surface/50 p-1.5">
-              {stage.prospects.map((p) => {
+            <div
+              className={`flex min-h-24 flex-1 flex-col gap-1.5 rounded-md p-1.5 transition-colors ${
+                drag.dragging && drag.target?.group === stage.id ? 'bg-surface' : 'bg-surface/50'
+              }`}
+              {...drag.zone(stage.id, stage.prospects.length)}
+            >
+              {stage.prospects.map((p, i) => {
                 const late =
                   p.nextStepDate !== null && p.nextStepDate < today && stage.kind === 'open'
                 return (
@@ -81,7 +114,10 @@ export function Pipeline({ go }: { go: Go }): React.JSX.Element {
                     key={p.id}
                     type="button"
                     onClick={() => go({ name: 'prospect', id: p.id })}
-                    className="rounded-sm bg-surface px-3.5 py-3 text-left transition-colors hover:bg-surface-raised focus-visible:bg-surface-raised"
+                    {...drag.item(p.id, i, stage.id)}
+                    className={`rounded-sm bg-surface px-3.5 py-3 text-left transition-[background-color,opacity] hover:bg-surface-raised focus-visible:bg-surface-raised ${
+                      drag.dragging === p.id ? 'opacity-40' : ''
+                    } ${dropLine(stage.id, i, stage.prospects.length)}`}
                   >
                     <span className="block truncate text-list font-bold">{p.company}</span>
                     {p.valueUsd !== null && (

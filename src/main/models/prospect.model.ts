@@ -11,6 +11,7 @@ export const ProspectModel = new EntitySchema<Prospect>({
     valueUsd: { name: 'value_usd', type: 'real', nullable: true },
     source: { type: 'text', nullable: true },
     stageId: { name: 'stage_id', type: 'text' },
+    position: { type: 'integer', default: 0 },
     notesMd: { name: 'notes_md', type: 'text', default: '' },
     nextStep: { name: 'next_step', type: 'text', nullable: true },
     nextStepDate: { name: 'next_step_date', type: 'text', nullable: true },

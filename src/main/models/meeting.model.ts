@@ -20,6 +20,7 @@ export const MeetingModel = new EntitySchema<Meeting>({
     rawNotesMd: { name: 'raw_notes_md', type: 'text', default: '' },
     recordingPath: { name: 'recording_path', type: 'text', nullable: true },
     durationSec: { name: 'duration_sec', type: 'integer', nullable: true },
+    language: { type: 'text', nullable: true },
     status: { type: 'text' },
     error: { type: 'text', nullable: true },
     createdAt: { name: 'created_at', type: 'text' },

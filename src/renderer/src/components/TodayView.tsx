@@ -7,6 +7,7 @@ import { onWindowShown } from '../lib/api'
 import { Meter } from './Meter'
 import { TaskRow } from './TaskRow'
 import { YesterdayTray } from './YesterdayTray'
+import { finalIndex, useReorder } from '../lib/useReorder'
 
 interface TodayViewProps {
   date: DayKey
@@ -36,6 +37,16 @@ export function TodayView({ date, day, onOpenTask }: TodayViewProps): React.JSX.
     inputRef.current?.focus()
     return onWindowShown(() => inputRef.current?.focus())
   }, [])
+
+  // Arrastrar para reordenar (una sola lista: grupo 'today')
+  const ids = day.today.map((t) => t.id)
+  const drag = useReorder((id, index) => void day.reorder(id, finalIndex(index, ids.indexOf(id))))
+  const lineAt = (i: number): 'before' | 'after' | null => {
+    if (!drag.target || !drag.dragging) return null
+    if (drag.target.index === i) return 'before'
+    if (i === total - 1 && drag.target.index === total) return 'after'
+    return null
+  }
 
   const submit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
@@ -102,7 +113,7 @@ export function TodayView({ date, day, onOpenTask }: TodayViewProps): React.JSX.
                   setDraft('')
                 }
               }}
-              placeholder={day.full ? 'Día lleno · 8 de 8' : 'Añade una tarea…'}
+              placeholder={day.full ? 'Día lleno · 8 de 8' : 'Añade una tarea… #tag !alto'}
               aria-label="Nueva tarea"
               className="min-w-0 flex-1 bg-transparent text-body outline-none disabled:cursor-not-allowed"
             />
@@ -148,14 +159,18 @@ export function TodayView({ date, day, onOpenTask }: TodayViewProps): React.JSX.
         )}
 
         {total > 0 && (
-          <ul className="flex flex-col gap-1" aria-label="Tareas de hoy">
-            {day.today.map((task) => (
+          <ul className="flex flex-col gap-1" aria-label="Tareas de hoy" {...drag.zone('today', total)}>
+            {day.today.map((task, i) => (
               <TaskRow
                 key={task.id}
                 task={task}
                 onToggle={() => void day.toggle(task)}
                 onOpen={() => onOpenTask(task)}
                 onRemove={() => void day.remove(task)}
+                onMoveBy={(delta) => void day.reorder(task.id, i + delta)}
+                drag={drag.item(task.id, i, 'today')}
+                dragging={drag.dragging === task.id}
+                dropLine={lineAt(i)}
               />
             ))}
           </ul>

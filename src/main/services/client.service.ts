@@ -15,6 +15,7 @@ import { ClientModel } from '../models/client.model'
 import { ProjectModel } from '../models/project.model'
 import { ProspectModel } from '../models/prospect.model'
 import { MeetingModel } from '../models/meeting.model'
+import { ContactModel } from '../models/contact.model'
 import { transactionGuard } from '../guards/transaction.guard'
 import { config } from '../config'
 import { AppError } from './app.error'
@@ -60,9 +61,13 @@ export class ClientService {
       .getRepository(MeetingModel)
       .find({ where: { clientId: client.id }, order: { date: 'DESC' } })
     const prospects = await this.db.getRepository(ProspectModel).findBy({ clientId: client.id })
+    const contacts = await this.db
+      .getRepository(ContactModel)
+      .find({ where: { clientId: client.id }, order: { name: 'ASC' } })
 
     return {
       ...client,
+      contacts,
       projects: projects.map((p) => ({ ...p, openDeliverables: openChecklist(p.deliverablesMd) })),
       meetings: meetings.map(brief),
       prospects,

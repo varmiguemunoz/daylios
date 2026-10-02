@@ -77,6 +77,10 @@ La primera grabación pide **Micrófono** y **Grabación de pantalla y audio del
 
 Grabaciones: `CLIENTS_DOCS_PATH/_reuniones/` hasta que se asocian a un cliente; entonces se mueven a `<Cliente>/Reuniones/`. Coste orientativo: 1 h ≈ 0,36 USD de transcripción.
 
+## Tareas: tags y esfuerzo
+
+Escribe `Propuesta Acme #ventas !alto` y se guarda la tarea «Propuesta Acme» con el tag `ventas` y esfuerzo alto (`!a`, `!m`, `!b` también valen). En el detalle se editan ambos. Arrastra las filas de Hoy para ordenarlas.
+
 ## Nota de voz
 
 Mantén pulsado **⌥ Espacio** en cualquier app, habla y suelta. Aparece una pastilla arriba («● Escuchando»); al soltar, DayliOS transcribe (Whisper), escribe la nota en markdown (título, listas, casillas para tareas) y la guarda en **Notas**. La notificación «Nota creada» abre la nota.
@@ -139,7 +143,7 @@ App instalada en `/Applications`:
 | `update_note`        | Reemplaza el contenido de una nota                                                          |
 | `delete_note`        | Elimina una nota                                                                            |
 
-`create_task` y `update_task` aceptan `description` (markdown).
+`create_task` y `update_task` aceptan `description` (markdown), `tags` y `effort` (alto/medio/bajo). En el título también funcionan `#tag` y `!alto` / `!medio` / `!bajo`.
 
 Consultora (las referencias aceptan id o nombre):
 

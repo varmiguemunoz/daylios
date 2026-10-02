@@ -7,7 +7,8 @@ const TYPE: Record<SearchHit['type'], string> = {
   client: 'Cliente',
   project: 'Proyecto',
   meeting: 'Reunión',
-  prospect: 'Prospecto'
+  prospect: 'Prospecto',
+  contact: 'Contacto'
 }
 
 const target = (hit: SearchHit): Screen => ({ name: hit.type, id: hit.id }) as Screen

@@ -4,6 +4,7 @@ import type { ProjectController } from '../controllers/project.controller'
 import type { ProspectController } from '../controllers/prospect.controller'
 import type { MeetingController } from '../controllers/meeting.controller'
 import type { ContextController } from '../controllers/context.controller'
+import type { ContactController } from '../controllers/contact.controller'
 
 export interface ConsultoraControllers {
   clients: ClientController
@@ -11,6 +12,7 @@ export interface ConsultoraControllers {
   prospects: ProspectController
   meetings: MeetingController
   context: ContextController
+  contacts: ContactController
 }
 
 /** Rutas de la Consultora, montadas en `/consultora`. `:ref` acepta id o nombre. */
@@ -44,4 +46,11 @@ export function consultoraRoutes(c: ConsultoraControllers): Router {
     .patch('/meetings/:id/action-items/:index', c.meetings.updateActionItem)
     .post('/meetings/:id/process', c.meetings.process)
     .get('/action-items', c.meetings.actionItems)
+    .post('/meetings/import', c.meetings.importRecording)
+
+    .get('/contacts', c.contacts.list)
+    .post('/contacts', c.contacts.create)
+    .get('/contacts/:id', c.contacts.get)
+    .patch('/contacts/:id', c.contacts.update)
+    .delete('/contacts/:id', c.contacts.remove)
 }

@@ -31,6 +31,8 @@ declare global {
       openConsultora: () => void
       /** Abre un archivo o carpeta en Finder (solo dentro de tu carpeta personal). */
       openPath: (path: string) => Promise<void>
+      /** Ruta en disco de un archivo soltado en la ventana. */
+      pathForFile: (file: File) => string
       /** La ventana del menubar se acaba de mostrar. */
       onWindowShown: (cb: () => void) => () => void
       /** Claude, una grabación u otra ventana cambiaron datos. */

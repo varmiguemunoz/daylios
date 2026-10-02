@@ -6,6 +6,10 @@
 export type ClientStatus = 'activo' | 'historico'
 export type ProjectStatus = 'activo' | 'pausa' | 'cerrado'
 export type StageKind = 'open' | 'won' | 'lost'
+/** Idiomas de transcripción disponibles. */
+export type Language = 'es' | 'en'
+export const LANGUAGES: Language[] = ['es', 'en']
+
 export type MeetingStatus = 'recording' | 'transcribing' | 'summarizing' | 'ready' | 'error'
 
 export const CLIENT_STATUSES: ClientStatus[] = ['activo', 'historico']
@@ -54,6 +58,8 @@ export interface Prospect {
   valueUsd: number | null
   source: string | null
   stageId: string
+  /** Orden dentro de su etapa. */
+  position: number
   notesMd: string
   nextStep: string | null
   /** YYYY-MM-DD */
@@ -88,8 +94,24 @@ export interface Meeting {
   rawNotesMd: string
   recordingPath: string | null
   durationSec: number | null
+  /** Idioma hablado (para la transcripción). */
+  language: Language | null
   status: MeetingStatus
   error: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Contact {
+  id: string
+  name: string
+  role: string | null
+  email: string | null
+  phone: string | null
+  linkedin: string | null
+  notesMd: string
+  clientId: string | null
+  prospectId: string | null
   createdAt: string
   updatedAt: string
 }
@@ -108,10 +130,25 @@ export type ProspectInput = Partial<
     'company' | 'contactMd' | 'valueUsd' | 'source' | 'notesMd' | 'nextStep' | 'nextStepDate'
   >
 > & { stage?: string }
+export type ContactInput = Partial<
+  Pick<Contact, 'name' | 'role' | 'email' | 'phone' | 'linkedin' | 'notesMd'>
+> & {
+  /** id o nombre; '' quita la relación. */
+  client?: string
+  prospect?: string
+}
+
 export type MeetingInput = Partial<
   Pick<
     Meeting,
-    'date' | 'title' | 'participants' | 'summaryMd' | 'decisionsMd' | 'actionItems' | 'rawNotesMd'
+    | 'date'
+    | 'title'
+    | 'participants'
+    | 'summaryMd'
+    | 'decisionsMd'
+    | 'actionItems'
+    | 'rawNotesMd'
+    | 'language'
   >
 > & {
   /** id o nombre; '' quita la asociación. */
@@ -146,7 +183,18 @@ export interface DocFile {
   modifiedAt: string
 }
 
+/** Contacto con el nombre de su cliente o prospecto (para listas). */
+export interface ContactBrief extends Contact {
+  organization: string | null
+}
+
+export interface ContactDetail extends ContactBrief {
+  /** Reuniones donde aparece como participante (por nombre). */
+  meetings: MeetingBrief[]
+}
+
 export interface ClientDetail extends Client {
+  contacts: Contact[]
   projects: (Project & { openDeliverables: string[] })[]
   meetings: MeetingBrief[]
   prospects: Prospect[]
@@ -161,6 +209,7 @@ export interface ProjectDetail extends Project {
 }
 
 export interface ProspectDetail extends Prospect {
+  contacts: Contact[]
   stage: Stage
   meetings: MeetingBrief[]
 }
@@ -202,7 +251,7 @@ export interface Overview {
 }
 
 export interface SearchHit {
-  type: 'client' | 'project' | 'meeting' | 'prospect'
+  type: 'client' | 'project' | 'meeting' | 'prospect' | 'contact'
   id: string
   title: string
   snippet: string
@@ -263,6 +312,17 @@ export interface StopInfo {
   projectId: string | null
   prospectId: string | null
   durationSec: number
+  language: Language
+}
+
+/** Datos al subir una grabación existente (video o audio). */
+export interface ImportInfo {
+  title: string
+  participants: string[]
+  clientId: string | null
+  projectId: string | null
+  prospectId: string | null
+  language: Language
 }
 
 /** Contrato que la ventana Consultora consume (vía IPC). Los mismos servicios sirven la API HTTP. */
@@ -299,8 +359,26 @@ export interface ConsultoraApi {
   getProspect(ref: string): Promise<ProspectDetail>
   createProspect(input: ProspectInput): Promise<Prospect>
   updateProspect(ref: string, patch: ProspectInput): Promise<Prospect>
-  /** Mueve de etapa. Una etapa `won` crea el cliente (y su carpeta) si aún no existe. */
-  moveProspect(ref: string, stage: string): Promise<{ prospect: Prospect; client: Client | null }>
+  /**
+   * Mueve de etapa (y opcionalmente a la posición `index` dentro de ella).
+   * Una etapa `won` crea el cliente (y su carpeta) si aún no existe.
+   */
+  moveProspect(
+    ref: string,
+    stage: string,
+    index?: number
+  ): Promise<{ prospect: Prospect; client: Client | null }>
+
+  listContacts(filter: { client?: string; prospect?: string; query?: string }): Promise<ContactBrief[]>
+  getContact(id: string): Promise<ContactDetail>
+  createContact(input: ContactInput): Promise<Contact>
+  updateContact(id: string, patch: ContactInput): Promise<Contact>
+  removeContact(id: string): Promise<void>
+
+  /** Selector de archivo de macOS para subir una grabación. null = cancelado. */
+  pickRecording(): Promise<string | null>
+  /** Copia la grabación a la carpeta de documentos, crea la reunión y lanza transcripción + resumen. */
+  importRecording(path: string, info: ImportInfo): Promise<Meeting>
 
   listMeetings(filter: MeetingFilter): Promise<MeetingsPage>
   getMeeting(id: string): Promise<Meeting>

@@ -14,6 +14,7 @@ import { ProjectController } from './controllers/project.controller'
 import { ProspectController } from './controllers/prospect.controller'
 import { MeetingController } from './controllers/meeting.controller'
 import { ContextController } from './controllers/context.controller'
+import { ContactController } from './controllers/contact.controller'
 import type { Consultora } from './consultora'
 import { requireToken } from './middlewares/auth.middleware'
 import { notifyOnWrite } from './middlewares/notify.middleware'
@@ -53,7 +54,8 @@ export function startServer(
       projects: new ProjectController(c.projects),
       prospects: new ProspectController(c.prospects),
       meetings: new MeetingController(c.meetings, c.recordings),
-      context: new ContextController(c.context)
+      context: new ContextController(c.context),
+      contacts: new ContactController(c.contacts)
     })
   )
   app.use(notFound)

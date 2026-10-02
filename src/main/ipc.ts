@@ -12,6 +12,8 @@ export function registerIpc(tasks: TaskService, notes: NoteService): void {
   ipcMain.handle('tasks:moveToDate', (_e, id, date) => tasks.moveToDate(id, date))
   ipcMain.handle('tasks:carryOver', (_e, from, to) => tasks.carryOver(from, to))
   ipcMain.handle('tasks:history', (_e, query) => tasks.history(query))
+  ipcMain.handle('tasks:reorder', (_e, date, ids) => tasks.reorder(date, ids))
+  ipcMain.handle('tasks:tags', () => tasks.tags())
 
   ipcMain.handle('notes:list', (_e, page, pageSize) => notes.list(page, pageSize))
   ipcMain.handle('notes:get', (_e, id) => notes.get(id))

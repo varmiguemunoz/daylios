@@ -17,7 +17,9 @@ export const TaskModel = new EntitySchema<Task>({
     createdAt: { name: 'created_at', type: 'text' },
     completedAt: { name: 'completed_at', type: 'text', nullable: true },
     carriedFrom: { name: 'carried_from', type: 'text', nullable: true },
-    description: { type: 'text', nullable: true }
+    description: { type: 'text', nullable: true },
+    tags: { type: 'simple-json' },
+    effort: { type: 'text', nullable: true }
   },
   indices: [{ name: 'idx_tasks_date', columns: ['date', 'position'] }]
 })

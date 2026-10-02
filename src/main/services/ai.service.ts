@@ -71,15 +71,20 @@ export class AiService {
     }
   }
 
-  /** Transcribe los trozos en orden y los une. `hint` mejora nombres propios (clientes, personas). */
-  async transcribe(files: string[], hint: string): Promise<string> {
+  /**
+   * Transcribe los trozos en orden y los une. `hint` mejora nombres propios (clientes, personas);
+   * `language` es el idioma hablado ('es' | 'en'), si se conoce.
+   */
+  async transcribe(files: string[], hint: string, language?: 'es' | 'en' | null): Promise<string> {
     const openai = this.client()
     const parts: string[] = []
     for (const file of files) {
       const result = await openai.audio.transcriptions.create({
         file: createReadStream(file),
         model: config.transcribeModel(),
-        prompt: hint || undefined
+        prompt: hint || undefined,
+        // Idioma hablado: mejora la precisión y evita que Whisper traduzca o mezcle idiomas
+        language: language ?? undefined
       })
       parts.push(result.text.trim())
     }

@@ -13,6 +13,7 @@ import {
 import { StageModel } from '../models/stage.model'
 import { ProspectModel } from '../models/prospect.model'
 import { MeetingModel } from '../models/meeting.model'
+import { ContactModel } from '../models/contact.model'
 import { transactionGuard } from '../guards/transaction.guard'
 import { AppError } from './app.error'
 import { findByRef } from './ref'
@@ -45,7 +46,7 @@ export class ProspectService {
     const stages = await this.listStages()
     const prospects = await this.db
       .getRepository(ProspectModel)
-      .find({ order: { updatedAt: 'DESC' } })
+      .find({ order: { position: 'ASC', updatedAt: 'DESC' } })
     const columns = stages.map((stage) => {
       const list = prospects.filter((p) => p.stageId === stage.id)
       return { ...stage, prospects: list, valueUsd: sum(list) }
@@ -62,7 +63,10 @@ export class ProspectService {
     const meetings = await this.db
       .getRepository(MeetingModel)
       .find({ where: { prospectId: prospect.id }, order: { date: 'DESC' } })
-    return { ...prospect, stage, meetings: meetings.map(brief) }
+    const contacts = await this.db
+      .getRepository(ContactModel)
+      .find({ where: { prospectId: prospect.id }, order: { name: 'ASC' } })
+    return { ...prospect, stage, contacts, meetings: meetings.map(brief) }
   }
 
   create(input: ProspectInput): Promise<Prospect> {
@@ -81,6 +85,8 @@ export class ProspectService {
         valueUsd: optionalAmount(input.valueUsd, 'El valor'),
         source: optionalText(input.source, 'El origen'),
         stageId: stage.id,
+        // Nuevo = arriba de su columna
+        position: -1,
         notesMd: markdown(input.notesMd, 'Las notas'),
         nextStep: optionalText(input.nextStep, 'El próximo paso'),
         nextStepDate: optionalDay(input.nextStepDate, 'La fecha del próximo paso'),
@@ -113,10 +119,15 @@ export class ProspectService {
   }
 
   /**
-   * Cambia de etapa. Si la etapa es `won` y el prospecto aún no es cliente, crea el cliente
-   * (con su carpeta) en la misma transacción y enlaza sus reuniones de venta.
+   * Cambia de etapa y, si viene `index`, lo coloca en esa posición de la columna (arrastrar).
+   * Si la etapa es `won` y el prospecto aún no es cliente, crea el cliente (con su carpeta)
+   * en la misma transacción y le pasa sus reuniones y contactos de venta.
    */
-  move(ref: unknown, stageRef: unknown): Promise<{ prospect: Prospect; client: Client | null }> {
+  move(
+    ref: unknown,
+    stageRef: unknown,
+    index?: number
+  ): Promise<{ prospect: Prospect; client: Client | null }> {
     return transactionGuard(this.db, async (manager) => {
       const prospects = manager.getRepository(ProspectModel)
       const p = await findByRef(prospects, ref, 'company', 'el prospecto')
@@ -124,6 +135,16 @@ export class ProspectService {
 
       p.stageId = stage.id
       p.updatedAt = now()
+
+      // Reordenar la columna destino con el prospecto en su sitio nuevo
+      const column = (await prospects.find({ where: { stageId: stage.id }, order: { position: 'ASC', updatedAt: 'DESC' } }))
+        .filter((other) => other.id !== p.id)
+      const at = typeof index === 'number' ? Math.max(0, Math.min(Math.floor(index), column.length)) : 0
+      column.splice(at, 0, p)
+      for (const [position, row] of column.entries()) {
+        if (row.id !== p.id) await prospects.update({ id: row.id }, { position })
+        else p.position = position
+      }
 
       let client: Client | null = null
       if (stage.kind === 'won' && !p.clientId) {
@@ -135,6 +156,9 @@ export class ProspectService {
         p.clientId = client.id
         await manager
           .getRepository(MeetingModel)
+          .update({ prospectId: p.id, clientId: IsNull() }, { clientId: client.id })
+        await manager
+          .getRepository(ContactModel)
           .update({ prospectId: p.id, clientId: IsNull() }, { clientId: client.id })
       }
 

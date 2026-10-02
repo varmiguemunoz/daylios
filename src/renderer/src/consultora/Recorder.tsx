@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Meeting } from '@shared/consultora'
 import { errorMessage } from '../lib/api'
-import { api, recordingApi, type Go } from './lib'
+import { recordingApi, type Go } from './lib'
 import { acquire, PermissionError, record, release, type Capture, type Streams } from './capture'
-import { Button, Field, Select } from './ui'
+import { Button } from './ui'
+import { MeetingSheet } from './MeetingSheet'
 
 type State =
   | { name: 'idle' }
@@ -173,7 +174,7 @@ function PermissionHelp({ kind, onClose }: { kind: 'screen' | 'microphone'; onCl
   )
 }
 
-/** Hoja al detener: título, participantes y asociación. Guardar lanza transcripción + resumen. */
+/** Hoja al detener: título, participantes, asociación e idioma. Guardar lanza transcripción + resumen. */
 function StopSheet({
   meeting,
   seconds,
@@ -183,130 +184,14 @@ function StopSheet({
   seconds: number
   onDone: (meeting: Meeting) => void
 }): React.JSX.Element {
-  const [title, setTitle] = useState(meeting.title)
-  const [participants, setParticipants] = useState('')
-  const [clientId, setClientId] = useState('')
-  const [projectId, setProjectId] = useState('')
-  const [prospectId, setProspectId] = useState('')
-  const [refs, setRefs] = useState<Awaited<ReturnType<typeof api.refs>> | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    void api.refs().then(setRefs)
-  }, [])
-
-  /** Sugerencia por título: solo rellena lo que aún está vacío. */
-  const suggest = async (): Promise<void> => {
-    const s = await api.suggestAssociation(title)
-    if (!clientId && s.clientId) setClientId(s.clientId)
-    if (!projectId && s.projectId) setProjectId(s.projectId)
-    if (!prospectId && s.prospectId) setProspectId(s.prospectId)
-  }
-
-  const save = async (): Promise<void> => {
-    try {
-      onDone(
-        await recordingApi.stop(meeting.id, {
-          title,
-          participants: participants
-            .split(',')
-            .map((p) => p.trim())
-            .filter(Boolean),
-          clientId: clientId || null,
-          projectId: projectId || null,
-          prospectId: prospectId || null,
-          durationSec: seconds
-        })
-      )
-    } catch (e) {
-      setError(errorMessage(e))
-    }
-  }
-
-  const projects = refs?.projects.filter((p) => !clientId || p.clientId === clientId) ?? []
-  const input = 'bg-transparent text-list outline-none'
-
   return (
-    <div className="fixed inset-0 z-20 grid place-items-center bg-night/75 p-6 [-webkit-app-region:no-drag]">
-      <form
-        className="toast-in w-full max-w-lg rounded-xl bg-surface p-6 shadow-[0_10px_30px_-8px_rgb(0_0_0/0.7)]"
-        onSubmit={(e) => {
-          e.preventDefault()
-          void save()
-        }}
-      >
-        <h2 className="text-title font-extrabold">Grabación lista</h2>
-        <p className="mt-1 text-caption text-milk-soft">
-          Al guardar se transcribe y se resume en segundo plano. Te aviso cuando termine.
-        </p>
-
-        <div className="mt-5 flex flex-col gap-2">
-          <Field label="Título">
-            <input
-              autoFocus
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              onBlur={() => void suggest()}
-              className={input}
-            />
-          </Field>
-          <Field label="Participantes (separados por comas)">
-            <input
-              value={participants}
-              onChange={(e) => setParticipants(e.target.value)}
-              placeholder="Ana (Acme), Miguel"
-              className={input}
-            />
-          </Field>
-        </div>
-
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Select
-            label="Cliente"
-            value={clientId}
-            options={[
-              { value: '', label: 'Sin cliente' },
-              ...(refs?.clients ?? []).map((c) => ({ value: c.id, label: c.name }))
-            ]}
-            onChange={(id) => {
-              setClientId(id)
-              setProjectId('')
-            }}
-          />
-          <Select
-            label="Proyecto"
-            value={projectId}
-            options={[
-              { value: '', label: 'Sin proyecto' },
-              ...projects.map((p) => ({ value: p.id, label: p.name }))
-            ]}
-            onChange={setProjectId}
-          />
-          <Select
-            label="Prospecto"
-            value={prospectId}
-            options={[
-              { value: '', label: 'Sin prospecto' },
-              ...(refs?.prospects ?? []).map((p) => ({ value: p.id, label: p.company }))
-            ]}
-            onChange={setProspectId}
-          />
-        </div>
-
-        {error && (
-          <p className="mt-3 rounded-md bg-coral/12 px-4 py-3 text-caption text-coral">{error}</p>
-        )}
-
-        <div className="mt-6 flex justify-end">
-          <button
-            type="submit"
-            className="h-10 rounded-full bg-apricot px-5 text-caption font-extrabold text-ink active:scale-95"
-          >
-            Guardar y procesar
-          </button>
-        </div>
-      </form>
-    </div>
+    <MeetingSheet
+      heading="Grabación lista"
+      hint="Al guardar se transcribe y se resume en segundo plano. Te aviso cuando termine."
+      defaultTitle={meeting.title}
+      submitLabel="Guardar y procesar"
+      onSubmit={async (info) => onDone(await recordingApi.stop(meeting.id, { ...info, durationSec: seconds }))}
+    />
   )
 }
 

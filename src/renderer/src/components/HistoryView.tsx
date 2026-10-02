@@ -7,6 +7,7 @@ import { Meter } from './Meter'
 import { DayHeading } from './DayHeading'
 import { Pager } from './Pager'
 import { Markdown } from './Markdown'
+import { EffortBars, TagChips } from './TaskMeta'
 
 type Period = '7' | '30' | 'month' | 'all' | 'range'
 
@@ -205,6 +206,10 @@ export function HistoryView({ today, onOpenTask }: HistoryViewProps): React.JSX.
                             aria-label="Tiene descripción"
                           />
                         )}
+                        <span className="hidden shrink-0 min-[380px]:inline-flex">
+                          <TagChips tags={t.tags.slice(0, 2)} />
+                        </span>
+                        <EffortBars effort={t.effort} />
                         {t.carriedFrom && (
                           <span className="shrink-0 text-micro font-bold text-butter/80">
                             arrastrada

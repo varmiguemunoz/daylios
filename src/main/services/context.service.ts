@@ -13,6 +13,7 @@ import { ProjectModel } from '../models/project.model'
 import { ProspectModel } from '../models/prospect.model'
 import { MeetingModel } from '../models/meeting.model'
 import { StageModel } from '../models/stage.model'
+import { ContactModel } from '../models/contact.model'
 import { transactionGuard } from '../guards/transaction.guard'
 import { AppError } from './app.error'
 import { findByRef } from './ref'
@@ -121,7 +122,12 @@ export class ContextService {
       where: [{ company: like }, { notesMd: like }, { contactMd: like }, { nextStep: like }]
     })
 
+    const contacts = await this.db
+      .getRepository(ContactModel)
+      .find({ where: [{ name: like }, { email: like }, { role: like }, { notesMd: like }] })
+
     return [
+      ...contacts.map((c) => hit('contact', c.id, c.name, q, [c.name, c.role, c.email, c.notesMd])),
       ...clients.map((c) =>
         hit('client', c.id, c.name, q, [c.name, c.sector, c.notesMd, c.contactsMd])
       ),

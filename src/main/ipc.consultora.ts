@@ -62,7 +62,27 @@ export function registerConsultoraIpc(c: Consultora, notify: () => void, voice: 
   read('consultora:getProspect', (ref: string) => c.prospects.get(ref))
   write('consultora:createProspect', (input) => c.prospects.create(input))
   write('consultora:updateProspect', (ref: string, patch) => c.prospects.update(ref, patch))
-  write('consultora:moveProspect', (ref: string, stage: string) => c.prospects.move(ref, stage))
+  write('consultora:moveProspect', (ref: string, stage: string, index?: number) =>
+    c.prospects.move(ref, stage, index)
+  )
+
+  read('consultora:listContacts', (filter) => c.contacts.list(filter ?? {}))
+  read('consultora:getContact', (id: string) => c.contacts.get(id))
+  write('consultora:createContact', (input) => c.contacts.create(input))
+  write('consultora:updateContact', (id: string, patch) => c.contacts.update(id, patch))
+  write('consultora:removeContact', (id: string) => c.contacts.remove(id))
+
+  ipcMain.handle('consultora:pickRecording', async (event) => {
+    const options: Electron.OpenDialogOptions = {
+      title: 'Subir grabación',
+      properties: ['openFile'],
+      filters: [{ name: 'Video o audio', extensions: ['mp4', 'mov', 'm4v', 'mkv', 'webm', 'mp3', 'm4a', 'wav'] }]
+    }
+    const win = BrowserWindow.fromWebContents(event.sender)
+    const result = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options)
+    return result.canceled ? null : (result.filePaths[0] ?? null)
+  })
+  write('consultora:importRecording', (path: string, info) => c.recordings.import(path, info))
 
   read('consultora:listMeetings', (filter) => c.meetings.list(filter))
   read('consultora:getMeeting', (id: string) => c.meetings.get(id))

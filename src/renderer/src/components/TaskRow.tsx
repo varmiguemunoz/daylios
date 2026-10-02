@@ -2,12 +2,21 @@ import { useState } from 'react'
 import { AlignLeft, Check, Trash2 } from 'lucide-react'
 import type { Task } from '@shared/tasks'
 import { Markdown } from './Markdown'
+import { EffortBars, TagChips } from './TaskMeta'
 
 interface TaskRowProps {
   task: Task
   onToggle: () => void
   onOpen: () => void
   onRemove: () => void
+  /** ⌥↑ / ⌥↓: mover la fila una posición. */
+  onMoveBy: (delta: -1 | 1) => void
+  /** Props de arrastrar (useReorder). */
+  drag: React.HTMLAttributes<HTMLElement> & { draggable: boolean }
+  /** Se está arrastrando esta fila. */
+  dragging: boolean
+  /** Línea apricot de «caerá aquí» encima o debajo de la fila. */
+  dropLine: 'before' | 'after' | null
 }
 
 /** Mueve el foco a la fila anterior/siguiente, o al campo de captura desde la primera. */
@@ -21,9 +30,18 @@ function focusSibling(from: HTMLElement, dir: 1 | -1): void {
 
 /**
  * Fila de tarea. Clic en el texto o Enter abre el detalle; el círculo (o Espacio) la completa.
- * Editar el título y la descripción se hace en el detalle.
+ * Editar el título y la descripción se hace en el detalle. Se arrastra para cambiar el orden (o ⌥↑/⌥↓).
  */
-export function TaskRow({ task, onToggle, onOpen, onRemove }: TaskRowProps): React.JSX.Element {
+export function TaskRow({
+  task,
+  onToggle,
+  onOpen,
+  onRemove,
+  onMoveBy,
+  drag,
+  dragging,
+  dropLine
+}: TaskRowProps): React.JSX.Element {
   // Recién creada = animar la entrada. useState con función: se calcula una sola vez al montar.
   const [fresh] = useState(() => Date.now() - Date.parse(task.createdAt) < 2000)
 
@@ -52,24 +70,36 @@ export function TaskRow({ task, onToggle, onOpen, onRemove }: TaskRowProps): Rea
         break
       }
       case 'ArrowDown':
+      case 'ArrowUp': {
         e.preventDefault()
-        focusSibling(e.currentTarget, 1)
+        const dir = e.key === 'ArrowDown' ? 1 : -1
+        if (e.altKey) {
+          onMoveBy(dir)
+          // Tras reordenar, el foco sigue en esta tarea
+          requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-row="${task.id}"]`)?.focus())
+        } else {
+          focusSibling(e.currentTarget, dir)
+        }
         break
-      case 'ArrowUp':
-        e.preventDefault()
-        focusSibling(e.currentTarget, -1)
-        break
+      }
     }
   }
 
   return (
     <li
-      data-row
+      data-row={task.id}
       tabIndex={0}
+      {...drag}
       onKeyDown={onRowKey}
-      aria-label={`${task.title}${task.done ? ', hecha' : ''}. Enter para abrir`}
+      aria-label={`${task.title}${task.done ? ', hecha' : ''}. Enter para abrir, ⌥↑/⌥↓ para mover`}
       className={`group flex min-h-[46px] items-center gap-3 rounded-md bg-surface py-1 pr-1.5 pl-3.5 transition-colors outline-offset-0 hover:bg-surface-raised focus-visible:bg-surface-raised ${
         fresh ? 'row-in' : ''
+      } ${dragging ? 'opacity-40' : ''} ${
+        dropLine === 'before'
+          ? 'shadow-[0_-3px_0_0_var(--color-apricot)]'
+          : dropLine === 'after'
+            ? 'shadow-[0_3px_0_0_var(--color-apricot)]'
+            : ''
       }`}
     >
       <button
@@ -105,10 +135,19 @@ export function TaskRow({ task, onToggle, onOpen, onRemove }: TaskRowProps): Rea
             />
           )}
         </span>
-        {task.carriedFrom && !task.done && (
-          <span className="text-micro leading-tight font-semibold text-butter/80">de ayer</span>
+        {((task.carriedFrom && !task.done) || task.tags.length > 0) && (
+          <span className="mt-0.5 flex min-w-0 items-center gap-1.5">
+            {task.carriedFrom && !task.done && (
+              <span className="text-micro leading-tight font-semibold text-butter/80">de ayer</span>
+            )}
+            <TagChips tags={task.tags} />
+          </span>
         )}
       </div>
+
+      <span className="shrink-0 group-focus-within:hidden group-hover:hidden">
+        <EffortBars effort={task.effort} />
+      </span>
 
       <div className="hidden shrink-0 items-center group-focus-within:flex group-hover:flex">
         <button

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   Briefcase,
+  Users,
   CalendarClock,
   SquareKanban,
   Search as SearchIcon,
@@ -17,11 +18,14 @@ import { Pipeline } from './screens/Pipeline'
 import { Prospect } from './screens/Prospect'
 import { Settings } from './screens/Settings'
 import { Search } from './screens/Search'
+import { Contacts } from './screens/Contacts'
+import { Contact } from './screens/Contact'
 
-type Section = 'clients' | 'meetings' | 'pipeline' | 'settings'
+type Section = 'clients' | 'contacts' | 'meetings' | 'pipeline' | 'settings'
 
 const SECTIONS: { id: Section; label: string; icon: typeof Briefcase }[] = [
   { id: 'clients', label: 'Clientes', icon: Briefcase },
+  { id: 'contacts', label: 'Contactos', icon: Users },
   { id: 'meetings', label: 'Reuniones', icon: CalendarClock },
   { id: 'pipeline', label: 'Pipeline', icon: SquareKanban }
 ]
@@ -35,6 +39,8 @@ const LABEL: Record<Screen['name'], string> = {
   meeting: 'Reunión',
   pipeline: 'Pipeline',
   prospect: 'Prospecto',
+  contacts: 'Contactos',
+  contact: 'Contacto',
   settings: 'Ajustes',
   search: 'Búsqueda'
 }
@@ -47,6 +53,8 @@ const SECTION_OF: Record<Screen['name'], Section | null> = {
   meeting: 'meetings',
   pipeline: 'pipeline',
   prospect: 'pipeline',
+  contacts: 'contacts',
+  contact: 'contacts',
   settings: 'settings',
   search: null
 }
@@ -182,6 +190,10 @@ function ScreenView({
       return <Pipeline go={go} />
     case 'prospect':
       return <Prospect id={screen.id} go={go} back={back} backLabel={backLabel} />
+    case 'contacts':
+      return <Contacts go={go} />
+    case 'contact':
+      return <Contact id={screen.id} go={go} back={back} backLabel={backLabel} />
     case 'settings':
       return <Settings />
     case 'search':

@@ -16,6 +16,8 @@ export interface DayState {
   full: boolean
   undo: Undo | null
   add: (title: string) => Promise<boolean>
+  /** Mueve la tarea `id` a la posición `index` de hoy (arrastrar o ⌥↑/⌥↓). */
+  reorder: (id: string, index: number) => Promise<void>
   toggle: (task: Task) => Promise<void>
   remove: (task: Task) => Promise<void>
   bringToday: (task: Task) => Promise<void>
@@ -92,6 +94,17 @@ export function useDay(date: DayKey): DayState {
     })
   }
 
+  const reorder = async (id: string, index: number): Promise<void> => {
+    const from = today.findIndex((t) => t.id === id)
+    if (from < 0) return
+    const next = [...today]
+    const [moved] = next.splice(from, 1)
+    next.splice(Math.max(0, Math.min(index, next.length)), 0, moved)
+    if (next.every((t, i) => t.id === today[i].id)) return
+    setToday(next)
+    await safely(() => tasksApi.reorder(date, next.map((t) => t.id)))
+  }
+
   const toggle = async (task: Task): Promise<void> => {
     const done = !task.done
     setToday((prev) => prev.map((t) => (t.id === task.id ? { ...t, done } : t)))
@@ -146,6 +159,7 @@ export function useDay(date: DayKey): DayState {
     full,
     undo,
     add,
+    reorder,
     toggle,
     remove,
     bringToday,

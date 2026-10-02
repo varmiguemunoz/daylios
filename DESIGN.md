@@ -373,6 +373,11 @@ The day's ceiling, drawn. Eight equal pill segments in a row.
 - **Pipeline:** horizontal columns (240px) on a 50% surface wash, cards on surface; overdue next steps in butter; the won column title in mint.
 - **Recording:** idle «Grabar reunión» quiet pill with a rose dot; live state is a rose 15% pill with a pulsing dot and tabular timer plus «Detener». Stopping opens a centered sheet (surface, xl radius, toast float shadow) for title, participants and association.
 
+### Tags, Effort and Drag
+- **Tag chip:** 20px pill (24px in detail), surface-raised, milk-soft bold, `#tag`. Tags carry no color: they are not a meaning.
+- **Effort:** three 3px bars of 8/10/12px; filled milk-soft, empty hairline. Detail uses a three-pill rail (Bajo · Medio · Alto), active = surface-raised + milk; click again clears.
+- **Drag:** dragged row/card at 40% opacity; drop target = 3px apricot line above (or below the last) item. Pipeline column under the pointer steps from 50% surface to surface.
+
 ### Voice Pill
 - Floating 44px pill, top center of the active display, over everything (also full-screen apps), never takes focus. Surface-raised with the toast float shadow (second and last allowed shadow use).
 - Listening: pulsing rose dot (live) + «Escuchando» milk + tabular timer milk-soft. Working: «Escribiendo la nota…» in apricot. Done: mint check + note title, 1.6s, then hides. Error: coral text.

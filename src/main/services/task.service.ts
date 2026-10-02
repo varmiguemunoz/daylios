@@ -9,7 +9,12 @@ import {
 } from 'typeorm'
 import {
   DAILY_LIMIT,
+  EFFORTS,
+  MAX_TAGS,
+  cleanTag,
   isDayKey,
+  parseCapture,
+  type Effort,
   type CarryOverResult,
   type DayKey,
   type HistoryPage,
@@ -58,9 +63,11 @@ export class TaskService implements TasksApi {
 
   // ---- escrituras ----
 
+  /** El título puede llevar `#tags` y `!alto|!medio|!bajo`: se separan aquí (UI y Claude por igual). */
   async add(date: DayKey, title: string, description?: string): Promise<Task> {
     const day = checkDay(date)
-    const clean = checkTitle(title)
+    const parsed = parseCapture(typeof title === 'string' ? title : '')
+    const clean = checkTitle(parsed.title)
     const details = checkDescription(description ?? '')
     return this.write(async (tasks) => {
       await assertRoom(tasks, day)
@@ -73,7 +80,9 @@ export class TaskService implements TasksApi {
         createdAt: new Date().toISOString(),
         completedAt: null,
         carriedFrom: null,
-        description: details
+        description: details,
+        tags: parsed.tags,
+        effort: parsed.effort
       }
       await tasks.insert(task)
       return task
@@ -85,6 +94,8 @@ export class TaskService implements TasksApi {
       const task = await findOrFail(tasks, id)
       if (patch.title !== undefined) task.title = checkTitle(patch.title)
       if (patch.description !== undefined) task.description = checkDescription(patch.description)
+      if (patch.tags !== undefined) task.tags = checkTags(patch.tags)
+      if (patch.effort !== undefined) task.effort = checkEffort(patch.effort)
       if (patch.done !== undefined && patch.done !== task.done) {
         task.done = patch.done
         task.completedAt = patch.done ? new Date().toISOString() : null
@@ -108,10 +119,40 @@ export class TaskService implements TasksApi {
       const existing = await tasks.findOneBy({ id: task.id })
       if (existing) return existing
       await assertRoom(tasks, day)
-      const restored: Task = { ...task, date: day, title, description: task.description ?? null }
+      const restored: Task = {
+        ...task,
+        date: day,
+        title,
+        description: task.description ?? null,
+        tags: checkTags(task.tags ?? []),
+        effort: checkEffort(task.effort ?? null)
+      }
       await tasks.insert(restored)
       return restored
     })
+  }
+
+  /** Nuevo orden de un día: `ids` en el orden deseado (todas las tareas del día). */
+  async reorder(date: DayKey, ids: string[]): Promise<Task[]> {
+    const day = checkDay(date)
+    if (!Array.isArray(ids)) throw new AppError('invalid', 'El orden debe ser una lista de ids.')
+    return this.write(async (tasks) => {
+      const current = await listDay(tasks, day)
+      const known = new Set(current.map((t) => t.id))
+      if (ids.length !== current.length || !ids.every((id) => known.has(id))) {
+        throw new AppError('invalid', 'El orden no coincide con las tareas del día. Recarga y vuelve a intentarlo.')
+      }
+      for (const [position, id] of ids.entries()) await tasks.update({ id }, { position })
+      return listDay(tasks, day)
+    })
+  }
+
+  /** Tags usados, del más frecuente al menos (para sugerir al escribir). */
+  async tags(): Promise<string[]> {
+    const rows = await this.tasks().find({ select: { tags: true } })
+    const count = new Map<string, number>()
+    for (const row of rows) for (const tag of row.tags ?? []) count.set(tag, (count.get(tag) ?? 0) + 1)
+    return [...count].sort((a, b) => b[1] - a[1]).map(([tag]) => tag)
   }
 
   async moveToDate(id: string, date: DayKey): Promise<Task> {
@@ -201,6 +242,19 @@ function checkTitle(value: unknown): string {
     throw new AppError('invalid', `El título no puede pasar de ${MAX_TITLE} caracteres.`)
   }
   return title
+}
+
+function checkTags(value: unknown): string[] {
+  if (!Array.isArray(value)) throw new AppError('invalid', 'Los tags deben ser una lista.')
+  const tags = [...new Set(value.map((t) => cleanTag(String(t))).filter(Boolean))]
+  if (tags.length > MAX_TAGS) throw new AppError('invalid', `Máximo ${MAX_TAGS} tags por tarea.`)
+  return tags
+}
+
+function checkEffort(value: unknown): Effort | null {
+  if (value === null || value === undefined || value === '') return null
+  if (!EFFORTS.includes(value as Effort)) throw new AppError('invalid', 'El esfuerzo debe ser alto, medio o bajo.')
+  return value as Effort
 }
 
 /** Texto vacío = sin descripción (null). */

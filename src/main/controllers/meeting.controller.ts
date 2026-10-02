@@ -50,6 +50,20 @@ export class MeetingController {
     res.json(meetingView(await this.recordings.process(String(req.params.id))))
   }
 
+  /** `{ path, language: 'es'|'en', title?, participants?, clientId?, projectId?, prospectId? }` */
+  importRecording = async (req: Request, res: Response): Promise<void> => {
+    const body = req.body ?? {}
+    const meeting = await this.recordings.import(String(body.path ?? ''), {
+      title: text(body.title) ?? '',
+      participants: Array.isArray(body.participants) ? body.participants : [],
+      clientId: text(body.clientId) ?? null,
+      projectId: text(body.projectId) ?? null,
+      prospectId: text(body.prospectId) ?? null,
+      language: body.language
+    })
+    res.status(201).json(meetingView(meeting))
+  }
+
   actionItems = async (req: Request, res: Response): Promise<void> => {
     res.json(
       await this.service.listActionItems({

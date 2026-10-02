@@ -7,6 +7,7 @@ import { useAutosave } from '../lib/useAutosave'
 import { BackButton } from './BackButton'
 import { Markdown } from './Markdown'
 import { MarkdownEditor } from './MarkdownEditor'
+import { TaskTagsEffort } from './TaskTagsEffort'
 
 interface TaskDetailProps {
   task: Task
@@ -150,6 +151,15 @@ export function TaskDetail({
             <span className="text-micro font-semibold text-butter/80">de ayer</span>
           )}
         </p>
+
+        <div className="mt-4 pl-[38px]">
+          <TaskTagsEffort
+            tags={task.tags}
+            effort={task.effort}
+            onTags={(tags) => void update({ tags })}
+            onEffort={(effort) => void update({ effort })}
+          />
+        </div>
 
         {error && (
           <p role="alert" className="mt-3 rounded-md bg-coral/12 px-4 py-3 text-caption text-coral">

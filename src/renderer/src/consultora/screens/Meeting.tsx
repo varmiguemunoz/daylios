@@ -14,6 +14,7 @@ import {
   Section,
   Select
 } from '../ui'
+import { ContactChips } from '../MeetingSheet'
 
 /**
  * Detalle de reunión: resumen, decisiones, action items, asociación, notas crudas y transcripción.
@@ -175,6 +176,30 @@ export function Meeting({
           }
         />
       </div>
+      <div className="mt-2">
+        <ContactChips
+          clientId={m.clientId}
+          prospectId={m.prospectId}
+          current={m.participants}
+          onAdd={(name) => void save({ participants: [...m.participants, name] })}
+        />
+      </div>
+      {m.recordingPath && (
+        <div className="mt-3 flex items-center gap-2 text-caption">
+          <span className="shrink-0 font-bold text-milk-soft">Idioma de la reunión</span>
+          <Select
+            label="Idioma hablado"
+            value={m.language ?? ''}
+            options={[
+              { value: '', label: 'Detectar' },
+              { value: 'es', label: 'Español' },
+              { value: 'en', label: 'English' }
+            ]}
+            onChange={(language) => void save({ language: (language || null) as MeetingInput['language'] })}
+          />
+          <span className="text-milk-soft">Se usa al transcribir (también al reintentar).</span>
+        </div>
+      )}
 
       <Section title="Resumen ejecutivo">
         <MarkdownField
