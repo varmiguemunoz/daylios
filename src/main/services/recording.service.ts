@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto'
 import { execFile } from 'child_process'
 import { createWriteStream, type WriteStream } from 'fs'
-import { mkdir, mkdtemp, readdir, rm } from 'fs/promises'
+import { mkdir, mkdtemp, readdir, rm, stat } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { promisify } from 'util'
@@ -130,17 +130,28 @@ export class RecordingService {
     return meeting
   }
 
-  /** Al arrancar: grabaciones que quedaron a medias (la app se cerró) pasan a error con opción de reintentar. */
+  /**
+   * Al arrancar, grabaciones que quedaron a medias (la app se cerró o la captura nunca empezó):
+   * - archivo vacío o inexistente: se borran la reunión y el archivo (no hay nada que salvar);
+   * - con datos: pasan a error con «Reintentar» para procesar lo grabado.
+   */
   async recoverInterrupted(): Promise<void> {
-    await transactionGuard(this.db, (manager) =>
-      manager.getRepository(MeetingModel).update(
-        { status: 'recording' },
-        {
-          status: 'error',
-          error: 'La grabación se interrumpió. Pulsa «Reintentar» para procesar lo grabado.'
+    const stuck = await this.db.getRepository(MeetingModel).findBy({ status: 'recording' })
+    for (const meeting of stuck) {
+      const size = meeting.recordingPath ? await fileSize(meeting.recordingPath) : 0
+      await transactionGuard(this.db, async (manager) => {
+        const repo = manager.getRepository(MeetingModel)
+        if (size > 0) {
+          await repo.update(
+            { id: meeting.id },
+            { status: 'error', error: 'La grabación se interrumpió. Pulsa «Reintentar» para procesar lo grabado.' }
+          )
+        } else {
+          await repo.delete({ id: meeting.id })
+          if (meeting.recordingPath) await rm(meeting.recordingPath, { force: true })
         }
-      )
-    )
+      })
+    }
   }
 
   // ---- internos ----
@@ -249,6 +260,15 @@ export class RecordingService {
       manager.getRepository(MeetingModel).update({ id }, { ...fields, updatedAt: now() })
     )
     this.onChange()
+  }
+}
+
+/** Tamaño en bytes; 0 si no existe. */
+async function fileSize(path: string): Promise<number> {
+  try {
+    return (await stat(path)).size
+  } catch {
+    return 0
   }
 }
 

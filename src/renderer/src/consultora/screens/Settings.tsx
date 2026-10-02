@@ -36,6 +36,7 @@ export function Settings(): React.JSX.Element {
   return (
     <Page title="Ajustes">
       <Connection />
+      <Voice />
 
       <Section
         title="Etapas del pipeline"
@@ -294,5 +295,103 @@ function Connection(): React.JSX.Element {
 
       <ErrorNote message={error} />
     </>
+  )
+}
+
+const SHORTCUTS = [
+  { value: 'Alt+Space', label: '⌥ Espacio' },
+  { value: 'CommandOrControl+Shift+Space', label: '⌘ ⇧ Espacio' },
+  { value: 'CommandOrControl+Shift+P', label: '⌘ ⇧ P' },
+  { value: 'Alt+Shift+Space', label: '⌥ ⇧ Espacio' }
+]
+
+/**
+ * Nota de voz: atajo global (mantener pulsado, hablar, soltar) → nota en markdown en Notas.
+ * «Mantener pulsado» necesita el permiso de Accesibilidad; sin él funciona como interruptor.
+ */
+function Voice(): React.JSX.Element {
+  const load = useCallback(() => api.voiceStatus(), [])
+  const { data: voice } = useLoad(load)
+  const [error, setError] = useState<string | null>(null)
+  const [retried, setRetried] = useState<string | null>(null)
+
+  if (!voice) return <Section title="Nota de voz">{null}</Section>
+
+  const save = async (input: SettingsInput): Promise<void> => setError(await attempt(() => api.saveSettings(input)))
+  const options = SHORTCUTS.some((s) => s.value === voice.shortcut)
+    ? SHORTCUTS
+    : [...SHORTCUTS, { value: voice.shortcut, label: voice.shortcut }]
+
+  return (
+    <Section title="Nota de voz">
+      <div className="rounded-md bg-surface px-5 py-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex cursor-pointer items-center gap-2 text-list font-bold">
+            <input
+              type="checkbox"
+              checked={voice.enabled}
+              onChange={(e) => void save({ voiceEnabled: e.target.checked })}
+              className="size-4 cursor-pointer accent-[var(--color-apricot)]"
+            />
+            Activada
+          </label>
+          <Select label="Atajo" value={voice.shortcut} options={options} onChange={(voiceShortcut) => void save({ voiceShortcut })} />
+          <span className="text-caption text-milk-soft">
+            {!voice.enabled
+              ? 'Desactivada'
+              : !voice.registered
+                ? ''
+                : voice.mode === 'hold'
+                  ? 'Mantén pulsado, habla y suelta.'
+                  : 'Pulsa para empezar y otra vez para terminar.'}
+          </span>
+        </div>
+
+        {voice.enabled && !voice.registered && (
+          <p className="mt-3 rounded-md bg-coral/12 px-4 py-3 text-caption text-coral">
+            Otra app ya usa ese atajo. Elige otro.
+          </p>
+        )}
+
+        {voice.enabled && !voice.accessibility && (
+          <div className="mt-3 rounded-md bg-apricot/10 px-4 py-3 text-caption text-apricot">
+            <p>
+              Para «mantener pulsado» macOS pide el permiso de <b>Accesibilidad</b> (sirve para saber cuándo sueltas la
+              tecla; DayliOS no lee lo que escribes). Actívalo para daily-os y pulsa «Ya lo activé».
+            </p>
+            <div className="mt-3 flex gap-2">
+              <Button kind="primary" onClick={() => void window.api.permissions.open('accessibility')}>
+                Abrir Ajustes del Sistema
+              </Button>
+              <Button onClick={() => void attempt(() => api.refreshVoice()).then(setError)}>Ya lo activé</Button>
+            </div>
+          </div>
+        )}
+
+        {voice.pending > 0 && (
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-md bg-butter/10 px-4 py-3 text-caption text-butter">
+            <span>
+              {voice.pending} {voice.pending === 1 ? 'nota de voz no se pudo transcribir' : 'notas de voz no se pudieron transcribir'}.
+            </span>
+            <Button
+              onClick={() =>
+                void api.retryVoiceNotes().then(({ created, failed }) =>
+                  setRetried(failed ? `${created} creadas, ${failed} siguen fallando.` : `${created} creadas.`)
+                )
+              }
+            >
+              Reintentar
+            </Button>
+          </div>
+        )}
+        {retried && <p className="mt-2 text-caption text-milk-soft">{retried}</p>}
+
+        <p className="mt-3 text-caption text-milk-soft">
+          Funciona en cualquier app. Lo que dices se transcribe y se escribe como nota en markdown en la pestaña Notas.
+          El audio se borra al terminar.
+        </p>
+      </div>
+      <ErrorNote message={error} />
+    </Section>
   )
 }

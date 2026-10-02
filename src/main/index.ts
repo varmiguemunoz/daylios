@@ -10,6 +10,10 @@ import { registerConsultoraIpc } from './ipc.consultora'
 import { startServer } from './server'
 import { createMenubarWindow, createTray } from './window'
 import { allowScreenCapture, showConsultora } from './consultora-window'
+import { VoiceNoteService } from './services/voice-note.service'
+import { VoiceController, notifyNoteCreated } from './voice/voice'
+import { disposeVoiceShortcut } from './voice/shortcut'
+import { noteTitle, type Note } from '@shared/notes'
 
 // Audio del sistema al grabar pantalla en macOS (ScreenCaptureKit). Debe ir antes de `ready`.
 app.commandLine.appendSwitch(
@@ -47,8 +51,21 @@ async function start(): Promise<void> {
   )
   await consultora.recordings.recoverInterrupted()
 
+  // Notas de voz: atajo global → pastilla → transcribir → nota en markdown. Clic en el aviso abre la nota.
+  const openNote = (note: Note): void => {
+    show()
+    win.webContents.send('notes:open', note)
+  }
+  const voiceNotes = new VoiceNoteService(dataDir, notes, consultora.ai, (note) => {
+    notify()
+    notifyNoteCreated(note, noteTitle(note.body), openNote)
+  })
+  const voice = new VoiceController(voiceNotes)
+  await voice.refresh()
+  app.on('will-quit', disposeVoiceShortcut)
+
   registerIpc(tasks, notes)
-  registerConsultoraIpc(consultora, notify)
+  registerConsultoraIpc(consultora, notify, voice)
   allowScreenCapture()
   ipcMain.on('window:hide', () => win.hide())
   ipcMain.on('window:openConsultora', () => {

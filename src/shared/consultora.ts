@@ -224,6 +224,23 @@ export interface Settings {
   transcribeModel: string
   summaryModel: string
   summaryLanguage: string
+  /** Atajo global de nota de voz (formato Electron, p. ej. "Alt+Space"). */
+  voiceShortcut: string
+  voiceEnabled: boolean
+}
+
+/** Estado del atajo de nota de voz. */
+export interface VoiceStatus {
+  shortcut: string
+  enabled: boolean
+  /** false = otra app ya usa ese atajo. */
+  registered: boolean
+  /** hold = mantener pulsado; toggle = pulsar para empezar y otra vez para terminar. */
+  mode: 'hold' | 'toggle'
+  /** Permiso de Accesibilidad (necesario para «mantener pulsado»). */
+  accessibility: boolean
+  /** Audios cuya transcripción falló, esperando «Reintentar». */
+  pending: number
 }
 
 /** Cambios de ajustes. `openaiApiKey: ''` borra la key. */
@@ -233,6 +250,8 @@ export interface SettingsInput {
   transcribeModel?: string
   summaryModel?: string
   summaryLanguage?: string
+  voiceShortcut?: string
+  voiceEnabled?: boolean
 }
 
 export type NoteEntity = 'client' | 'project' | 'prospect' | 'meeting'
@@ -257,6 +276,11 @@ export interface ConsultoraApi {
   testApiKey(): Promise<{ ok: boolean; message: string }>
   /** Selector de carpeta de macOS. null = cancelado. */
   pickFolder(): Promise<string | null>
+  voiceStatus(): Promise<VoiceStatus>
+  /** Vuelve a procesar los audios de notas de voz que fallaron. */
+  retryVoiceNotes(): Promise<{ created: number; failed: number }>
+  /** Vuelve a registrar el atajo (tras dar el permiso de Accesibilidad). */
+  refreshVoice(): Promise<VoiceStatus>
 
   listClients(
     status?: ClientStatus

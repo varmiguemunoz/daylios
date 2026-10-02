@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Meeting } from '@shared/consultora'
 import { errorMessage } from '../lib/api'
 import { api, recordingApi, type Go } from './lib'
-import { startCapture, type Capture } from './capture'
+import { acquire, PermissionError, record, release, type Capture, type Streams } from './capture'
 import { Button, Field, Select } from './ui'
 
 type State =
@@ -19,6 +19,7 @@ export function Recorder({ go }: { go: Go }): React.JSX.Element {
   const [state, setState] = useState<State>({ name: 'idle' })
   const [error, setError] = useState<string | null>(null)
   const [warning, setWarning] = useState<string | null>(null)
+  const [help, setHelp] = useState<'screen' | 'microphone' | null>(null)
   const [now, setNow] = useState(() => Date.now())
   const stopRef = useRef<() => void>(() => undefined)
 
@@ -29,31 +30,44 @@ export function Recorder({ go }: { go: Go }): React.JSX.Element {
     return () => window.clearInterval(timer)
   }, [state.name])
 
+  /**
+   * 1. Micrófono  2. Pantalla + micro  3. Crear la reunión  4. Grabar.
+   * Si falla 2 no se crea nada (no quedan reuniones rotas) y se muestra cómo dar el permiso.
+   */
   const start = async (): Promise<void> => {
     setError(null)
     setWarning(null)
+    setHelp(null)
     setState({ name: 'starting' })
-    let meeting: Meeting | null = null
+
+    // Pide el micrófono si nunca se pidió. La pantalla no se pre-comprueba: macOS dice «denied»
+    // también cuando aún no la ha pedido, y solo la pide (y añade la app a la lista) al intentarlo.
+    await window.api.permissions.check()
+
+    let streams: Streams
     try {
-      meeting = await recordingApi.start()
-      const id = meeting.id
-      const capture = await startCapture(
-        (data) => recordingApi.chunk(id, data),
+      streams = await acquire()
+    } catch (e) {
+      if (e instanceof PermissionError) setHelp(e.message.startsWith('No hay audio') ? 'microphone' : 'screen')
+      else setError(errorMessage(e))
+      setState({ name: 'idle' })
+      return
+    }
+
+    try {
+      const meeting = await recordingApi.start()
+      const capture = record(
+        streams,
+        (data) => recordingApi.chunk(meeting.id, data),
         () => stopRef.current()
       )
-      if (!capture.hasSystemAudio)
-        setWarning('Sin audio del sistema: solo se graba tu micrófono (no las voces de los demás).')
+      if (!capture.hasSystemAudio) setWarning('Sin audio del sistema: solo se graba tu micrófono (no las voces de los demás).')
       else if (!capture.hasMic) setWarning('Sin micrófono: solo se graba el audio del sistema.')
       const startedAt = Date.now()
       setNow(startedAt)
       setState({ name: 'recording', meeting, capture, startedAt })
     } catch (e) {
-      // No se pudo capturar: cerrar el archivo y borrar la reunión vacía
-      if (meeting) {
-        const id = meeting.id
-        await recordingApi.stop(id, emptyInfo(meeting)).catch(() => undefined)
-        await api.removeMeeting(id).catch(() => undefined)
-      }
+      release(streams)
       setError(errorMessage(e))
       setState({ name: 'idle' })
     }
@@ -96,7 +110,9 @@ export function Recorder({ go }: { go: Go }): React.JSX.Element {
         </button>
       )}
 
-      {(error || warning) && state.name !== 'stopping' && (
+      {help && state.name === 'idle' && <PermissionHelp kind={help} onClose={() => setHelp(null)} />}
+
+      {(error || warning) && state.name !== 'stopping' && !help && (
         <p
           role="alert"
           className={`absolute top-14 right-6 z-10 max-w-sm rounded-md px-4 py-3 text-caption ${error ? 'bg-coral/15 text-coral' : 'bg-butter/10 text-butter'}`}
@@ -117,6 +133,43 @@ export function Recorder({ go }: { go: Go }): React.JSX.Element {
         />
       )}
     </>
+  )
+}
+
+/**
+ * Falta un permiso de macOS. Pasos: activar el interruptor en Ajustes del Sistema y reiniciar
+ * (macOS solo aplica la Grabación de pantalla después de reiniciar la app).
+ */
+function PermissionHelp({ kind, onClose }: { kind: 'screen' | 'microphone'; onClose: () => void }): React.JSX.Element {
+  const [restarting, setRestarting] = useState(false)
+  const what = kind === 'screen' ? 'Grabación de pantalla y audio del sistema' : 'Micrófono'
+  return (
+    <div
+      role="alert"
+      className="toast-in absolute top-14 right-6 z-10 w-[380px] rounded-lg bg-surface-raised p-5 shadow-[0_10px_30px_-8px_rgb(0_0_0/0.7)] [-webkit-app-region:no-drag]"
+    >
+      <p className="text-list font-extrabold">Falta el permiso de {what}</p>
+      <ol className="mt-2 list-decimal pl-5 text-caption text-milk-soft">
+        <li>Abre Ajustes del Sistema y activa <span className="font-bold text-milk">daily-os</span>. Si ya estaba activo, desactívalo y vuelve a activarlo.</li>
+        <li>Reinicia DayliOS: macOS solo aplica el permiso al volver a abrir la app.</li>
+      </ol>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button kind="primary" onClick={() => void window.api.permissions.open(kind)}>
+          Abrir Ajustes del Sistema
+        </Button>
+        <Button
+          disabled={restarting}
+          onClick={() => {
+            setRestarting(true)
+            void window.api.permissions.restartApp()
+          }}
+        >
+          {restarting ? 'Reiniciando…' : 'Reiniciar DayliOS'}
+        </Button>
+        <Button onClick={onClose}>Cerrar</Button>
+      </div>
+      {restarting && <p className="mt-3 text-caption text-milk-soft">Se vuelve a abrir sola en unos segundos.</p>}
+    </div>
   )
 }
 
@@ -256,15 +309,6 @@ function StopSheet({
     </div>
   )
 }
-
-const emptyInfo = (meeting: Meeting): Parameters<typeof recordingApi.stop>[1] => ({
-  title: meeting.title,
-  participants: [],
-  clientId: null,
-  projectId: null,
-  prospectId: null,
-  durationSec: 0
-})
 
 /** 754 → "12:34" */
 const clock = (seconds: number): string => {

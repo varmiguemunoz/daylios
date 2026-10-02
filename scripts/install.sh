@@ -51,8 +51,28 @@ step "Instalando en ${APP_PATH}"
 rm -rf "$APP_PATH"
 ditto "$BUILT_APP" "$APP_PATH"
 xattr -dr com.apple.quarantine "$APP_PATH" 2>/dev/null || true
-# Firma local (ad-hoc): en Apple Silicon todo binario necesita al menos esta firma.
-codesign --force --deep --sign - "$APP_PATH" >/dev/null 2>&1 || true
+# Firma. macOS guarda los permisos (pantalla, micrófono, accesibilidad) ligados a la firma:
+# con un certificado de tu llavero la firma es la misma en cada build y los permisos se conservan.
+# Se busca uno de Xcode (Apple Development) o Developer ID. Para forzar uno:
+#   DAYLIOS_SIGN_IDENTITY="Apple Development: tu@correo (XXXXXXXXXX)" npm run service:install
+IDENTITY="${DAYLIOS_SIGN_IDENTITY:-}"
+if [[ -z "$IDENTITY" ]]; then
+  IDENTITY="$(security find-identity -v -p codesigning 2>/dev/null \
+    | grep -E '"(Developer ID Application|Apple Development):' \
+    | head -n 1 | awk '{print $2}' || true)"
+fi
+
+if [[ -n "$IDENTITY" ]]; then
+  step "Firmando con tu certificado (${IDENTITY})"
+  echo "  Si macOS pregunta si «codesign» puede usar la clave del llavero, elige «Permitir siempre»."
+  codesign --force --deep --sign "$IDENTITY" "$APP_PATH" \
+    || fail "No se pudo firmar con ${IDENTITY}. Prueba con DAYLIOS_SIGN_IDENTITY=… o abre Xcode una vez para renovar el certificado."
+else
+  # Firma local (ad-hoc): en Apple Silicon todo binario necesita al menos esta firma.
+  codesign --force --deep --sign - "$APP_PATH" >/dev/null 2>&1 || true
+  printf '\n\033[1;33m! Sin certificado de firma: macOS volverá a pedir los permisos tras cada instalación.\033[0m\n'
+  echo "  Abre Xcode → Settings → Accounts, añade tu Apple ID y crea un certificado «Apple Development»."
+fi
 
 # ---- 4. Servicio (LaunchAgent) ----
 step "Registrando el servicio ${LABEL}"

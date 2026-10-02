@@ -77,6 +77,20 @@ La primera grabación pide **Micrófono** y **Grabación de pantalla y audio del
 
 Grabaciones: `CLIENTS_DOCS_PATH/_reuniones/` hasta que se asocian a un cliente; entonces se mueven a `<Cliente>/Reuniones/`. Coste orientativo: 1 h ≈ 0,36 USD de transcripción.
 
+## Nota de voz
+
+Mantén pulsado **⌥ Espacio** en cualquier app, habla y suelta. Aparece una pastilla arriba («● Escuchando»); al soltar, DayliOS transcribe (Whisper), escribe la nota en markdown (título, listas, casillas para tareas) y la guarda en **Notas**. La notificación «Nota creada» abre la nota.
+
+- El atajo se cambia o desactiva en **Consultora → Ajustes → Nota de voz**.
+- «Mantener pulsado» necesita el permiso de **Accesibilidad** (solo para saber cuándo sueltas la tecla). Sin él, funciona como interruptor: pulsa para empezar y otra vez para terminar.
+- Menos de 1 s se ignora; máximo 10 min. El audio se borra al terminar; si la transcripción falla, queda en Ajustes con «Reintentar».
+
+## Firma y permisos
+
+`service:install` firma la app con tu certificado de Xcode («Apple Development») si existe. Así macOS conserva los permisos (Grabación de pantalla, Micrófono, Accesibilidad) entre reinstalaciones. La primera vez con la firma nueva los pedirá una última vez, y macOS puede preguntar si `codesign` puede usar la clave: elige «Permitir siempre». Para forzar un certificado: `DAYLIOS_SIGN_IDENTITY="Apple Development: …" npm run service:install`.
+
+Tras conceder **Grabación de pantalla**, macOS exige reiniciar la app: usa el botón «Reiniciar DayliOS» del aviso de permisos.
+
 ## Conectar Claude Desktop
 
 Edita `~/Library/Application Support/Claude/claude_desktop_config.json` y reinicia Claude.

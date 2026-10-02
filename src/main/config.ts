@@ -15,6 +15,8 @@ interface StoredSettings {
   transcribeModel: string
   summaryModel: string
   summaryLanguage: string
+  voiceShortcut: string
+  voiceEnabled: boolean
 }
 
 const DEFAULTS: StoredSettings = {
@@ -22,7 +24,9 @@ const DEFAULTS: StoredSettings = {
   docsPath: '~/Desktop/alimunozadvisory',
   transcribeModel: 'whisper-1',
   summaryModel: 'gpt-4o-mini',
-  summaryLanguage: 'es'
+  summaryLanguage: 'es',
+  voiceShortcut: 'Alt+Space',
+  voiceEnabled: true
 }
 
 let file = ''
@@ -48,7 +52,9 @@ export const config = {
   openaiKey: (): string => current.openaiApiKey,
   transcribeModel: (): string => current.transcribeModel,
   summaryModel: (): string => current.summaryModel,
-  summaryLanguage: (): string => current.summaryLanguage
+  summaryLanguage: (): string => current.summaryLanguage,
+  voiceShortcut: (): string => current.voiceShortcut,
+  voiceEnabled: (): boolean => current.voiceEnabled
 }
 
 /** Lo que la ventana puede ver: nunca la API key completa. */
@@ -60,7 +66,9 @@ export function publicSettings(): Settings {
     apiKeyHint: key ? `…${key.slice(-4)}` : '',
     transcribeModel: current.transcribeModel,
     summaryModel: current.summaryModel,
-    summaryLanguage: current.summaryLanguage
+    summaryLanguage: current.summaryLanguage,
+    voiceShortcut: current.voiceShortcut,
+    voiceEnabled: current.voiceEnabled
   }
 }
 
@@ -95,6 +103,11 @@ export function saveSettings(input: SettingsInput): Settings {
   if (input.summaryLanguage !== undefined) {
     next.summaryLanguage = clean(input.summaryLanguage, 'El idioma', 20) || DEFAULTS.summaryLanguage
   }
+
+  if (input.voiceShortcut !== undefined) {
+    next.voiceShortcut = clean(input.voiceShortcut, 'El atajo', 60) || DEFAULTS.voiceShortcut
+  }
+  if (input.voiceEnabled !== undefined) next.voiceEnabled = input.voiceEnabled === true
 
   writeFileSync(file, JSON.stringify(next, null, 2), { mode: 0o600 })
   chmodSync(file, 0o600)

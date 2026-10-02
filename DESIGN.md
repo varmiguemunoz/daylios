@@ -373,6 +373,10 @@ The day's ceiling, drawn. Eight equal pill segments in a row.
 - **Pipeline:** horizontal columns (240px) on a 50% surface wash, cards on surface; overdue next steps in butter; the won column title in mint.
 - **Recording:** idle «Grabar reunión» quiet pill with a rose dot; live state is a rose 15% pill with a pulsing dot and tabular timer plus «Detener». Stopping opens a centered sheet (surface, xl radius, toast float shadow) for title, participants and association.
 
+### Voice Pill
+- Floating 44px pill, top center of the active display, over everything (also full-screen apps), never takes focus. Surface-raised with the toast float shadow (second and last allowed shadow use).
+- Listening: pulsing rose dot (live) + «Escuchando» milk + tabular timer milk-soft. Working: «Escribiendo la nota…» in apricot. Done: mint check + note title, 1.6s, then hides. Error: coral text.
+
 ### Motion
 
 All motion uses the expo ease-out curve and runs only in response to a state change.

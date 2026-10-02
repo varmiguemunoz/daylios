@@ -40,6 +40,14 @@ export function Meeting({
     setError(await attempt(() => api.updateMeeting(id, patch)))
   const saveItems = (items: ActionItem[]): Promise<void> => save({ actionItems: items })
 
+  // Borrada (desde aquí, otra pantalla o Claude): no reintentar cargarla.
+  if (loadError?.includes('No existe esa reunión')) {
+    return (
+      <Page back={{ label: backLabel, onClick: back }} title="Reunión no disponible">
+        <p className="mt-4 text-caption text-milk-soft">Esta reunión ya no existe.</p>
+      </Page>
+    )
+  }
   if (!m)
     return (
       <Page back={{ label: backLabel, onClick: back }} title="…">

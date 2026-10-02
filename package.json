@@ -28,6 +28,7 @@
     "openai": "^5.0.0",
     "reflect-metadata": "^0.2.2",
     "typeorm": "^0.3.27",
+    "uiohook-napi": "^1.5.4",
     "zod": "^3.25.76"
   },
   "devDependencies": {

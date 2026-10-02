@@ -86,6 +86,34 @@ export class AiService {
     return parts.filter(Boolean).join('\n\n')
   }
 
+  /**
+   * Convierte un dictado en una nota markdown: primera línea `# Título`, párrafos, listas
+   * y casillas `- [ ]` para tareas. Mismo idioma del dictado, sin muletillas y sin inventar.
+   */
+  async formatNote(transcript: string): Promise<string> {
+    const response = await this.client().chat.completions.create({
+      model: config.summaryModel(),
+      temperature: 0.3,
+      messages: [
+        {
+          role: 'system',
+          content:
+            'Conviertes un dictado de voz en una nota markdown clara. Reglas: ' +
+            'la primera línea es "# " seguido de un título corto (máx. 8 palabras); ' +
+            'ordena el contenido en párrafos cortos, listas o casillas "- [ ] " cuando se mencionen tareas o pendientes; ' +
+            'usa **negrita** solo para nombres, fechas o cifras clave; ' +
+            'escribe en el mismo idioma del dictado; quita muletillas y repeticiones; ' +
+            'no añadas nada que no se haya dicho. Responde solo con el markdown, sin ``` ni comentarios.'
+        },
+        { role: 'user', content: `Fecha: ${new Date().toISOString().slice(0, 10)}\n\nDictado:\n${transcript}` }
+      ]
+    })
+    const text = response.choices[0]?.message?.content?.trim()
+    if (!text) throw new AppError('invalid', 'El modelo no devolvió la nota.')
+    // Por si el modelo envuelve la respuesta en ```markdown … ```
+    return text.replace(/^```(?:markdown|md)?\s*/i, '').replace(/\s*```$/, '').trim()
+  }
+
   /** Resumen ejecutivo, decisiones y action items. Textos largos: resume por partes y luego une. */
   async summarize(context: SummaryContext, text: string): Promise<Summary> {
     if (text.length <= PART_CHARS) return this.summarizeOnce(context, text)

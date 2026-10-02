@@ -67,6 +67,9 @@ function App(): React.JSX.Element {
     [remove]
   )
 
+  // Clic en la notificación «Nota creada» (nota de voz): abrir esa nota.
+  useEffect(() => window.api.onNotesOpen((note) => setScreen({ name: 'note', note })), [])
+
   // Atajos globales. En los detalles solo ⌘Z: Esc y ⌘E los gestiona cada pantalla.
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {

@@ -3,12 +3,14 @@ import { homedir } from 'os'
 import { resolve, sep } from 'path'
 import { config, publicSettings, saveSettings } from './config'
 import type { Consultora } from './consultora'
+import { checkPermissions, openPrivacy, restartApp, type Privacy } from './permissions'
+import type { VoiceController } from './voice/voice'
 
 /**
  * Canales de la ventana Consultora (ver src/preload). Uno por método.
  * Las escrituras avisan a todas las ventanas (`data:changed`) para que recarguen.
  */
-export function registerConsultoraIpc(c: Consultora, notify: () => void): void {
+export function registerConsultoraIpc(c: Consultora, notify: () => void, voice: VoiceController): void {
   const read = (channel: string, fn: (...args: never[]) => unknown): void => {
     ipcMain.handle(channel, (_e, ...args) => fn(...(args as never[])))
   }
@@ -24,7 +26,14 @@ export function registerConsultoraIpc(c: Consultora, notify: () => void): void {
   read('consultora:refs', () => c.context.refs())
   read('consultora:search', (q: string) => c.context.search(q))
   read('consultora:settings', () => publicSettings())
-  write('consultora:saveSettings', async (input) => saveSettings(input))
+  write('consultora:saveSettings', async (input) => {
+    const settings = saveSettings(input)
+    await voice.refresh() // el atajo de voz puede haber cambiado
+    return settings
+  })
+  read('consultora:voiceStatus', () => voice.status())
+  write('consultora:refreshVoice', () => voice.refresh())
+  write('consultora:retryVoiceNotes', () => voice.retry())
   read('consultora:testApiKey', () => c.ai.testKey())
   ipcMain.handle('consultora:pickFolder', async (event) => {
     const options: Electron.OpenDialogOptions = {
@@ -74,6 +83,11 @@ export function registerConsultoraIpc(c: Consultora, notify: () => void): void {
   write('consultora:appendNote', (entity, ref: string, text: string) =>
     c.context.appendNote(entity, ref, text)
   )
+
+  // ---- Permisos de macOS ----
+  ipcMain.handle('permissions:check', () => checkPermissions())
+  ipcMain.handle('permissions:open', (_e, kind: Privacy) => openPrivacy(kind))
+  ipcMain.handle('app:restart', () => restartApp())
 
   // ---- Grabación ----
   ipcMain.handle('recording:start', () => c.recordings.start())

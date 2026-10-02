@@ -37,6 +37,9 @@ const consultora: ConsultoraApi = {
   saveSettings: call('saveSettings'),
   testApiKey: call('testApiKey'),
   pickFolder: call('pickFolder'),
+  voiceStatus: call('voiceStatus'),
+  retryVoiceNotes: call('retryVoiceNotes'),
+  refreshVoice: call('refreshVoice'),
   listClients: call('listClients'),
   getClient: call('getClient'),
   createClient: call('createClient'),
@@ -72,8 +75,33 @@ const recording = {
   stop: (id: string, info: StopInfo) => ipcRenderer.invoke('recording:stop', id, info)
 }
 
+/** Pastilla de nota de voz: main avisa start/stop; la pastilla devuelve el audio. */
+const voice = {
+  onStart: (cb: () => void) => on('voice:start', cb),
+  onStop: (cb: () => void) => on('voice:stop', cb),
+  finish: (data: Uint8Array, seconds: number) => ipcRenderer.invoke('voice:finish', data, seconds),
+  hide: () => ipcRenderer.send('voice:hide')
+}
+
+/** Main pide al popover abrir una nota (clic en la notificación «Nota creada»). */
+function onNotesOpen(cb: (note: unknown) => void): () => void {
+  const listener = (_e: unknown, note: unknown): void => cb(note)
+  ipcRenderer.on('notes:open', listener)
+  return () => ipcRenderer.removeListener('notes:open', listener)
+}
+
+/** Permisos de macOS (pantalla, micrófono, accesibilidad) y reinicio de la app. */
+const permissions = {
+  check: () => ipcRenderer.invoke('permissions:check'),
+  open: (kind: 'screen' | 'microphone' | 'accessibility') => ipcRenderer.invoke('permissions:open', kind),
+  restartApp: () => ipcRenderer.invoke('app:restart')
+}
+
 /** Suscribe `cb` a un evento enviado por main; devuelve la función para cancelar. */
-function on(channel: 'window:shown' | 'data:changed', cb: () => void): () => void {
+function on(
+  channel: 'window:shown' | 'data:changed' | 'voice:start' | 'voice:stop',
+  cb: () => void
+): () => void {
   const listener = (): void => cb()
   ipcRenderer.on(channel, listener)
   return () => ipcRenderer.removeListener(channel, listener)
@@ -84,6 +112,9 @@ contextBridge.exposeInMainWorld('api', {
   notes,
   consultora,
   recording,
+  permissions,
+  voice,
+  onNotesOpen,
   hideWindow: () => ipcRenderer.send('window:hide'),
   openConsultora: () => ipcRenderer.send('window:openConsultora'),
   openPath: (path: string) => ipcRenderer.invoke('shell:open', path),

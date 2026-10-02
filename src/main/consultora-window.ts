@@ -56,10 +56,18 @@ export function showConsultora(): BrowserWindow {
 /**
  * Captura de pantalla para grabar reuniones: pantalla principal + audio del sistema
  * ('loopback', ScreenCaptureKit, macOS 13+). Sin selector: graba la pantalla principal.
+ *
+ * Siempre se llama a `callback`, también si falla: si no, `getDisplayMedia()` en la ventana
+ * se queda esperando para siempre (era el cuelgue en «Preparando…»). Sin permiso de
+ * Grabación de pantalla, `getSources` falla con «Failed to get sources».
  */
 export function allowScreenCapture(): void {
   session.defaultSession.setDisplayMediaRequestHandler(async (_request, callback) => {
-    const [screen] = await desktopCapturer.getSources({ types: ['screen'] })
-    callback(screen ? { video: screen, audio: 'loopback' } : {})
+    try {
+      const [screen] = await desktopCapturer.getSources({ types: ['screen'] })
+      callback(screen ? { video: screen, audio: 'loopback' } : {})
+    } catch {
+      callback({}) // getDisplayMedia rechaza al momento y la ventana muestra cómo dar el permiso
+    }
   })
 }

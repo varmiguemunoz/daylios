@@ -60,3 +60,9 @@ function textLines(body: string): string[] {
     )
     .filter(Boolean)
 }
+
+/** Resultado de una nota de voz. */
+export type VoiceResult =
+  | { status: 'created'; title: string; noteId: string }
+  | { status: 'ignored' }
+  | { status: 'failed'; message: string }
