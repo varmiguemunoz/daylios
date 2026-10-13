@@ -2,7 +2,12 @@ import type { ErrorRequestHandler, RequestHandler } from 'express'
 import { AppError, type AppErrorCode } from '../services/app.error'
 import { errorView } from '../views/task.view'
 
-const STATUS: Record<AppErrorCode, number> = { invalid: 400, not_found: 404, day_full: 409 }
+const STATUS: Record<AppErrorCode, number> = {
+  invalid: 400,
+  not_found: 404,
+  day_full: 409,
+  conflict: 409
+}
 
 export const notFound: RequestHandler = (_req, res) => {
   res.status(404).json(errorView('Ruta no encontrada.'))

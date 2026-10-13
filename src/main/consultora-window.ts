@@ -53,6 +53,18 @@ export function showConsultora(): BrowserWindow {
   return win
 }
 
+/** La ventana Consultora si ya existe (sin crearla). */
+export const consultoraWindow = (): BrowserWindow | null => win
+
+/** Muestra Consultora y le pide abrir una pantalla (cliente o workspace) cuando haya cargado. */
+export function openConsultoraAt(target: { client?: string; workspace?: boolean }): BrowserWindow {
+  const w = showConsultora()
+  const send = (): void => w.webContents.send('consultora:navigate', target)
+  if (w.webContents.isLoading()) w.webContents.once('did-finish-load', send)
+  else send()
+  return w
+}
+
 /**
  * Captura de pantalla para grabar reuniones: pantalla principal + audio del sistema
  * ('loopback', ScreenCaptureKit, macOS 13+). Sin selector: graba la pantalla principal.

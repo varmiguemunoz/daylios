@@ -254,7 +254,13 @@ export interface ContactBrief extends Contact {
 export interface ContactDetail extends ContactBrief {
   project: { id: string; name: string } | null
   /** Prospecto en el que está, con su pipeline y etapa. */
-  prospect: { id: string; company: string; stage: string; stageKind: StageKind; pipeline: string } | null
+  prospect: {
+    id: string
+    company: string
+    stage: string
+    stageKind: StageKind
+    pipeline: string
+  } | null
   /** Reuniones donde aparece como participante (por nombre). */
   meetings: MeetingBrief[]
   /** Línea de tiempo, más reciente primero (máx. 100). */
@@ -388,6 +394,8 @@ export interface Refs {
 /** Ajustes visibles en la ventana. La API key nunca sale de main: solo si existe y sus 4 últimos caracteres. */
 export interface Settings {
   docsPath: string
+  /** Bóveda del workspace (ruta absoluta ya resuelta). */
+  workspacePath: string
   hasApiKey: boolean
   /** "…a1b2" */
   apiKeyHint: string
@@ -397,6 +405,8 @@ export interface Settings {
   /** Atajo global de nota de voz (formato Electron, p. ej. "Alt+Space"). */
   voiceShortcut: string
   voiceEnabled: boolean
+  /** Atajo global del workspace (formato Electron). Vacío = desactivado. */
+  workspaceShortcut: string
   // ---- Email marketing (los secretos, solo como pista) ----
   hasResendKey: boolean
   resendKeyHint: string
@@ -428,10 +438,14 @@ export interface VoiceStatus {
 export interface SettingsInput {
   openaiApiKey?: string
   docsPath?: string
+  /** '' = por defecto (`<docsPath>/Workspace`). */
+  workspacePath?: string
   transcribeModel?: string
   summaryModel?: string
   summaryLanguage?: string
   voiceShortcut?: string
+  /** '' lo desactiva. */
+  workspaceShortcut?: string
   voiceEnabled?: boolean
   /** '' borra la key. */
   resendApiKey?: string
@@ -483,6 +497,8 @@ export interface ConsultoraApi {
   retryVoiceNotes(): Promise<{ created: number; failed: number }>
   /** Vuelve a registrar el atajo (tras dar el permiso de Accesibilidad). */
   refreshVoice(): Promise<VoiceStatus>
+  /** Atajo global del workspace y si se pudo registrar (otra app puede tenerlo). */
+  workspaceShortcutStatus(): Promise<{ shortcut: string; registered: boolean }>
 
   listClients(
     status?: ClientStatus

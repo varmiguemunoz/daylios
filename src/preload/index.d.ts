@@ -2,12 +2,14 @@ import type { TasksApi } from '../shared/tasks'
 import type { Note, NotesApi, VoiceResult } from '../shared/notes'
 import type { ConsultoraApi, Meeting, StopInfo } from '../shared/consultora'
 import type { MarketingApi } from '../shared/marketing'
+import type { WorkspaceApi } from '../shared/workspace'
 
 declare global {
   interface Window {
     api: {
       tasks: TasksApi
       notes: NotesApi
+      workspace: WorkspaceApi
       consultora: ConsultoraApi
       marketing: MarketingApi
       recording: {
@@ -29,10 +31,12 @@ declare global {
       /** Clic en «Nota creada»: el popover abre esa nota. */
       onNotesOpen: (cb: (note: Note) => void) => () => void
       hideWindow: () => void
+      /** Consultora avisa si el workspace está delante (el atajo global lo usa para ocultar). */
+      setWorkspaceActive: (on: boolean) => void
       /** Abre la ventana Consultora (y oculta el popover). Con `client`, en la ficha de ese cliente. */
-      openConsultora: (target?: { client?: string }) => void
+      openConsultora: (target?: { client?: string; workspace?: boolean }) => void
       /** Consultora: main pide abrir una pantalla (p. ej. un cliente desde una nota del menubar). */
-      onConsultoraNavigate: (cb: (target: { client?: string }) => void) => () => void
+      onConsultoraNavigate: (cb: (target: { client?: string; workspace?: boolean }) => void) => () => void
       /** Abre un archivo o carpeta en Finder (solo dentro de tu carpeta personal). */
       openPath: (path: string) => Promise<void>
       /** Ruta en disco de un archivo soltado en la ventana. */

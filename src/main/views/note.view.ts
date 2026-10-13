@@ -9,7 +9,8 @@ export function noteView(n: Note): Note & { title: string; excerpt: string } {
     body: n.body,
     date: n.date,
     createdAt: n.createdAt,
-    updatedAt: n.updatedAt
+    updatedAt: n.updatedAt,
+    path: n.path
   }
 }
 

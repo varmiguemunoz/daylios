@@ -5,12 +5,18 @@ import { config, publicSettings, saveSettings } from './config'
 import type { Consultora } from './consultora'
 import { checkPermissions, openPrivacy, restartApp, type Privacy } from './permissions'
 import type { VoiceController } from './voice/voice'
+import type { WorkspaceShortcut } from './workspace-shortcut'
 
 /**
  * Canales de la ventana Consultora (ver src/preload). Uno por método.
  * Las escrituras avisan a todas las ventanas (`data:changed`) para que recarguen.
  */
-export function registerConsultoraIpc(c: Consultora, notify: () => void, voice: VoiceController): void {
+export function registerConsultoraIpc(
+  c: Consultora,
+  notify: () => void,
+  voice: VoiceController,
+  workspaceShortcut: WorkspaceShortcut
+): void {
   const read = (channel: string, fn: (...args: never[]) => unknown): void => {
     ipcMain.handle(channel, (_e, ...args) => fn(...(args as never[])))
   }
@@ -29,9 +35,11 @@ export function registerConsultoraIpc(c: Consultora, notify: () => void, voice: 
   write('consultora:saveSettings', async (input) => {
     const settings = saveSettings(input)
     await voice.refresh() // el atajo de voz puede haber cambiado
+    workspaceShortcut.refresh()
     return settings
   })
   read('consultora:voiceStatus', () => voice.status())
+  read('consultora:workspaceShortcutStatus', () => workspaceShortcut.status())
   write('consultora:refreshVoice', () => voice.refresh())
   write('consultora:retryVoiceNotes', () => voice.retry())
   read('consultora:testApiKey', () => c.ai.testKey())

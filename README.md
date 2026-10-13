@@ -54,6 +54,26 @@ La app es la única que abre la base de datos. La UI y Claude pasan por el mismo
 
 Al arrancar, la app escribe `connection.json` (puerto + token, permisos 600) junto a la base de datos. El MCP lo lee en cada llamada. **La app tiene que estar abierta** para que Claude pueda usarla; con `npm run service:install` queda siempre corriendo.
 
+## Workspace (notas, boards y archivos)
+
+Primera sección de Consultora, con el aspecto de Obsidian. Es una carpeta real: por defecto
+`<carpeta de clientes>/Workspace`, se cambia en Ajustes. Lo que hay dentro se ve igual en Finder, en Obsidian y en la
+app; si cambias algo fuera, la app lo ve en menos de 2 s.
+
+- **Atajo global**: ⌥⌘W abre el workspace en la última nota desde cualquier app; otra vez lo oculta. Se cambia en
+  Ajustes. Dentro no hay barra lateral ni cabecera de Consultora; la cinta de la izquierda abre la navegación.
+- **Atajos dentro**: ⌘O, ⌘F o ⌘K buscar y abrir, ⌘N nota nueva, ⌘\ mostrar u ocultar el explorador.
+- **Explorador**: un árbol de carpetas y archivos. Arrastra para mover, suelta archivos de Finder para subirlos
+  (50 MB máximo), clic derecho para el menú. Borrar manda a la Papelera.
+- **Notas**: archivos `.md`. El primer título de la nota es el nombre del archivo. Doble clic para escribir; al
+  salir o tras 2 s sin teclear vuelve a la lectura. Las del menubar y las de voz caen en `Notas rápidas/`. Pega una
+  imagen y se guarda en `Adjuntos/`.
+- **Boards**: archivos `.canvas` (JSON Canvas, se abren también en Obsidian). Tarjetas, formas, imágenes, notas
+  incrustadas, grupos y flechas con rótulo. Doble clic en el fondo crea una tarjeta; soltar una flecha en el vacío
+  crea una tarjeta conectada. ⌘G agrupa y lo que está dentro se mueve con el grupo. ⌘C, ⌘V, ⌘D, ⌘Z, ⇧⌘Z, flechas
+  para mover, ⌥ para colocar sin rejilla.
+- Mover o renombrar actualiza los enlaces de notas e imágenes de boards que apuntan a lo movido.
+
 ## Consultora (clientes, proyectos, reuniones, pipeline)
 
 Ventana aparte para el contexto de la consultora: clic derecho en el icono del menubar → **Abrir Consultora**, o el botón del maletín junto a las pestañas.
@@ -184,6 +204,7 @@ permisos de macOS y empezar o detener una grabación en vivo.
 | Pipelines    | `list_pipelines` · `get_pipeline` · `save_pipeline` · `delete_pipeline` · `get_prospect` · `save_prospect` · `move_prospect` · `delete_prospect`                                     |
 | Contactos    | `list_contacts` · `get_contact` · `save_contact` · `delete_contact` · `tag_contact` · `set_contact_subscription` · `convert_contact` (alias `promote_contact`) · `detach_contact_prospect` |
 | Tags         | `list_tags` (`kind`: contact o task) · `rename_tag` · `set_tag_audience` · `delete_tag` · `rename_task_tag` · `delete_task_tag`                                                     |
+| Workspace    | `workspace_tree` · `workspace_list` · `workspace_search` · `workspace_read` · `workspace_write_note` · `workspace_create_folder` · `workspace_move` · `workspace_delete` (a la Papelera) · `workspace_create_board` · `board_read` · `board_edit` |
 | Email        | `list_sources` · `save_source` · `rotate_source_secret` · `delete_source` · `list_rules` · `save_rule` · `delete_rule` · `list_sequences` · `get_sequence` · `save_sequence` · `set_sequence_status` · `get_newsletter_context` · `send_newsletter` · `list_newsletters` · `get_newsletter` · `get_marketing_status` · `sync_marketing_now` |
 
 `create_task` y `update_task` aceptan `description` (markdown), `tags` y `effort` (alto/medio/bajo). En el título también funcionan `#tag` y `!alto` / `!medio` / `!bajo`.

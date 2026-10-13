@@ -12,10 +12,14 @@ import { AppError } from './services/app.error'
 interface StoredSettings {
   openaiApiKey: string
   docsPath: string
+  /** Bóveda del workspace. Vacío = `<docsPath>/Workspace`. */
+  workspacePath: string
   transcribeModel: string
   summaryModel: string
   summaryLanguage: string
   voiceShortcut: string
+  /** Atajo global que abre el workspace. Vacío = desactivado. */
+  workspaceShortcut: string
   voiceEnabled: boolean
   // ---- Email marketing ----
   resendApiKey: string
@@ -36,10 +40,12 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const DEFAULTS: StoredSettings = {
   openaiApiKey: '',
   docsPath: '~/Desktop/alimunozadvisory',
+  workspacePath: '',
   transcribeModel: 'whisper-1',
   summaryModel: 'gpt-4o-mini',
   summaryLanguage: 'es',
   voiceShortcut: 'Alt+Space',
+  workspaceShortcut: 'Alt+CommandOrControl+W',
   voiceEnabled: true,
   resendApiKey: '',
   fromEmail: '',
@@ -71,11 +77,16 @@ const expandHome = (path: string): string =>
 
 export const config = {
   docsPath: (): string => expandHome(current.docsPath),
+  workspacePath: (): string =>
+    current.workspacePath
+      ? expandHome(current.workspacePath)
+      : join(expandHome(current.docsPath), 'Workspace'),
   openaiKey: (): string => current.openaiApiKey,
   transcribeModel: (): string => current.transcribeModel,
   summaryModel: (): string => current.summaryModel,
   summaryLanguage: (): string => current.summaryLanguage,
   voiceShortcut: (): string => current.voiceShortcut,
+  workspaceShortcut: (): string => current.workspaceShortcut,
   voiceEnabled: (): boolean => current.voiceEnabled,
   resendKey: (): string => current.resendApiKey,
   /** "Nombre <email>" o solo el email. Vacío si falta el email. */
@@ -100,12 +111,14 @@ export function publicSettings(): Settings {
   const key = current.openaiApiKey
   return {
     docsPath: config.docsPath(),
+    workspacePath: config.workspacePath(),
     hasApiKey: Boolean(key),
     apiKeyHint: key ? `…${key.slice(-4)}` : '',
     transcribeModel: current.transcribeModel,
     summaryModel: current.summaryModel,
     summaryLanguage: current.summaryLanguage,
     voiceShortcut: current.voiceShortcut,
+    workspaceShortcut: current.workspaceShortcut,
     voiceEnabled: current.voiceEnabled,
     hasResendKey: Boolean(current.resendApiKey),
     resendKeyHint: hint(current.resendApiKey),
@@ -141,6 +154,9 @@ export function saveSettings(input: SettingsInput): Settings {
     if (!path) throw new AppError('invalid', 'Indica una carpeta.')
     next.docsPath = path
   }
+  if (input.workspacePath !== undefined) {
+    next.workspacePath = clean(input.workspacePath, 'La carpeta del workspace', 1000)
+  }
   if (input.transcribeModel !== undefined) {
     next.transcribeModel =
       clean(input.transcribeModel, 'El modelo de transcripción') || DEFAULTS.transcribeModel
@@ -152,6 +168,9 @@ export function saveSettings(input: SettingsInput): Settings {
     next.summaryLanguage = clean(input.summaryLanguage, 'El idioma', 20) || DEFAULTS.summaryLanguage
   }
 
+  if (input.workspaceShortcut !== undefined) {
+    next.workspaceShortcut = clean(input.workspaceShortcut, 'El atajo del workspace', 60)
+  }
   if (input.voiceShortcut !== undefined) {
     next.voiceShortcut = clean(input.voiceShortcut, 'El atajo', 60) || DEFAULTS.voiceShortcut
   }

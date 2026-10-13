@@ -39,12 +39,17 @@ export class NoteController {
 
   unlink = async (req: Request, res: Response): Promise<void> => {
     const type = String(req.params.type) as 'note' | 'client'
-    res.json(await this.service.unlink(String(req.params.id), { type, id: String(req.params.targetId) }))
+    res.json(
+      await this.service.unlink(String(req.params.id), { type, id: String(req.params.targetId) })
+    )
   }
 
   update = async (req: Request, res: Response): Promise<void> => {
     const body = req.body ?? {}
-    res.json(noteView(await this.service.update(String(req.params.id), text(body.body) ?? '')))
+    const id = String(req.params.id)
+    await this.service.update(id, text(body.body) ?? '')
+    // Claude no «sale del editor»: el nombre del archivo se ajusta al título en cada cambio.
+    res.json(noteView(await this.service.settle(id)))
   }
 
   remove = async (req: Request, res: Response): Promise<void> => {
@@ -54,4 +59,5 @@ export class NoteController {
 }
 
 const text = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined)
-const list = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [])
+const list = (v: unknown): string[] =>
+  Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []

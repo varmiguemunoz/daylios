@@ -46,7 +46,8 @@ A single-day ledger with a hard ceiling of eight, designed to be read by an AI a
 - Notes can relate to other notes and to clients; each note shows an index of its relations at the top and the bottom. A minimal note search exists only to pick a relation.
 - Several pipelines (one per offer), each with its own columns, edited from the pipeline itself (board or list view, filters in a right-side panel).
 - One tags screen (contacts and tasks): rename, delete, and mark contact tags as Resend audiences (only audiences get a Segment).
-- Explicitly out of scope: sprints, task views beyond Today, History and Notes; note folders; Zoom/Meet/Teams, invoicing or multi-user integrations; a canvas flow builder (internal automations, planned for a later session, will be a linear list of steps), SMS or WhatsApp.
+- Workspace (v4, inside Consultora): a real folder on disk, Obsidian-style. Folders, notes (`.md`), boards (`.canvas`, JSON Canvas, Miro-style diagrams via React Flow), images and files, all indexed in SQLite with stable ids. Menubar and voice notes live in its «Notas rápidas» folder. Only the owner and Claude use it; no accounts or sync. It looks and behaves like Obsidian: own theme, file explorer, quick switcher, a global ⌥⌘W shortcut, notes named after their first heading, and an Obsidian style canvas with groups that carry their content.
+- Explicitly out of scope: sprints, task views beyond Today, History and Notes; real-time multi-user editing, comments, templates or board export; Zoom/Meet/Teams, invoicing or multi-user integrations; a canvas flow builder (internal automations, planned for a later session, will be a linear list of steps), SMS or WhatsApp.
 - UI language: Spanish (inferred from the owner's brief; confirm).
 
 ## Brand Commitments

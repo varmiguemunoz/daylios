@@ -18,6 +18,9 @@ import { ContactController } from './controllers/contact.controller'
 import type { Consultora } from './consultora'
 import type { Marketing } from './marketing'
 import { MarketingController } from './controllers/marketing.controller'
+import type { WorkspaceService } from './services/workspace.service'
+import { WorkspaceController } from './controllers/workspace.controller'
+import { workspaceRoutes } from './routes/workspace.routes'
 import { marketingRoutes } from './routes/marketing.routes'
 import { requireToken } from './middlewares/auth.middleware'
 import { notifyOnWrite } from './middlewares/notify.middleware'
@@ -34,7 +37,13 @@ export interface Connection {
  * Al arrancar escribe `connection.json` (puerto + token, permisos 600) junto a la base de datos.
  */
 export function startServer(
-  services: { tasks: TaskService; notes: NoteService; consultora: Consultora; marketing: Marketing },
+  services: {
+    tasks: TaskService
+    notes: NoteService
+    consultora: Consultora
+    marketing: Marketing
+    workspace: WorkspaceService
+  },
   dir: string,
   onChange: () => void
 ): Promise<Connection> {
@@ -44,7 +53,8 @@ export function startServer(
   app.disable('x-powered-by')
   app.use(requireToken(token))
   // Una nota puede tener hasta 100 000 caracteres (con acentos, más bytes).
-  app.use(express.json({ limit: '512kb' }))
+  // Boards grandes (JSON Canvas) pueden pasar de 512 KB.
+  app.use(express.json({ limit: '4mb' }))
   app.use(notifyOnWrite(onChange))
   app.use(taskRoutes(new TaskController(services.tasks)))
   app.use(noteRoutes(new NoteController(services.notes)))
@@ -62,6 +72,7 @@ export function startServer(
     })
   )
   app.use('/marketing', marketingRoutes(new MarketingController(services.marketing)))
+  app.use('/workspace', workspaceRoutes(new WorkspaceController(services.workspace)))
   app.use(notFound)
   app.use(errorHandler)
 

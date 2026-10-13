@@ -447,7 +447,33 @@ All motion uses the expo ease-out curve and runs only in response to a state cha
 - Board: 260px columns on a 50% surface wash. Column header = name pill (won in a mint wash, lost milk-soft) + neutral count badge, value in micro and a quiet «+» that opens an inline input at the top of the column. Cards: surface, sm radius, company bold with value at the right in tabular, main contact in caption, next step in micro (butter when overdue).
 - Navigation: ← / → move one column, ⇧ jumps to the ends. Holding the pointer 500ms on the board background enables panning: grabbing cursor and a 1.5px apricot inset ring at 40% while it lasts.
 - List: the same data in fixed columns with sortable headers (arrow on the active one) and the stage as an inline pill select.
-- Editor modal: name field, rows with a grip handle, inline name, a three-pill kind rail (Abierta, Ganada in mint, Perdida), prospect count and delete. Deleting a column with prospects asks where they go in an apricot 10% notice; deleting the pipeline lives in a rose 8% band at the bottom.
+- Editor modal: name field, rows that drag only from their grip handle, inline name, a three-pill kind rail (Abierta, Ganada in mint, Perdida), prospect count and delete. Deleting a column with prospects asks where they go in an apricot 10% notice; deleting the pipeline lives in a rose 10% band at the bottom.
+
+### Workspace (Obsidian theme)
+
+The workspace is the one place where DayliOS stops looking like DayliOS. Entering it puts `theme-obsidian` on `body`, which redefines the app tokens, so shared components, dialogs and menus re-theme without their own code.
+
+- **Tokens:** background `#1e1e1e`, secondary `#262626`, hover `#2f2f2f`, active and borders `#363636`, text `#dadada`, muted `#999`, faint `#666`, accent `#8a5cf5`. System font stack. Sizes 16 body, 14 lists, 13 captions. Radii 4, 6, 8, 10. Thin scrollbars, accent selection.
+- **Shell:** no Consultora sidebar and no header. A 38px draggable top strip with the open file path, REC and a «…» menu. A 44px ribbon on the left: explorer, search, new note, new board, Consultora navigation. The explorer is resizable from 180 to 480px and remembers its width.
+- **Explorer:** one tree of folders and files, 26px rows, indent guides, chevrons, drag to move, right click menu. Active file in the active background.
+- **Notes:** a centered 760px reading column, no chrome. Double click writes, two seconds idle or clicking outside returns to reading. The first heading is the file name.
+- **Quick switcher:** ⌘O, ⌘F or ⌘K. Fuzzy names, text search from three characters, Enter on no match creates the note.
+- **Global shortcut:** ⌥⌘W by default, configurable in Ajustes. Opens the last workspace file; pressed again it hides the window.
+
+### Boards (Obsidian canvas)
+
+- React Flow with only `base.css`. Every visual lives in `.ob-canvas` in main.css. No shadows on nodes.
+- Background dots every 20px in `#3a3a3a`. Snap to the 20px grid; hold ⌥ to place freely.
+- Cards: 2px `#4a4a4a` border, 8px radius, document background, 12 by 20 padding, 16px markdown. Colors are the six Obsidian canvas colors: border in the color, background tinted 8%. Selected = 2px accent ring.
+- Below 45% zoom card text turns into grey bars, one per line. Only that boolean is read from the store, so nodes repaint only when crossing the threshold.
+- Groups: 2px border, 8px radius, faint tint, label above the top left in 18px semibold. Everything fully inside a group moves with it. ⌘G groups the selection. Deleting a group with content asks: only the frame, or frame and content.
+- Connection points: 14px circles outside each side, visible on hover. Dropping a connection on empty space creates a connected card ready to type. Edges are 2px bezier curves in `#8c8c8c`, accent when selected, labels on the document background.
+- Resize from any edge, no visible handles.
+- Bottom center toolbar: card, vault note, image or file, shape, group. Card and group can be dragged onto the canvas. Explorer items dropped on the canvas embed without copying.
+- Top right controls: zoom in, percentage, zoom out, fit, undo, redo, minimap.
+- Selection menu floats above the selection: delete, color, zoom to selection, group, shape. A single edge gets: delete, color, no arrows, end arrow, both arrows, label.
+- Keys: ⌘A, ⌘C, ⌘X, ⌘V, ⌘D, ⌘G, ⌘Z, ⇧⌘Z, arrows 1px, ⇧ arrows 10px, ⇧1 fit, ⇧2 zoom to selection, ⌘0 100%.
+- Saving: the canvas only marks itself dirty; the file is serialized once, 500ms after the last change.
 
 ## Do's and Don'ts
 

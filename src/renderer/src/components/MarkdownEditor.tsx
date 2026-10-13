@@ -5,7 +5,7 @@ import { useIdleExit } from '../lib/useIdleExit'
 import { Markdown } from './Markdown'
 
 /** Sin escribir durante este tiempo, el editor vuelve solo a lectura. */
-export const IDLE_MS = 2000
+export const IDLE_MS = 10000
 
 /** Marca del campo en edición (ver `fromMarkdownEditor`). */
 const EDITOR_SELECTOR = '[data-md-editor]'
@@ -28,7 +28,14 @@ interface MarkdownEditorProps {
   onCommit?: () => Promise<void>
   /** Empezar editando (p. ej. una nota recién creada y vacía). */
   autoEdit?: boolean
+  /** Carpeta de la nota en la bóveda (imágenes relativas). */
+  imageBase?: string
+  /** Pegar o soltar imágenes: las guarda y devuelve el markdown a insertar en el cursor. */
+  onPasteFiles?: (files: File[]) => Promise<string[]>
 }
+
+const imagesOf = (list: FileList | null | undefined): File[] =>
+  [...(list ?? [])].filter((f) => f.type.startsWith('image/'))
 
 /**
  * Markdown sin modos visibles: siempre se lee. Doble clic, ⌘E o Enter entra a editar
@@ -42,7 +49,9 @@ export function MarkdownEditor({
   placeholder,
   emptyHint,
   onCommit,
-  autoEdit = false
+  autoEdit = false,
+  imageBase,
+  onPasteFiles
 }: MarkdownEditorProps): React.JSX.Element {
   const [editing, setEditing] = useState(autoEdit)
   const editingRef = useRef(autoEdit)
@@ -92,6 +101,23 @@ export function MarkdownEditor({
     el.setSelectionRange(at, at)
   }, [editing])
 
+  /** Inserta en el cursor el markdown de las imágenes guardadas. */
+  const insertFiles = async (files: File[], el: HTMLTextAreaElement): Promise<void> => {
+    if (!onPasteFiles || !files.length) return
+    const start = el.selectionStart
+    const end = el.selectionEnd
+    const snippets = await onPasteFiles(files).catch(() => [])
+    if (!snippets.length) return
+    const text = snippets.join('\n')
+    const current = el.value
+    onChange(current.slice(0, start) + text + current.slice(end))
+    caret.current = start + text.length
+    requestAnimationFrame(() => {
+      if (area.current) area.current.setSelectionRange(caret.current ?? 0, caret.current ?? 0)
+    })
+    poke()
+  }
+
   const onTextKey = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
     if (e.key === 'Escape') {
       e.preventDefault()
@@ -122,6 +148,18 @@ export function MarkdownEditor({
             poke()
           }}
           onKeyDown={onTextKey}
+          onPaste={(e) => {
+            const files = imagesOf(e.clipboardData?.files)
+            if (!files.length || !onPasteFiles) return
+            e.preventDefault()
+            void insertFiles(files, e.currentTarget)
+          }}
+          onDrop={(e) => {
+            const files = imagesOf(e.dataTransfer?.files)
+            if (!files.length || !onPasteFiles) return
+            e.preventDefault()
+            void insertFiles(files, e.currentTarget)
+          }}
           onBlur={leave}
           placeholder={placeholder}
           aria-label="Texto en markdown"
@@ -150,7 +188,11 @@ export function MarkdownEditor({
           {empty ? (
             <p className="text-caption text-milk-soft">{emptyHint}</p>
           ) : (
-            <Markdown text={value} onToggleTask={(line) => onChange(toggleTaskLine(value, line))} />
+            <Markdown
+              text={value}
+              imageBase={imageBase}
+              onToggleTask={(line) => onChange(toggleTaskLine(value, line))}
+            />
           )}
         </div>
       )}

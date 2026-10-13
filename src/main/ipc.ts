@@ -16,7 +16,9 @@ export function registerIpc(tasks: TaskService, notes: NoteService): void {
   ipcMain.handle('tasks:tags', () => tasks.tags())
   ipcMain.handle('tasks:get', (_e, id) => tasks.get(id))
   ipcMain.handle('tasks:addSubtask', (_e, parentId, title) => tasks.addSubtask(parentId, title))
-  ipcMain.handle('tasks:reorderSubtasks', (_e, parentId, ids) => tasks.reorderSubtasks(parentId, ids))
+  ipcMain.handle('tasks:reorderSubtasks', (_e, parentId, ids) =>
+    tasks.reorderSubtasks(parentId, ids)
+  )
   ipcMain.handle('tasks:completeSubtasks', (_e, parentId) => tasks.completeSubtasks(parentId))
   ipcMain.handle('tasks:tagSummaries', () => tasks.tagSummaries())
   ipcMain.handle('tasks:renameTag', (_e, from, to) => tasks.renameTag(from, to))
@@ -29,6 +31,7 @@ export function registerIpc(tasks: TaskService, notes: NoteService): void {
   ipcMain.handle('notes:search', (_e, query, limit) => notes.search(query, limit))
   ipcMain.handle('notes:link', (_e, id, target) => notes.link(id, target))
   ipcMain.handle('notes:unlink', (_e, id, target) => notes.unlink(id, target))
-  ipcMain.handle('notes:update', (_e, id, body) => notes.update(id, body))
+  ipcMain.handle('notes:update', (_e, id, body, expected) => notes.update(id, body, expected))
+  ipcMain.handle('notes:settle', (_e, id) => notes.settle(id))
   ipcMain.handle('notes:remove', (_e, id) => notes.remove(id))
 }

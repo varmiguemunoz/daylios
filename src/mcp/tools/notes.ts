@@ -9,7 +9,8 @@ export function register(server: McpServer): void {
     'list_notes',
     {
       description:
-        'Notas agrupadas por día de creación (más reciente primero), paginadas por días. ' +
+        'Notas rápidas (carpeta «Notas rápidas» del workspace) agrupadas por día de creación, paginadas por días. ' +
+        'Para notas de otras carpetas usa workspace_list y workspace_search. ' +
         'Cada nota trae title (su primera línea), excerpt y body en markdown.',
       inputSchema: {
         page: z.number().int().min(1).optional(),
@@ -56,7 +57,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     'delete_note',
     {
-      description: 'Elimina una nota de forma permanente (y sus relaciones; las otras notas no se tocan).',
+      description:
+        'Manda una nota a la Papelera de macOS y quita sus relaciones (las otras notas no se tocan).',
       inputSchema: { id: z.string() }
     },
     ({ id }) => tool(() => api('DELETE', `/notes/${encodeURIComponent(id)}`))
@@ -65,7 +67,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     'search_notes',
     {
-      description: 'Busca notas por título y texto (sin distinguir acentos). Devuelve id, título, extracto y fecha.',
+      description:
+        'Busca notas por título y texto (sin distinguir acentos). Devuelve id, título, extracto y fecha.',
       inputSchema: { query: z.string(), limit: z.number().int().min(1).max(50).optional() }
     },
     ({ query: q, limit }) => tool(() => api('GET', `/notes/search${query({ q, limit })}`))
@@ -97,7 +100,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     'link_note_client',
     {
-      description: 'Relaciona una nota con un cliente (aparece en la ficha del cliente y en get_client.notes).',
+      description:
+        'Relaciona una nota con un cliente (aparece en la ficha del cliente y en get_client.notes).',
       inputSchema: { id: z.string(), client: z.string().describe('id del cliente') }
     },
     ({ id, client }) => tool(() => link(id, { type: 'client', id: client }))

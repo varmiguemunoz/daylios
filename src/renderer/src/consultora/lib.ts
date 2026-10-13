@@ -8,6 +8,10 @@ export const openPath = window.api.openPath
 
 /** Pantallas de la ventana. Sin router: una pila de pantallas (Atrás = quitar la última). */
 export type Screen =
+  | { name: 'workspace'; folder: string | null }
+  | { name: 'ws-note'; id: string }
+  | { name: 'ws-board'; id: string }
+  | { name: 'ws-image'; id: string }
   | { name: 'clients' }
   | { name: 'client'; id: string }
   | { name: 'project'; id: string }

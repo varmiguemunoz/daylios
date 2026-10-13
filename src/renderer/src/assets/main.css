@@ -51,6 +51,24 @@
   --radius-xl: 28px;
 
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Workspace · tema Obsidian (oscuro por defecto). Solo se usan dentro de .theme-obsidian. */
+  --color-ob-bg: #1e1e1e;
+  --color-ob-alt: #262626;
+  --color-ob-hover: #2f2f2f;
+  --color-ob-active: #363636;
+  --color-ob-border: #363636;
+  --color-ob-text: #dadada;
+  --color-ob-muted: #999999;
+  --color-ob-faint: #666666;
+  --color-ob-accent: #8a5cf5;
+  --color-ob-red: #fb464c;
+  --color-ob-orange: #e9973f;
+  --color-ob-yellow: #e0de71;
+  --color-ob-green: #44cf6e;
+  --color-ob-cyan: #53dfdd;
+  --color-ob-purple: #a882ff;
+  --font-ob: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
 }
 
 @layer base {
@@ -427,4 +445,336 @@
 /* Selectores nativos en la noche */
 select {
   color-scheme: dark;
+}
+
+/* ======================================================================
+   Boards del workspace · lienzo de Obsidian
+   React Flow trae solo base.css (posiciones), todo el aspecto vive aquí.
+   Sin sombras en los nodos: con cientos de tarjetas cuestan fotogramas.
+   ====================================================================== */
+.ob-canvas .react-flow {
+  --xy-background-color: var(--color-ob-bg);
+  --xy-selection-background-color: color-mix(in srgb, var(--color-ob-accent) 8%, transparent);
+  --xy-selection-border: 1px solid color-mix(in srgb, var(--color-ob-accent) 70%, transparent);
+  background: var(--color-ob-bg);
+  font-family: var(--font-ob);
+  color: var(--color-ob-text);
+}
+
+/* Tarjeta: borde de 2px, radio 8, fondo del documento. */
+.ob-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border: 2px solid #4a4a4a;
+  border-radius: 8px;
+  background: var(--color-ob-bg);
+}
+.ob-embed {
+  overflow: visible;
+}
+
+.react-flow__node.selected .ob-card,
+.react-flow__node.selected .ob-image {
+  box-shadow: 0 0 0 2px var(--color-ob-accent);
+}
+
+.ob-card-text {
+  padding: 12px 20px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--color-ob-text);
+}
+textarea.ob-card-text {
+  cursor: text;
+}
+
+.ob-free-text {
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+}
+.ob-free-text .ob-card-text {
+  padding: 4px 6px;
+}
+.react-flow__node.selected .ob-free-text {
+  box-shadow: 0 0 0 2px var(--color-ob-accent);
+}
+
+/* Markdown dentro de las tarjetas: márgenes cortos, como el modo lectura de Obsidian. */
+.ob-card-md .md {
+  font-size: 16px;
+  line-height: 1.5;
+}
+.ob-card-md .md > * + * {
+  margin-top: 0.5em;
+}
+.ob-card-md .md h1,
+.ob-card-md .md h2,
+.ob-card-md .md h3 {
+  line-height: 1.25;
+}
+
+/* Grupo: marco con tinte y rótulo encima, a la izquierda. */
+.ob-group {
+  width: 100%;
+  height: 100%;
+  border: 2px solid #4a4a4a;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.025);
+}
+.react-flow__node.selected .ob-group {
+  border-color: var(--color-ob-accent);
+}
+.ob-group-label {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: var(--color-ob-alt);
+  color: var(--color-ob-text);
+  font-size: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Imagen sin marco. */
+.ob-image {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 8px;
+}
+.ob-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+/* Nombre del archivo incrustado, encima del nodo. */
+.ob-file-title {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  max-width: 100%;
+  font-size: 13px;
+  color: var(--color-ob-muted);
+}
+.ob-file-title:hover {
+  color: var(--color-ob-text);
+}
+
+/* Puntos de conexión: fuera del borde, solo al pasar el ratón o mientras se conecta. */
+.ob-handle.react-flow__handle {
+  width: 14px;
+  height: 14px;
+  min-width: 0;
+  min-height: 0;
+  border: 2px solid #8c8c8c;
+  border-radius: 50%;
+  background: var(--color-ob-bg);
+  opacity: 0;
+  transition: opacity 100ms;
+}
+.ob-handle.react-flow__handle-top {
+  top: -14px;
+}
+.ob-handle.react-flow__handle-bottom {
+  bottom: -14px;
+  top: auto;
+}
+.ob-handle.react-flow__handle-left {
+  left: -14px;
+}
+.ob-handle.react-flow__handle-right {
+  right: -14px;
+  left: auto;
+}
+.react-flow__node:hover .ob-handle,
+.ob-handle.connectingfrom,
+.ob-handle.connectingto,
+.ob-handle.connectionindicator:hover {
+  opacity: 1;
+}
+.ob-handle.react-flow__handle:hover,
+.ob-handle.connectingto {
+  border-color: var(--color-ob-accent);
+}
+
+/* Cambiar tamaño desde cualquier borde, sin tiradores visibles. */
+.ob-resize-line.react-flow__resize-control.line {
+  border-color: transparent;
+}
+.ob-resize-line.react-flow__resize-control.line.left,
+.ob-resize-line.react-flow__resize-control.line.right {
+  width: 10px;
+}
+.ob-resize-line.react-flow__resize-control.line.top,
+.ob-resize-line.react-flow__resize-control.line.bottom {
+  height: 10px;
+}
+.ob-resize-handle.react-flow__resize-control.handle {
+  width: 14px;
+  height: 14px;
+  border: none;
+  background: transparent;
+}
+
+/* Conexiones. */
+.ob-canvas .react-flow__edge.selectable:hover .react-flow__edge-path {
+  stroke: var(--color-ob-muted);
+}
+.ob-edge-label {
+  position: absolute;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--color-ob-bg);
+  color: var(--color-ob-text);
+  font-size: 14px;
+  pointer-events: all;
+}
+
+/* Barras flotantes: barra inferior, controles, menú de selección. */
+.ob-toolbar,
+.ob-controls,
+.ob-menu {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--color-ob-border);
+  border-radius: 8px;
+  background: var(--color-ob-alt);
+  box-shadow: 0 6px 20px -8px rgb(0 0 0 / 0.6);
+}
+.ob-controls {
+  flex-direction: column;
+}
+.ob-tool {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--color-ob-muted);
+  transition:
+    background-color 100ms,
+    color 100ms;
+}
+.ob-tool:hover:not(:disabled) {
+  background: var(--color-ob-hover);
+  color: var(--color-ob-text);
+}
+.ob-tool:disabled {
+  opacity: 0.35;
+}
+.ob-tool[aria-pressed='true'] {
+  color: var(--color-ob-accent);
+}
+.ob-tool[draggable='true'] {
+  cursor: grab;
+}
+
+.ob-canvas .react-flow__minimap {
+  overflow: hidden;
+  border: 1px solid var(--color-ob-border);
+  border-radius: 8px;
+}
+
+/* ======================================================================
+   Workspace · tema Obsidian
+   Se activa poniendo .theme-obsidian en <body> mientras el workspace está abierto:
+   así también los diálogos y menús (portales en body) se ven como Obsidian.
+   Redefine los tokens de la app, de modo que los componentes compartidos cambian solos.
+   ====================================================================== */
+body.theme-obsidian {
+  --color-night: #1e1e1e;
+  --color-surface: #262626;
+  --color-surface-raised: #2f2f2f;
+  --color-hairline: #363636;
+  --color-milk: #dadada;
+  --color-milk-soft: #999999;
+  --color-milk-faint: #666666;
+  --color-ink: #ffffff;
+  --color-apricot: #8a5cf5;
+  --color-apricot-soft: color-mix(in srgb, #8a5cf5 40%, #262626);
+  --color-rose: #fb464c;
+  --color-coral: #fb464c;
+  --color-mint: #44cf6e;
+  --color-butter: #e0de71;
+  --font-sans: var(--font-ob);
+  --text-body: 16px;
+  --text-body--line-height: 1.5;
+  --text-title: 20px;
+  --text-label: 15px;
+  --text-list: 14px;
+  --text-caption: 13px;
+  --text-micro: 12px;
+  --text-headline: 28px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 0;
+}
+
+body.theme-obsidian ::selection {
+  background: color-mix(in srgb, var(--color-ob-accent) 35%, transparent);
+}
+
+body.theme-obsidian * {
+  scrollbar-width: thin;
+  scrollbar-color: #3f3f3f transparent;
+}
+
+body.theme-obsidian :focus-visible {
+  outline: 2px solid var(--color-ob-accent);
+  outline-offset: -1px;
+}
+
+/* Notas con la tipografía de Obsidian: títulos por peso, enlaces violeta, código gris. */
+body.theme-obsidian .md {
+  line-height: 1.5;
+}
+body.theme-obsidian .md h1 {
+  font-size: 1.618em;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+body.theme-obsidian .md h2 {
+  font-size: 1.462em;
+  font-weight: 600;
+}
+body.theme-obsidian .md h3 {
+  font-size: 1.318em;
+  font-weight: 600;
+}
+body.theme-obsidian .md a {
+  color: var(--color-ob-accent);
+  text-decoration-color: color-mix(in srgb, var(--color-ob-accent) 45%, transparent);
+}
+body.theme-obsidian .md code {
+  background: #2a2a2a;
+  color: #e0e0e0;
+  border-radius: 4px;
+}
+body.theme-obsidian .md blockquote {
+  background: transparent;
+  border-left: 2px solid var(--color-ob-accent);
+  border-radius: 0;
+}
+body.theme-obsidian .md img {
+  border-radius: 4px;
 }

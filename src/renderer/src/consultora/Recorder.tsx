@@ -16,13 +16,24 @@ type State =
  * Botón «Grabar» de la barra superior. Grabando: cronómetro + «Detener».
  * Al detener pide título, participantes y asociación (sugerida por el título) y lanza el procesado.
  */
-export function Recorder({ go }: { go: Go }): React.JSX.Element {
+export function Recorder({
+  go,
+  onStateChange
+}: {
+  go: Go
+  /** Avisa del estado (el workspace muestra «REC» y la ventana sabe cuándo mostrar la hoja de guardado). */
+  onStateChange?: (state: State['name']) => void
+}): React.JSX.Element {
   const [state, setState] = useState<State>({ name: 'idle' })
   const [error, setError] = useState<string | null>(null)
   const [warning, setWarning] = useState<string | null>(null)
   const [help, setHelp] = useState<'screen' | 'microphone' | null>(null)
   const [now, setNow] = useState(() => Date.now())
   const stopRef = useRef<() => void>(() => undefined)
+
+  useEffect(() => {
+    onStateChange?.(state.name)
+  }, [state.name, onStateChange])
 
   // Cronómetro: solo corre mientras se graba
   useEffect(() => {

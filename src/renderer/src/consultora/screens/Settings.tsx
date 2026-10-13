@@ -14,6 +14,7 @@ export function Settings(): React.JSX.Element {
       <EmailSettings />
       <HubSettings />
       <Voice />
+      <WorkspaceKey />
       <p className="mt-9 px-1 text-caption text-milk-soft">
         Las columnas del pipeline se editan en Pipeline, con «Editar pipeline».
       </p>
@@ -54,6 +55,11 @@ function Connection(): React.JSX.Element {
   const pickFolder = async (): Promise<void> => {
     const folder = await api.pickFolder()
     if (folder) await save({ docsPath: folder })
+  }
+
+  const pickWorkspace = async (): Promise<void> => {
+    const folder = await api.pickFolder()
+    if (folder) await save({ workspacePath: folder })
   }
 
   if (!settings) return <Section title="OpenAI y carpeta">{null}</Section>
@@ -180,6 +186,25 @@ function Connection(): React.JSX.Element {
         </p>
       </Section>
 
+      <Section title="Carpeta del workspace">
+        <div className="flex items-center gap-2 rounded-md bg-surface py-2 pr-2 pl-5">
+          <span className="min-w-0 flex-1 truncate text-list" title={settings.workspacePath}>
+            {settings.workspacePath}
+          </span>
+          <Button onClick={() => void openPath(settings.workspacePath).catch(() => undefined)}>
+            <FolderOpen size={15} strokeWidth={2.5} />
+            Abrir
+          </Button>
+          <Button kind="primary" onClick={() => void pickWorkspace()}>
+            Cambiar…
+          </Button>
+        </div>
+        <p className="mt-2 px-1 text-caption text-milk-soft">
+          Tus notas, boards y archivos del workspace viven aquí como archivos normales. Cambiarla no
+          mueve nada: si quieres llevártelo, mueve la carpeta en Finder y elige la nueva ubicación.
+        </p>
+      </Section>
+
       <ErrorNote message={error} />
     </>
   )
@@ -191,6 +216,56 @@ const SHORTCUTS = [
   { value: 'CommandOrControl+Shift+P', label: '⌘ ⇧ P' },
   { value: 'Alt+Shift+Space', label: '⌥ ⇧ Espacio' }
 ]
+
+const WORKSPACE_SHORTCUTS = [
+  { value: 'Alt+CommandOrControl+W', label: '⌥ ⌘ W' },
+  { value: 'Alt+CommandOrControl+O', label: '⌥ ⌘ O' },
+  { value: 'Control+CommandOrControl+O', label: '⌃ ⌘ O' },
+  { value: 'Alt+Shift+O', label: '⌥ ⇧ O' },
+  { value: '', label: 'Desactivado' }
+]
+
+/** Atajo global del workspace. ⌥⌘W en muchas apps es «Cerrar todas las ventanas»: se avisa. */
+function WorkspaceKey(): React.JSX.Element {
+  const load = useCallback(() => api.workspaceShortcutStatus(), [])
+  const { data } = useLoad(load)
+  const [error, setError] = useState<string | null>(null)
+  if (!data) return <Section title="Atajo del workspace">{null}</Section>
+
+  const options = WORKSPACE_SHORTCUTS.some((s) => s.value === data.shortcut)
+    ? WORKSPACE_SHORTCUTS
+    : [...WORKSPACE_SHORTCUTS, { value: data.shortcut, label: data.shortcut }]
+
+  return (
+    <Section title="Atajo del workspace">
+      <div className="flex flex-wrap items-center gap-3 rounded-md bg-surface px-5 py-4">
+        <Select
+          label="Atajo del workspace"
+          value={data.shortcut}
+          options={options}
+          onChange={(workspaceShortcut) =>
+            void attempt(() => api.saveSettings({ workspaceShortcut })).then(setError)
+          }
+        />
+        <span className="text-caption text-milk-soft">
+          Desde cualquier app abre el workspace; otra vez lo oculta.
+        </span>
+      </div>
+      {data.shortcut && !data.registered && (
+        <p className="mt-3 rounded-md bg-coral/12 px-4 py-3 text-caption text-coral">
+          Otra app ya usa ese atajo. Elige otro.
+        </p>
+      )}
+      {data.shortcut === 'Alt+CommandOrControl+W' && data.registered && (
+        <p className="mt-2 px-1 text-caption text-milk-soft">
+          En Finder y en el navegador ⌥⌘W es «Cerrar todas las ventanas»: mientras DayliOS esté
+          abierto, ese atajo abre el workspace.
+        </p>
+      )}
+      <ErrorNote message={error} />
+    </Section>
+  )
+}
 
 /**
  * Nota de voz: atajo global (mantener pulsado, hablar, soltar) → nota en markdown en Notas.

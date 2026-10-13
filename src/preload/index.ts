@@ -3,6 +3,7 @@ import type { TasksApi } from '../shared/tasks'
 import type { NotesApi } from '../shared/notes'
 import type { ConsultoraApi, StopInfo } from '../shared/consultora'
 import type { MarketingApi } from '../shared/marketing'
+import type { WorkspaceApi } from '../shared/workspace'
 
 /** Cada método llama a su canal en main (ver src/main/ipc.ts). */
 const tasks: TasksApi = {
@@ -33,8 +34,39 @@ const notes: NotesApi = {
   search: (query, limit) => ipcRenderer.invoke('notes:search', query, limit),
   link: (id, target) => ipcRenderer.invoke('notes:link', id, target),
   unlink: (id, target) => ipcRenderer.invoke('notes:unlink', id, target),
-  update: (id, body) => ipcRenderer.invoke('notes:update', id, body),
+  update: (id, body, expected) => ipcRenderer.invoke('notes:update', id, body, expected),
+  settle: (id) => ipcRenderer.invoke('notes:settle', id),
   remove: (id) => ipcRenderer.invoke('notes:remove', id)
+}
+
+/** Workspace: un canal `workspace:<método>` por método (ver src/main/ipc.workspace.ts). */
+const callWorkspace =
+  (method: keyof WorkspaceApi) =>
+  (...args: unknown[]) =>
+    ipcRenderer.invoke(`workspace:${method}`, ...args)
+
+const workspace: WorkspaceApi = {
+  info: callWorkspace('info'),
+  tree: callWorkspace('tree'),
+  explorer: callWorkspace('explorer'),
+  list: callWorkspace('list'),
+  get: callWorkspace('get'),
+  resolve: callWorkspace('resolve'),
+  search: callWorkspace('search'),
+  createFolder: callWorkspace('createFolder'),
+  createNote: callWorkspace('createNote'),
+  createBoard: callWorkspace('createBoard'),
+  rename: callWorkspace('rename'),
+  move: callWorkspace('move'),
+  impact: callWorkspace('impact'),
+  remove: callWorkspace('remove'),
+  upload: callWorkspace('upload'),
+  pickFiles: callWorkspace('pickFiles'),
+  attach: callWorkspace('attach'),
+  readBoard: callWorkspace('readBoard'),
+  writeBoard: callWorkspace('writeBoard'),
+  reveal: callWorkspace('reveal'),
+  openExternal: callWorkspace('openExternal')
 }
 
 /** Ventana Consultora: un canal `consultora:<método>` por método (ver src/main/ipc.consultora.ts). */
@@ -54,6 +86,7 @@ const consultora: ConsultoraApi = {
   voiceStatus: call('voiceStatus'),
   retryVoiceNotes: call('retryVoiceNotes'),
   refreshVoice: call('refreshVoice'),
+  workspaceShortcutStatus: call('workspaceShortcutStatus'),
   listClients: call('listClients'),
   getClient: call('getClient'),
   createClient: call('createClient'),
@@ -165,7 +198,8 @@ function onNotesOpen(cb: (note: unknown) => void): () => void {
 /** Permisos de macOS (pantalla, micrófono, accesibilidad) y reinicio de la app. */
 const permissions = {
   check: () => ipcRenderer.invoke('permissions:check'),
-  open: (kind: 'screen' | 'microphone' | 'accessibility') => ipcRenderer.invoke('permissions:open', kind),
+  open: (kind: 'screen' | 'microphone' | 'accessibility') =>
+    ipcRenderer.invoke('permissions:open', kind),
   restartApp: () => ipcRenderer.invoke('app:restart')
 }
 
@@ -182,6 +216,7 @@ function on(
 contextBridge.exposeInMainWorld('api', {
   tasks,
   notes,
+  workspace,
   consultora,
   marketing,
   recording,
@@ -189,9 +224,11 @@ contextBridge.exposeInMainWorld('api', {
   voice,
   onNotesOpen,
   hideWindow: () => ipcRenderer.send('window:hide'),
-  openConsultora: (target?: { client?: string }) => ipcRenderer.send('window:openConsultora', target),
-  onConsultoraNavigate: (cb: (target: { client?: string }) => void) => {
-    const listener = (_e: unknown, target: { client?: string }): void => cb(target)
+  setWorkspaceActive: (on: boolean) => ipcRenderer.send('workspace:active', on),
+  openConsultora: (target?: { client?: string; workspace?: boolean }) =>
+    ipcRenderer.send('window:openConsultora', target),
+  onConsultoraNavigate: (cb: (target: { client?: string; workspace?: boolean }) => void) => {
+    const listener = (_e: unknown, target: { client?: string; workspace?: boolean }): void => cb(target)
     ipcRenderer.on('consultora:navigate', listener)
     return () => ipcRenderer.removeListener('consultora:navigate', listener)
   },

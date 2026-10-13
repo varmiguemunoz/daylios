@@ -1,5 +1,7 @@
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { resolveLink } from '@shared/vault-links'
+import { vaultUrl } from '@shared/workspace'
 
 interface MarkdownProps {
   text: string
@@ -7,6 +9,8 @@ interface MarkdownProps {
   inline?: boolean
   /** Si se pasa, las casillas `- [ ]` se pueden marcar: recibe la línea (1-based) de la casilla. */
   onToggleTask?: (line: number) => void
+  /** Carpeta de la nota en la bóveda: las imágenes relativas se cargan desde ahí (`vault://`). */
+  imageBase?: string
 }
 
 /** Enlaces: se abren en el navegador del sistema (ver window.ts) y no disparan el clic de la fila. */
@@ -17,6 +21,17 @@ const link: Components['a'] = ({ href, children }) => (
 )
 
 const BLOCK: Components = { a: link }
+
+/** `![](../Adjuntos/a.png)` → `vault://path/Adjuntos/a.png`. Externas y `data:` quedan igual. */
+function vaultImage(base: string): Components['img'] {
+  return function VaultImage({ src, alt }) {
+    const raw = typeof src === 'string' ? src : ''
+    const path = resolveLink(raw, base)
+    return (
+      <img src={path ? vaultUrl(path) : raw} alt={alt ?? ''} loading="lazy" draggable={false} />
+    )
+  }
+}
 
 /** Casillas marcables: el clic en la casilla avisa con la línea del markdown donde está. */
 function taskComponents(onToggleTask: (line: number) => void): Components {
@@ -53,7 +68,12 @@ const INLINE_TAGS = ['p', 'strong', 'em', 'del', 'code', 'a']
  * No interpreta HTML crudo: lo que escribas se muestra, no se ejecuta.
  * Los estilos viven en main.css (`.md` y `.md-inline`).
  */
-export function Markdown({ text, inline = false, onToggleTask }: MarkdownProps): React.JSX.Element {
+export function Markdown({
+  text,
+  inline = false,
+  onToggleTask,
+  imageBase
+}: MarkdownProps): React.JSX.Element {
   if (inline) {
     return (
       <span className="md-inline">
@@ -73,7 +93,10 @@ export function Markdown({ text, inline = false, onToggleTask }: MarkdownProps):
     <div className="md">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        components={onToggleTask ? taskComponents(onToggleTask) : BLOCK}
+        components={{
+          ...(onToggleTask ? taskComponents(onToggleTask) : BLOCK),
+          ...(imageBase !== undefined ? { img: vaultImage(imageBase) } : {})
+        }}
       >
         {text}
       </ReactMarkdown>

@@ -1,9 +1,11 @@
-import { app, BrowserWindow, ipcMain, powerMonitor, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, net, powerMonitor, protocol, shell } from 'electron'
+import { pathToFileURL } from 'url'
 import { optimizer } from '@electron-toolkit/utils'
 import { openDatabase } from './db/data-source'
-import { loadConfig } from './config'
+import { config, loadConfig } from './config'
 import { TaskService } from './services/task.service'
 import { NoteService } from './services/note.service'
+import { moveNotesToVault } from './services/notes-to-vault'
 import { createConsultora } from './consultora'
 import { registerIpc } from './ipc'
 import { registerConsultoraIpc } from './ipc.consultora'
@@ -13,18 +15,31 @@ import { resendFromConfig } from './services/resend.provider'
 import { hubFromConfig } from './services/hub.client'
 import { startServer } from './server'
 import { createMenubarWindow, createTray } from './window'
-import { allowScreenCapture, showConsultora } from './consultora-window'
+import { allowScreenCapture, openConsultoraAt, showConsultora } from './consultora-window'
+import { WorkspaceShortcut } from './workspace-shortcut'
 import { VoiceNoteService } from './services/voice-note.service'
 import { VoiceController, notifyNoteCreated } from './voice/voice'
 import { disposeVoiceShortcut } from './voice/shortcut'
 import { noteTitle, type Note } from '@shared/notes'
 import { setTrash } from './services/trash'
+import { Vault } from './services/vault'
+import { WorkspaceService } from './services/workspace.service'
+import { WorkspaceWatcher } from './services/workspace-watcher'
+import { registerWorkspaceIpc } from './ipc.workspace'
 
 // Audio del sistema al grabar pantalla en macOS (ScreenCaptureKit). Debe ir antes de `ready`.
 app.commandLine.appendSwitch(
   'enable-features',
   'MacLoopbackAudioForScreenShare,MacSckSystemAudioLoopbackOverride'
 )
+
+// Imágenes de la bóveda del workspace: `vault://item/<id>` y `vault://path/<ruta>`. Antes de `ready`.
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'vault',
+    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true }
+  }
+])
 
 // Una sola instancia: un segundo arranque abre la ventana existente.
 if (!app.requestSingleInstanceLock()) app.quit()
@@ -49,8 +64,18 @@ async function start(): Promise<void> {
   optimizer.watchWindowShortcuts(win)
   const { tray, show } = createTray(win, showConsultora)
 
+  // Workspace: bóveda en disco + índice. Se sincroniza al arrancar y vigila cambios de Finder o Claude.
+  const workspace = new WorkspaceService(db, new Vault(config.workspacePath), notify)
+  const watcher = new WorkspaceWatcher(workspace)
+  await watcher.ensure().catch(() => undefined)
+  serveVault(workspace)
+
   const tasks = new TaskService(db)
-  const notes = new NoteService(db)
+  const notes = new NoteService(db, workspace)
+  // Una sola vez: las notas de la tabla vieja pasan a «Notas rápidas» en la bóveda.
+  await moveNotesToVault(db, workspace).catch((error) =>
+    console.error('[workspace] migrar notas', error)
+  )
   // Mientras graba, el menubar muestra «● REC».
   const consultora = createConsultora(db, notify, (recording) =>
     tray.setTitle(recording ? ' ● REC' : '')
@@ -71,7 +96,12 @@ async function start(): Promise<void> {
   app.on('will-quit', disposeVoiceShortcut)
 
   registerIpc(tasks, notes)
-  registerConsultoraIpc(consultora, notify, voice)
+  registerWorkspaceIpc(workspace, watcher, notify)
+  // ⌥⌘W (configurable): abre el workspace desde cualquier app.
+  const workspaceShortcut = new WorkspaceShortcut()
+  workspaceShortcut.refresh()
+  app.on('will-quit', () => workspaceShortcut.dispose())
+  registerConsultoraIpc(consultora, notify, voice, workspaceShortcut)
   // Email marketing: la cola hacia Resend (y el hub) se sincroniza sola cada minuto y al despertar.
   const marketing = createMarketing(db, resendFromConfig, hubFromConfig, notify)
   registerMarketingIpc(marketing, notify)
@@ -79,13 +109,10 @@ async function start(): Promise<void> {
   powerMonitor.on('resume', () => void marketing.sync.tick())
   allowScreenCapture()
   ipcMain.on('window:hide', () => win.hide())
-  ipcMain.on('window:openConsultora', (_e, target?: { client?: string }) => {
+  ipcMain.on('window:openConsultora', (_e, target?: { client?: string; workspace?: boolean }) => {
     win.hide()
-    const consultoraWin = showConsultora()
-    if (!target?.client) return
-    const send = (): void => consultoraWin.webContents.send('consultora:navigate', target)
-    if (consultoraWin.webContents.isLoading()) consultoraWin.webContents.once('did-finish-load', send)
-    else send()
+    if (target?.client || target?.workspace) openConsultoraAt(target)
+    else showConsultora()
   })
   app.on('second-instance', show)
 
@@ -93,7 +120,22 @@ async function start(): Promise<void> {
   if (!app.isPackaged) win.once('ready-to-show', show)
 
   // Claude cambió algo: las ventanas recargan lo que estén mostrando.
-  await startServer({ tasks, notes, consultora, marketing }, dataDir, notify)
+  await startServer({ tasks, notes, consultora, marketing, workspace }, dataDir, notify)
+}
+
+/** Sirve archivos de la bóveda a las ventanas. Toda ruta pasa por la validación del vault. */
+function serveVault(workspace: WorkspaceService): void {
+  protocol.handle('vault', async (request) => {
+    try {
+      const url = new URL(request.url)
+      const rel = decodeURIComponent(url.pathname.replace(/^\/+/, ''))
+      const abs =
+        url.hostname === 'item' ? await workspace.absPath(rel) : await workspace.absOf(rel)
+      return net.fetch(pathToFileURL(abs).toString())
+    } catch {
+      return new Response('No encontrado', { status: 404 })
+    }
+  })
 }
 
 // La app vive en el menubar: cerrar la ventana no la termina.
