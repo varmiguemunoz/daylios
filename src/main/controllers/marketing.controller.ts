@@ -14,6 +14,35 @@ export class MarketingController {
     res.json((await this.m.sources.list()).map((s) => ({ ...s, secret: undefined })))
   }
 
+  /** Body: `{ name, slug?, defaultTags? }`. Devuelve la fuente sin su secreto (se copia desde la app). */
+  createSource = async (req: Request, res: Response): Promise<void> => {
+    res.status(201).json({ ...(await this.m.sources.create(req.body ?? {})), secret: undefined })
+  }
+
+  updateSource = async (req: Request, res: Response): Promise<void> => {
+    res.json({ ...(await this.m.sources.update(String(req.params.slug), req.body ?? {})), secret: undefined })
+  }
+
+  rotateSource = async (req: Request, res: Response): Promise<void> => {
+    res.json({ ...(await this.m.sources.rotateSecret(String(req.params.slug))), secret: undefined })
+  }
+
+  /** Sin `?confirm=1` no borra. */
+  removeSource = async (req: Request, res: Response): Promise<void> => {
+    if (req.query.confirm !== '1') {
+      res.json({ needsConfirm: true, slug: String(req.params.slug) })
+      return
+    }
+    await this.m.sources.remove(String(req.params.slug))
+    res.json({ ok: true })
+  }
+
+  /** Descarga el hub y vacía la cola hacia Resend ahora. */
+  syncNow = async (_req: Request, res: Response): Promise<void> => {
+    await this.m.sync.tick()
+    res.json(await this.m.sync.status())
+  }
+
   rules = async (_req: Request, res: Response): Promise<void> => {
     res.json(await this.m.rules.list())
   }
@@ -69,7 +98,27 @@ export class MarketingController {
     res.json(await this.m.tags.list())
   }
 
-  renameTag = async (req: Request, res: Response): Promise<void> => {
-    res.json(await this.m.tags.rename(String(req.params.slug), req.body?.name))
+  /** Body: `{ name?, audience? }`. */
+  updateTag = async (req: Request, res: Response): Promise<void> => {
+    const slug = String(req.params.slug)
+    const body = req.body ?? {}
+    let tag = typeof body.name === 'string' ? await this.m.tags.rename(slug, body.name) : null
+    if (typeof body.audience === 'boolean') tag = await this.m.tags.setAudience(slug, body.audience)
+    res.json(tag ?? (await this.m.tags.list()).find((t) => t.slug === slug) ?? null)
+  }
+
+  tagUsage = async (req: Request, res: Response): Promise<void> => {
+    res.json(await this.m.tags.usage(String(req.params.slug)))
+  }
+
+  /** Sin `?confirm=1` solo devuelve el uso (qué se perdería). */
+  removeTag = async (req: Request, res: Response): Promise<void> => {
+    const slug = String(req.params.slug)
+    if (req.query.confirm !== '1') {
+      res.json({ needsConfirm: true, usage: await this.m.tags.usage(slug) })
+      return
+    }
+    await this.m.tags.remove(slug)
+    res.json({ ok: true })
   }
 }

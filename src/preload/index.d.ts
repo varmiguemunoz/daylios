@@ -29,8 +29,10 @@ declare global {
       /** Clic en «Nota creada»: el popover abre esa nota. */
       onNotesOpen: (cb: (note: Note) => void) => () => void
       hideWindow: () => void
-      /** Abre la ventana Consultora (y oculta el popover). */
-      openConsultora: () => void
+      /** Abre la ventana Consultora (y oculta el popover). Con `client`, en la ficha de ese cliente. */
+      openConsultora: (target?: { client?: string }) => void
+      /** Consultora: main pide abrir una pantalla (p. ej. un cliente desde una nota del menubar). */
+      onConsultoraNavigate: (cb: (target: { client?: string }) => void) => () => void
       /** Abre un archivo o carpeta en Finder (solo dentro de tu carpeta personal). */
       openPath: (path: string) => Promise<void>
       /** Ruta en disco de un archivo soltado en la ventana. */

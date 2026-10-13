@@ -1,8 +1,9 @@
 import { existsSync } from 'fs'
-import { mkdir, readdir, readFile, rename, stat } from 'fs/promises'
-import { basename, extname, join, relative, resolve, sep } from 'path'
+import { mkdir, readdir, readFile, rename, stat, writeFile } from 'fs/promises'
+import { basename, dirname, extname, join, relative, resolve, sep } from 'path'
 import type { DocFile } from '@shared/consultora'
 import { AppError } from './app.error'
+import { moveToTrash } from './trash'
 
 /**
  * Carpetas de documentos de los clientes. La carpeta es la fuente de verdad:
@@ -59,12 +60,22 @@ export async function listDocuments(folder: string): Promise<DocFile[]> {
   return files.sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt))
 }
 
-/** Contenido de un archivo de texto dentro de la carpeta del cliente (nunca fuera de ella). */
-export async function readDocument(folder: string, path: string): Promise<string> {
+/** Ruta absoluta de `path` dentro de la carpeta del cliente (nunca fuera de ella). */
+export function safePath(folder: string, path: string): string {
   const full = resolve(folder, path)
   if (!full.startsWith(resolve(folder) + sep)) {
     throw new AppError('invalid', 'La ruta debe estar dentro de la carpeta del cliente.')
   }
+  return full
+}
+
+/** ¿Se puede leer y editar como texto dentro de la app? */
+export const isTextDocument = (path: string): boolean =>
+  TEXT_EXTENSIONS.includes(extname(path).toLowerCase())
+
+/** Contenido de un archivo de texto dentro de la carpeta del cliente (nunca fuera de ella). */
+export async function readDocument(folder: string, path: string): Promise<string> {
+  const full = safePath(folder, path)
   if (!TEXT_EXTENSIONS.includes(extname(full).toLowerCase())) {
     throw new AppError(
       'invalid',
@@ -84,4 +95,73 @@ export async function moveInto(file: string, folder: string, sub: string): Promi
   const destination = join(target, basename(file))
   await rename(file, destination)
   return destination
+}
+
+/** Renombra un documento en su misma subcarpeta. Devuelve la ruta relativa nueva. */
+export async function renameDocument(folder: string, path: string, name: string): Promise<string> {
+  const from = safePath(folder, path)
+  const clean = safeFolderName(String(name ?? ''))
+  if (!clean || clean.startsWith('.')) throw new AppError('invalid', 'Escribe un nombre de archivo válido.')
+  if (!existsSync(from)) throw new AppError('not_found', 'No existe ese archivo.')
+  const to = join(dirname(from), clean)
+  safePath(folder, relative(folder, to))
+  if (to === from) return relative(folder, from)
+  if (existsSync(to)) throw new AppError('invalid', `Ya existe «${clean}» en esa carpeta.`)
+  await rename(from, to)
+  return relative(folder, to)
+}
+
+/** Manda un documento a la Papelera de macOS. */
+export async function trashDocument(folder: string, path: string): Promise<void> {
+  const full = safePath(folder, path)
+  if (!existsSync(full)) throw new AppError('not_found', 'No existe ese archivo.')
+  await moveToTrash(full)
+}
+
+const MAX_WRITE = 1_000_000
+
+/**
+ * Guarda un documento de texto. `expectedModifiedAt` evita pisar cambios hechos fuera de la app.
+ * Devuelve la nueva fecha de modificación.
+ */
+export async function writeDocument(
+  folder: string,
+  path: string,
+  content: string,
+  expectedModifiedAt?: string
+): Promise<{ path: string; modifiedAt: string }> {
+  const full = safePath(folder, path)
+  if (!isTextDocument(full)) {
+    throw new AppError('invalid', `Solo se editan ${TEXT_EXTENSIONS.join(', ')}.`)
+  }
+  if (typeof content !== 'string' || content.length > MAX_WRITE) {
+    throw new AppError('invalid', 'El documento debe ser texto de menos de 1 MB.')
+  }
+  if (expectedModifiedAt && existsSync(full)) {
+    const current = (await stat(full)).mtime.toISOString()
+    if (current !== expectedModifiedAt) {
+      throw new AppError('invalid', 'El archivo cambió fuera de la app. Vuelve a abrirlo antes de guardar.')
+    }
+  }
+  await mkdir(dirname(full), { recursive: true })
+  await writeFile(full, content, 'utf8')
+  return { path: relative(folder, full), modifiedAt: (await stat(full)).mtime.toISOString() }
+}
+
+/** Documento completo para editarlo en la app (sin recortar). */
+export async function openDocument(
+  folder: string,
+  path: string
+): Promise<{ path: string; name: string; content: string; modifiedAt: string }> {
+  const full = safePath(folder, path)
+  if (!isTextDocument(full)) throw new AppError('invalid', `Solo se editan ${TEXT_EXTENSIONS.join(', ')}.`)
+  if (!existsSync(full)) throw new AppError('not_found', 'No existe ese archivo.')
+  const info = await stat(full)
+  if (info.size > MAX_WRITE) throw new AppError('invalid', 'Es demasiado grande para editarlo aquí. Ábrelo con su app.')
+  return {
+    path: relative(folder, full),
+    name: basename(full),
+    content: await readFile(full, 'utf8'),
+    modifiedAt: info.mtime.toISOString()
+  }
 }

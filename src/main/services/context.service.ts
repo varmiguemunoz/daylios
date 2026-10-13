@@ -6,13 +6,15 @@ import {
   type NoteEntity,
   type Overview,
   type Refs,
-  type SearchHit
+  type SearchHit,
+  type DocContent
 } from '@shared/consultora'
 import { ClientModel } from '../models/client.model'
 import { ProjectModel } from '../models/project.model'
 import { ProspectModel } from '../models/prospect.model'
 import { MeetingModel } from '../models/meeting.model'
 import { StageModel } from '../models/stage.model'
+import { PipelineModel } from '../models/pipeline.model'
 import { ContactModel } from '../models/contact.model'
 import { contactLabel } from '@shared/marketing'
 import { transactionGuard } from '../guards/transaction.guard'
@@ -20,7 +22,14 @@ import { AppError } from './app.error'
 import { findByRef } from './ref'
 import { now, requiredText } from './fields'
 import { brief, openActionItems } from './meeting.helpers'
-import { listDocuments, readDocument } from './documents'
+import {
+  listDocuments,
+  openDocument,
+  readDocument,
+  renameDocument,
+  trashDocument,
+  writeDocument
+} from './documents'
 import type { ClientService } from './client.service'
 
 /**
@@ -43,6 +52,10 @@ export class ContextService {
     const meetings = await this.db.getRepository(MeetingModel).find({ order: { date: 'DESC' } })
     const stages = await this.db.getRepository(StageModel).find({ order: { position: 'ASC' } })
     const prospects = await this.db.getRepository(ProspectModel).find()
+    const pipelines = await this.db.getRepository(PipelineModel).find({ order: { position: 'ASC' } })
+    const pipelineName = new Map(pipelines.map((p) => [p.id, p.name]))
+    const order = new Map(pipelines.map((p, i) => [p.id, i]))
+    stages.sort((a, b) => (order.get(a.pipelineId) ?? 0) - (order.get(b.pipelineId) ?? 0) || a.position - b.position)
 
     const openStages = new Set(stages.filter((s) => s.kind === 'open').map((s) => s.id))
 
@@ -67,6 +80,7 @@ export class ContextService {
       pipeline: stages.map((stage) => {
         const list = prospects.filter((p) => p.stageId === stage.id)
         return {
+          pipeline: pipelineName.get(stage.pipelineId) ?? '',
           stage: stage.name,
           kind: stage.kind,
           count: list.length,
@@ -157,6 +171,31 @@ export class ContextService {
   async readDocument(client: string, path: string): Promise<{ path: string; content: string }> {
     const folder = (await this.clients.find(client)).folderPath
     return { path, content: await readDocument(folder, requiredText(path, 'La ruta', 1000)) }
+  }
+
+  async openDocument(client: string, path: string): Promise<DocContent> {
+    const folder = (await this.clients.find(client)).folderPath
+    return openDocument(folder, requiredText(path, 'La ruta', 1000))
+  }
+
+  async writeDocument(
+    client: string,
+    path: string,
+    content: string,
+    expectedModifiedAt?: string
+  ): Promise<{ path: string; modifiedAt: string }> {
+    const folder = (await this.clients.find(client)).folderPath
+    return writeDocument(folder, requiredText(path, 'La ruta', 1000), content, expectedModifiedAt || undefined)
+  }
+
+  async renameDocument(client: string, path: string, name: string): Promise<{ path: string }> {
+    const folder = (await this.clients.find(client)).folderPath
+    return { path: await renameDocument(folder, requiredText(path, 'La ruta', 1000), name) }
+  }
+
+  async trashDocument(client: string, path: string): Promise<void> {
+    const folder = (await this.clients.find(client)).folderPath
+    await trashDocument(folder, requiredText(path, 'La ruta', 1000))
   }
 
   /**

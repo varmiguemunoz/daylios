@@ -45,6 +45,17 @@ export class MeetingController {
     )
   }
 
+  /** Sin `?confirm=1` devuelve la reunión y no borra. La grabación se queda en la carpeta. */
+  remove = async (req: Request, res: Response): Promise<void> => {
+    const id = String(req.params.id)
+    if (req.query.confirm !== '1') {
+      res.json({ needsConfirm: true, meeting: meetingView(await this.service.get(id)) })
+      return
+    }
+    await this.service.remove(id)
+    res.json({ ok: true })
+  }
+
   /** Transcribe (si falta) y resume en segundo plano. Devuelve la reunión al momento. */
   process = async (req: Request, res: Response): Promise<void> => {
     res.json(meetingView(await this.recordings.process(String(req.params.id))))

@@ -1,9 +1,10 @@
 import { useCallback, useState } from 'react'
-import { Check, Film, Sparkles, Trash2, X } from 'lucide-react'
+import { Check, Film, Sparkles, X } from 'lucide-react'
 import type { ActionItem, MeetingInput } from '@shared/consultora'
 import { api, attempt, dateTime, duration, openPath, useLoad } from '../lib'
 import {
   Button,
+  ConfirmButton,
   EditableText,
   ErrorNote,
   List,
@@ -35,7 +36,6 @@ export function Meeting({
   const { data: refs } = useLoad(refsLoad)
   const [error, setError] = useState<string | null>(null)
   const [newItem, setNewItem] = useState('')
-  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const save = async (patch: MeetingInput): Promise<void> =>
     setError(await attempt(() => api.updateMeeting(id, patch)))
@@ -62,7 +62,6 @@ export function Meeting({
   const projects = refs?.projects.filter((p) => !m.clientId || p.clientId === m.clientId) ?? []
 
   const remove = async (): Promise<void> => {
-    if (!confirmDelete) return setConfirmDelete(true)
     const failed = await attempt(() => api.removeMeeting(id))
     if (failed) setError(failed)
     else back()
@@ -101,20 +100,7 @@ export function Meeting({
             <Sparkles size={15} strokeWidth={2.5} />
             {m.status === 'error' ? 'Reintentar' : m.summaryMd ? 'Resumir de nuevo' : 'Resumir'}
           </Button>
-          <button
-            type="button"
-            onClick={() => void remove()}
-            onMouseLeave={() => setConfirmDelete(false)}
-            onBlur={() => setConfirmDelete(false)}
-            aria-label={confirmDelete ? 'Confirmar: borrar reunión' : 'Borrar reunión'}
-            className={`flex h-9 items-center justify-center rounded-full text-caption font-extrabold transition-colors ${
-              confirmDelete
-                ? 'bg-rose px-4 text-ink'
-                : 'w-9 text-milk-soft hover:bg-rose/15 hover:text-rose'
-            }`}
-          >
-            {confirmDelete ? '¿Borrar?' : <Trash2 size={16} />}
-          </button>
+          <ConfirmButton label="Borrar reunión" onConfirm={() => void remove()} />
         </>
       }
     >
@@ -195,7 +181,9 @@ export function Meeting({
               { value: 'es', label: 'Español' },
               { value: 'en', label: 'English' }
             ]}
-            onChange={(language) => void save({ language: (language || null) as MeetingInput['language'] })}
+            onChange={(language) =>
+              void save({ language: (language || null) as MeetingInput['language'] })
+            }
           />
           <span className="text-milk-soft">Se usa al transcribir (también al reintentar).</span>
         </div>

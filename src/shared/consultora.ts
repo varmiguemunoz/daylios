@@ -4,6 +4,7 @@
  */
 
 import type { ContactEvent, ContactFields, ContactStatus, TagRef } from './marketing'
+import type { NoteBrief } from './notes'
 
 export type ClientStatus = 'activo' | 'historico'
 export type ProjectStatus = 'activo' | 'pausa' | 'cerrado'
@@ -51,6 +52,34 @@ export interface Stage {
   name: string
   position: number
   kind: StageKind
+  /** Pipeline al que pertenece la etapa (columna). */
+  pipelineId: string
+}
+
+/** Un pipeline (p. ej. uno por oferta). Sus columnas son etapas. */
+export interface PipelineRef {
+  id: string
+  name: string
+  position: number
+}
+
+export interface PipelineSummary extends PipelineRef {
+  stages: number
+  prospects: number
+  openValueUsd: number
+}
+
+/** Etapa al guardar un pipeline. Sin id = nueva. */
+export type StageInput = Partial<Stage> & { name: string; kind: StageKind }
+
+export interface PipelineInput {
+  /** Sin id = pipeline nuevo. */
+  id?: string
+  name: string
+  /** Lista completa de etapas en orden. Las que faltan se borran (si tienen prospectos, ver `moves`). */
+  stages?: StageInput[]
+  /** Etapa borrada → etapa (de este pipeline) a la que pasan sus prospectos. */
+  moves?: { from: string; to: string }[]
 }
 
 export interface Prospect {
@@ -115,6 +144,8 @@ export interface Contact {
   linkedin: string | null
   notesMd: string
   clientId: string | null
+  /** Proyecto del cliente en el que participa (opcional). */
+  projectId: string | null
   prospectId: string | null
   /** Suscripción a emails de marketing (`none` = contacto de trabajo). */
   status: ContactStatus
@@ -142,13 +173,31 @@ export type ProspectInput = Partial<
     Prospect,
     'company' | 'contactMd' | 'valueUsd' | 'source' | 'notesMd' | 'nextStep' | 'nextStepDate'
   >
-> & { stage?: string }
+> & {
+  /** id o nombre. Sin etapa = primera abierta del pipeline. */
+  stage?: string
+  /** id o nombre del pipeline. Sin pipeline = el primero. */
+  pipeline?: string
+}
 export type ContactInput = Partial<
   Pick<Contact, 'name' | 'role' | 'email' | 'phone' | 'linkedin' | 'notesMd' | 'fields'>
 > & {
-  /** id o nombre; '' quita la relación. */
+  /** id o nombre; '' quita la relación. Cambiar de cliente quita el proyecto. */
   client?: string
+  /** id o nombre de un proyecto de su cliente; '' quita. */
+  project?: string
   prospect?: string
+}
+
+/** «Convertir en prospecto». */
+export interface ConvertInput {
+  /** id o nombre; sin pipeline = el primero. */
+  pipeline?: string
+  /** id o nombre; sin etapa = primera abierta. */
+  stage?: string
+  /** Nombre del prospecto; sin él: cliente, `fields.company` o el contacto. */
+  company?: string
+  valueUsd?: number | null
 }
 
 export type MeetingInput = Partial<
@@ -203,6 +252,9 @@ export interface ContactBrief extends Contact {
 }
 
 export interface ContactDetail extends ContactBrief {
+  project: { id: string; name: string } | null
+  /** Prospecto en el que está, con su pipeline y etapa. */
+  prospect: { id: string; company: string; stage: string; stageKind: StageKind; pipeline: string } | null
   /** Reuniones donde aparece como participante (por nombre). */
   meetings: MeetingBrief[]
   /** Línea de tiempo, más reciente primero (máx. 100). */
@@ -212,6 +264,10 @@ export interface ContactDetail extends ContactBrief {
 export interface ContactFilter {
   client?: string
   prospect?: string
+  /** Slugs: el contacto debe tenerlos todos. */
+  tags?: string[]
+  /** true = en un prospecto; false = en ninguno. */
+  inPipeline?: boolean
   /** Nombre, rol, email o empresa. */
   query?: string
   /** Slug del tag. */
@@ -237,6 +293,26 @@ export interface ClientDetail extends Client {
   prospects: Prospect[]
   openActionItems: OpenActionItem[]
   documents: DocFile[]
+  /** Notas relacionadas con el cliente. */
+  notes: NoteBrief[]
+}
+
+/** Lo que se borra o desvincula al borrar un cliente. */
+export interface ClientImpact {
+  projects: number
+  meetings: number
+  contacts: number
+  prospects: number
+  notes: number
+  folderPath: string
+}
+
+/** Documento de texto abierto para editar. */
+export interface DocContent {
+  path: string
+  name: string
+  content: string
+  modifiedAt: string
 }
 
 export interface ProjectDetail extends Project {
@@ -248,11 +324,19 @@ export interface ProjectDetail extends Project {
 export interface ProspectDetail extends Prospect {
   contacts: Contact[]
   stage: Stage
+  pipeline: PipelineRef
   meetings: MeetingBrief[]
 }
 
+/** Tarjeta del tablero: prospecto + contacto principal + tags de sus contactos (para filtrar). */
+export interface ProspectCard extends Prospect {
+  contact: { id: string; name: string } | null
+  tags: TagRef[]
+}
+
 export interface Pipeline {
-  stages: (Stage & { prospects: Prospect[]; valueUsd: number })[]
+  pipeline: PipelineRef
+  stages: (Stage & { prospects: ProspectCard[]; valueUsd: number })[]
   openValueUsd: number
 }
 
@@ -282,7 +366,7 @@ export interface Overview {
     lastMeeting: { id: string; date: string; title: string } | null
   }[]
   openActionItems: OpenActionItem[]
-  pipeline: { stage: string; kind: StageKind; count: number; valueUsd: number }[]
+  pipeline: { pipeline: string; stage: string; kind: StageKind; count: number; valueUsd: number }[]
   nextSteps: { prospectId: string; company: string; nextStep: string; date: string | null }[]
   recentMeetings: MeetingBrief[]
 }
@@ -406,14 +490,27 @@ export interface ConsultoraApi {
   getClient(ref: string): Promise<ClientDetail>
   createClient(input: ClientInput): Promise<Client>
   updateClient(ref: string, patch: ClientInput): Promise<Client>
+  clientImpact(ref: string): Promise<ClientImpact>
+  /** Borra el cliente y sus proyectos; desvincula reuniones, contactos, prospectos y notas. */
+  removeClient(ref: string, opts: { trashFolder: boolean }): Promise<void>
 
   getProject(ref: string): Promise<ProjectDetail>
   createProject(input: ProjectInput): Promise<Project>
   updateProject(ref: string, patch: ProjectInput): Promise<Project>
+  /** Borra el proyecto; sus reuniones y contactos se quedan en el cliente. */
+  removeProject(ref: string): Promise<void>
 
-  pipeline(): Promise<Pipeline>
-  listStages(): Promise<Stage[]>
-  saveStages(stages: (Partial<Stage> & { name: string; kind: StageKind })[]): Promise<Stage[]>
+  listPipelines(): Promise<PipelineSummary[]>
+  /** Sin ref = el primero. */
+  pipeline(ref?: string): Promise<Pipeline>
+  /** Crea o edita un pipeline (nombre y columnas). */
+  savePipeline(input: PipelineInput): Promise<Pipeline>
+  /** Borra un pipeline. Si tiene prospectos, `moveTo` dice a dónde van. */
+  removePipeline(ref: string, moveTo?: { pipeline: string; stage?: string }): Promise<void>
+  /** Etapas de un pipeline (sin ref = de todos). */
+  listStages(pipeline?: string): Promise<Stage[]>
+  /** Etapas del pipeline por defecto (compatibilidad). */
+  saveStages(stages: StageInput[]): Promise<Stage[]>
   getProspect(ref: string): Promise<ProspectDetail>
   createProspect(input: ProspectInput): Promise<Prospect>
   updateProspect(ref: string, patch: ProspectInput): Promise<Prospect>
@@ -424,8 +521,11 @@ export interface ConsultoraApi {
   moveProspect(
     ref: string,
     stage: string,
-    index?: number
+    index?: number,
+    pipeline?: string
   ): Promise<{ prospect: Prospect; client: Client | null }>
+  /** Borra el prospecto; sus contactos y reuniones quedan sin prospecto. */
+  removeProspect(ref: string): Promise<void>
 
   listContacts(filter: ContactFilter): Promise<ContactsPage>
   getContact(id: string): Promise<ContactDetail>
@@ -439,6 +539,10 @@ export interface ConsultoraApi {
   tagContact(id: string, change: { add?: string[]; remove?: string[] }): Promise<ContactBrief>
   /** Crea un prospecto con este contacto en la etapa dada (vacío = primera abierta). */
   promoteContact(id: string, stage?: string): Promise<{ contact: Contact; prospect: Prospect }>
+  /** Convertir en prospecto: pipeline, etapa, nombre y valor. */
+  convertContact(id: string, input: ConvertInput): Promise<{ contact: Contact; prospect: Prospect }>
+  /** Quita el vínculo con su prospecto (no lo borra). */
+  detachContactProspect(id: string): Promise<Contact>
 
   /** Selector de archivo de macOS para subir una grabación. null = cancelado. */
   pickRecording(): Promise<string | null>
@@ -463,6 +567,18 @@ export interface ConsultoraApi {
 
   listDocuments(client: string): Promise<DocFile[]>
   readDocument(client: string, path: string): Promise<{ path: string; content: string }>
+  /** Documento de texto completo para editarlo. */
+  openDocument(client: string, path: string): Promise<DocContent>
+  writeDocument(
+    client: string,
+    path: string,
+    content: string,
+    expectedModifiedAt?: string
+  ): Promise<{ path: string; modifiedAt: string }>
+  /** Devuelve la ruta relativa nueva. */
+  renameDocument(client: string, path: string, name: string): Promise<{ path: string }>
+  /** A la Papelera de macOS. */
+  trashDocument(client: string, path: string): Promise<void>
   appendNote(entity: NoteEntity, ref: string, text: string): Promise<void>
 }
 

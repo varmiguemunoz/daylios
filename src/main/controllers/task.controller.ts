@@ -26,13 +26,18 @@ export class TaskController {
     )
   }
 
+  get = async (req: Request, res: Response): Promise<void> => {
+    const view = await this.service.get(String(req.params.id))
+    res.json({ ...view, task: taskView(view.task), subtasks: view.subtasks.map(taskView) })
+  }
+
+  /** Con `parent` crea una subtarea (vive en el día de la madre). */
   create = async (req: Request, res: Response): Promise<void> => {
     const body = req.body ?? {}
-    const task = await this.service.add(
-      text(body.date) ?? todayKey(),
-      text(body.title) ?? '',
-      text(body.description)
-    )
+    const parent = text(body.parent)
+    const task = parent
+      ? await this.service.addSubtask(parent, text(body.title) ?? '', text(body.description))
+      : await this.service.add(text(body.date) ?? todayKey(), text(body.title) ?? '', text(body.description))
     // Tags / esfuerzo explícitos (además de los que vengan en el título)
     const extra: TaskPatch = {}
     if (Array.isArray(body.tags)) extra.tags = [...task.tags, ...body.tags]
@@ -53,8 +58,35 @@ export class TaskController {
   }
 
   remove = async (req: Request, res: Response): Promise<void> => {
-    await this.service.remove(String(req.params.id))
-    res.json({ ok: true })
+    const { subtasks } = await this.service.remove(String(req.params.id))
+    res.json({ ok: true, subtasksRemoved: subtasks.length })
+  }
+
+  reorder = async (req: Request, res: Response): Promise<void> => {
+    const body = req.body ?? {}
+    const tasks = await this.service.reorder(text(body.date) ?? todayKey(), body.ids)
+    res.json(tasks.map(taskView))
+  }
+
+  reorderSubtasks = async (req: Request, res: Response): Promise<void> => {
+    const tasks = await this.service.reorderSubtasks(String(req.params.id), (req.body ?? {}).ids)
+    res.json(tasks.map(taskView))
+  }
+
+  tagSummaries = async (_req: Request, res: Response): Promise<void> => {
+    res.json(await this.service.tagSummaries())
+  }
+
+  renameTag = async (req: Request, res: Response): Promise<void> => {
+    res.json({ changed: await this.service.renameTag(String(req.params.tag), (req.body ?? {}).name) })
+  }
+
+  removeTag = async (req: Request, res: Response): Promise<void> => {
+    res.json({ changed: await this.service.removeTag(String(req.params.tag)) })
+  }
+
+  completeSubtasks = async (req: Request, res: Response): Promise<void> => {
+    res.json((await this.service.completeSubtasks(String(req.params.id))).map(taskView))
   }
 
   move = async (req: Request, res: Response): Promise<void> => {

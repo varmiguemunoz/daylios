@@ -15,12 +15,15 @@ export type Screen =
   | { name: 'meeting'; id: string }
   | { name: 'pipeline' }
   | { name: 'prospect'; id: string }
+  | { name: 'tags' }
   | { name: 'contacts' }
   | { name: 'contact'; id: string }
   | { name: 'sources' }
   | { name: 'rules' }
   | { name: 'sequences' }
   | { name: 'newsletters' }
+  | { name: 'note'; id: string }
+  | { name: 'document'; client: string; path: string }
   | { name: 'settings' }
   | { name: 'search'; query: string }
 

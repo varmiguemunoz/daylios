@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { CornerDownLeft, Plus } from 'lucide-react'
 import { DAILY_LIMIT, type DayKey, type Task } from '@shared/tasks'
 import type { DayState } from '../lib/useDay'
@@ -6,13 +6,35 @@ import { longDate, plural, weekdayName } from '../lib/format'
 import { onWindowShown } from '../lib/api'
 import { Meter } from './Meter'
 import { TaskRow } from './TaskRow'
+import { SubtaskDropdown } from './SubtaskDropdown'
 import { YesterdayTray } from './YesterdayTray'
 import { finalIndex, useReorder } from '../lib/useReorder'
 
 interface TodayViewProps {
   date: DayKey
   day: DayState
-  onOpenTask: (task: Task) => void
+  /** `parent` = se abrió una subtarea desde su madre desplegada. */
+  onOpenTask: (task: Task, parent?: Task) => void
+}
+
+const EXPANDED_KEY = 'today.expanded'
+
+/** Madres desplegadas, recordadas entre aperturas. localStorage puede fallar: entonces solo en memoria. */
+function readExpanded(): Set<string> {
+  try {
+    const raw = localStorage.getItem(EXPANDED_KEY)
+    return new Set(raw ? (JSON.parse(raw) as string[]) : [])
+  } catch {
+    return new Set()
+  }
+}
+
+function writeExpanded(ids: Set<string>): void {
+  try {
+    localStorage.setItem(EXPANDED_KEY, JSON.stringify([...ids]))
+  } catch {
+    // sin persistencia
+  }
 }
 
 function statusLine(done: number, total: number): string {
@@ -27,6 +49,7 @@ function statusLine(done: number, total: number): string {
 
 export function TodayView({ date, day, onOpenTask }: TodayViewProps): React.JSX.Element {
   const [draft, setDraft] = useState('')
+  const [expanded, setExpanded] = useState<Set<string>>(readExpanded)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const total = day.today.length
@@ -46,6 +69,16 @@ export function TodayView({ date, day, onOpenTask }: TodayViewProps): React.JSX.
     if (drag.target.index === i) return 'before'
     if (i === total - 1 && drag.target.index === total) return 'after'
     return null
+  }
+
+  const setOpen = (id: string, open: boolean): void => {
+    const next = new Set(expanded)
+    if (open) next.add(id)
+    else next.delete(id)
+    // Limpia ids que ya no están en el día.
+    for (const key of next) if (!ids.includes(key)) next.delete(key)
+    setExpanded(next)
+    writeExpanded(next)
   }
 
   const submit = async (e: React.FormEvent): Promise<void> => {
@@ -159,20 +192,40 @@ export function TodayView({ date, day, onOpenTask }: TodayViewProps): React.JSX.
         )}
 
         {total > 0 && (
-          <ul className="flex flex-col gap-1" aria-label="Tareas de hoy" {...drag.zone('today', total)}>
-            {day.today.map((task, i) => (
-              <TaskRow
-                key={task.id}
-                task={task}
-                onToggle={() => void day.toggle(task)}
-                onOpen={() => onOpenTask(task)}
-                onRemove={() => void day.remove(task)}
-                onMoveBy={(delta) => void day.reorder(task.id, i + delta)}
-                drag={drag.item(task.id, i, 'today')}
-                dragging={drag.dragging === task.id}
-                dropLine={lineAt(i)}
-              />
-            ))}
+          <ul
+            className="flex flex-col gap-1"
+            aria-label="Tareas de hoy"
+            {...drag.zone('today', total)}
+          >
+            {day.today.map((task, i) => {
+              const hasSubtasks = Boolean(task.subtasks?.total)
+              const open = hasSubtasks && expanded.has(task.id)
+              return (
+                <Fragment key={task.id}>
+                  <TaskRow
+                    task={task}
+                    onToggle={() => void day.toggle(task)}
+                    onOpen={() => onOpenTask(task)}
+                    onRemove={() => void day.remove(task)}
+                    onMoveBy={(delta) => void day.reorder(task.id, i + delta)}
+                    drag={drag.item(task.id, i, 'today')}
+                    dragging={drag.dragging === task.id}
+                    dropLine={lineAt(i)}
+                    expanded={open}
+                    onExpand={hasSubtasks ? (next) => setOpen(task.id, next) : undefined}
+                  />
+                  {open && (
+                    <SubtaskDropdown
+                      parent={task}
+                      revision={day.revision}
+                      onOpen={(sub) => onOpenTask(sub, task)}
+                      onRemove={(sub) => void day.removeSubtask(sub)}
+                      onChange={(list) => day.patchProgress(task.id, list)}
+                    />
+                  )}
+                </Fragment>
+              )
+            })}
           </ul>
         )}
       </main>

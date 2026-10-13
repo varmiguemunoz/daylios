@@ -69,6 +69,16 @@ export async function enqueueEvent(
   notify()
 }
 
+/** Borrar un Segment de Resend (`ref` = slug del tag, para el historial de errores). */
+export async function enqueueSegmentDelete(
+  manager: EntityManager,
+  slug: string,
+  segmentId: string
+): Promise<void> {
+  await manager.getRepository(OutboxModel).save(job('segment_delete', slug, { segmentId }))
+  notify()
+}
+
 /** Marca de tiempo estrictamente creciente: el orden de la cola es el orden en que se encoló. */
 let lastStamp = 0
 function stamp(): string {

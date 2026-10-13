@@ -14,6 +14,7 @@ export const ContactModel = new EntitySchema<Contact>({
     linkedin: { type: 'text', nullable: true },
     notesMd: { name: 'notes_md', type: 'text', default: '' },
     clientId: { name: 'client_id', type: 'text', nullable: true },
+    projectId: { name: 'project_id', type: 'text', nullable: true },
     prospectId: { name: 'prospect_id', type: 'text', nullable: true },
     status: { type: 'text', default: 'none' },
     source: { type: 'text', nullable: true },
@@ -27,6 +28,7 @@ export const ContactModel = new EntitySchema<Contact>({
   indices: [
     { name: 'idx_contacts_client', columns: ['clientId'] },
     { name: 'idx_contacts_prospect', columns: ['prospectId'] },
+    { name: 'idx_contacts_project', columns: ['projectId'] },
     { name: 'idx_contacts_email', columns: ['email'], unique: true },
     { name: 'idx_contacts_status', columns: ['status'] }
   ]

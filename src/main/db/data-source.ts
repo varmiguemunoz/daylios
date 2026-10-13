@@ -8,12 +8,19 @@ import { StageModel } from '../models/stage.model'
 import { ProspectModel } from '../models/prospect.model'
 import { MeetingModel } from '../models/meeting.model'
 import { ContactModel } from '../models/contact.model'
+import { NoteRelationModel } from '../models/note-relation.model'
+import { PipelineModel } from '../models/pipeline.model'
 import { CreateTasks1727600000000 } from './migrations/CreateTasks'
 import { AddTaskDescription1727800000000 } from './migrations/AddTaskDescription'
 import { CreateNotes1727800000001 } from './migrations/CreateNotes'
 import { CreateConsultora1727900000000 } from './migrations/CreateConsultora'
 import { AddTagsEffortContacts1728000000000 } from './migrations/AddTagsEffortContacts'
 import { AddMarketing1728100000000 } from './migrations/AddMarketing'
+import { AddSubtasks1728200000000 } from './migrations/AddSubtasks'
+import { AddTagAudience1728300000000 } from './migrations/AddTagAudience'
+import { AddNoteRelations1728400000000 } from './migrations/AddNoteRelations'
+import { AddContactProject1728500000000 } from './migrations/AddContactProject'
+import { AddPipelines1728600000000 } from './migrations/AddPipelines'
 import {
   ContactEventModel,
   ContactTagModel,
@@ -41,7 +48,9 @@ export const ENTITIES = [
   RuleModel,
   NewsletterModel,
   OutboxModel,
-  HubReceiptModel
+  HubReceiptModel,
+  NoteRelationModel,
+  PipelineModel
 ]
 
 // En orden. Nunca edites una publicada: añade una nueva al final.
@@ -51,7 +60,12 @@ export const MIGRATIONS = [
   CreateNotes1727800000001,
   CreateConsultora1727900000000,
   AddTagsEffortContacts1728000000000,
-  AddMarketing1728100000000
+  AddMarketing1728100000000,
+  AddSubtasks1728200000000,
+  AddTagAudience1728300000000,
+  AddNoteRelations1728400000000,
+  AddContactProject1728500000000,
+  AddPipelines1728600000000
 ]
 
 /** Abre `daylios.db` en la carpeta de datos de la app y aplica las migraciones pendientes. */

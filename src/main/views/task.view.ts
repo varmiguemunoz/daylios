@@ -12,7 +12,9 @@ export function taskView(t: Task): Task {
     carriedFrom: t.carriedFrom,
     description: t.description ?? null,
     tags: t.tags ?? [],
-    effort: t.effort ?? null
+    effort: t.effort ?? null,
+    parentId: t.parentId ?? null,
+    ...(t.subtasks ? { subtasks: t.subtasks } : {})
   }
 }
 

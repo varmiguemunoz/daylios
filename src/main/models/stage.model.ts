@@ -8,6 +8,8 @@ export const StageModel = new EntitySchema<Stage>({
     id: { type: 'text', primary: true },
     name: { type: 'text' },
     position: { type: 'integer' },
-    kind: { type: 'text' }
-  }
+    kind: { type: 'text' },
+    pipelineId: { name: 'pipeline_id', type: 'text' }
+  },
+  indices: [{ name: 'idx_stages_pipeline', columns: ['pipelineId', 'position'] }]
 })

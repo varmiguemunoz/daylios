@@ -56,8 +56,10 @@ export interface Tag {
   /** a-z0-9 y guiones. Es la clave: `tag.<slug>` (evento) y `tag:<slug>` (segment). */
   slug: string
   name: string
-  /** Segment de Resend (se crea la primera vez que hace falta). */
+  /** Segment de Resend (solo si es audiencia; se crea la primera vez que hace falta). */
   segmentId: string | null
+  /** Audiencia = tiene Segment en Resend y puede recibir newsletters. */
+  audience: boolean
   createdAt: string
 }
 
@@ -66,6 +68,14 @@ export type TagRef = Pick<Tag, 'slug' | 'name'>
 export interface TagSummary extends Tag {
   contacts: number
   subscribed: number
+}
+
+/** Dónde se usa un tag (antes de borrarlo). */
+export interface TagUsage {
+  slug: string
+  contacts: number
+  rules: { id: string; name: string; active: boolean }[]
+  sources: string[]
 }
 
 // ---- Fuentes (webhooks de entrada) ----
@@ -198,6 +208,11 @@ export interface MarketingApi {
   listTags(): Promise<TagSummary[]>
   /** Cambia el nombre visible (el slug no cambia). */
   renameTag(slug: string, name: string): Promise<Tag>
+  /** Marca o desmarca un tag como audiencia (Segment de Resend). */
+  setTagAudience(slug: string, audience: boolean): Promise<Tag>
+  tagUsage(slug: string): Promise<TagUsage>
+  /** Quita el tag de todos los contactos y lo borra. Falla si lo usa una regla activa. */
+  removeTag(slug: string): Promise<void>
   /** Cola hacia Resend y última descarga del hub. */
   status(): Promise<MarketingStatus>
   /** Sincroniza ahora (hub + cola) y devuelve el estado. */

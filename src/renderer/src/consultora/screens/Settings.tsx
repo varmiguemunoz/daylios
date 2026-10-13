@@ -1,140 +1,23 @@
 import { useCallback, useState } from 'react'
-import { ArrowDown, ArrowUp, FolderOpen, Plus, X } from 'lucide-react'
-import type { SettingsInput, Stage, StageKind } from '@shared/consultora'
+import { FolderOpen } from 'lucide-react'
+import type { SettingsInput } from '@shared/consultora'
 import { api, attempt, openPath, useLoad } from '../lib'
 import { Button, ErrorNote, Field, Page, Section, Select } from '../ui'
 import { EmailSettings } from './SettingsEmail'
 import { HubSettings } from './SettingsHub'
 
-type Draft = Partial<Stage> & { name: string; kind: StageKind }
-
-const KINDS = [
-  { value: 'open', label: 'Abierta' },
-  { value: 'won', label: 'Ganada (crea cliente)' },
-  { value: 'lost', label: 'Perdida' }
-]
-
-/** Ajustes: OpenAI, carpeta de clientes, modelos y etapas del pipeline. Todo se guarda al momento. */
+/** Ajustes: OpenAI, carpeta de clientes, email, hub y nota de voz. Todo se guarda al momento. */
 export function Settings(): React.JSX.Element {
-  const stagesLoad = useCallback(() => api.listStages(), [])
-  const { data: stages } = useLoad(stagesLoad)
-  const [draft, setDraft] = useState<Draft[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  const list = draft ?? stages ?? []
-  const edit = (next: Draft[]): void => setDraft(next)
-  const swap = (i: number, j: number): void => {
-    const next = [...list]
-    ;[next[i], next[j]] = [next[j], next[i]]
-    edit(next)
-  }
-
-  const save = async (): Promise<void> => {
-    const failed = await attempt(() => api.saveStages(list))
-    setError(failed)
-    if (!failed) setDraft(null)
-  }
-
   return (
     <Page title="Ajustes">
       <Connection />
       <EmailSettings />
       <HubSettings />
       <Voice />
-
-      <Section
-        title="Etapas del pipeline"
-        aside={
-          draft && (
-            <div className="flex gap-2">
-              <Button onClick={() => setDraft(null)}>Descartar</Button>
-              <Button kind="primary" onClick={() => void save()}>
-                Guardar etapas
-              </Button>
-            </div>
-          )
-        }
-      >
-        <ErrorNote message={error} />
-        <ul className="flex flex-col gap-1.5">
-          {list.map((stage, i) => (
-            <li
-              key={stage.id ?? `new-${i}`}
-              className="flex items-center gap-2 rounded-md bg-surface py-1.5 pr-1.5 pl-4"
-            >
-              <input
-                value={stage.name}
-                aria-label="Nombre de la etapa"
-                onChange={(e) =>
-                  edit(list.map((s, j) => (j === i ? { ...s, name: e.target.value } : s)))
-                }
-                className="min-w-0 flex-1 bg-transparent text-list font-bold outline-none"
-              />
-              <Select
-                label="Tipo"
-                value={stage.kind}
-                options={KINDS}
-                onChange={(kind) =>
-                  edit(list.map((s, j) => (j === i ? { ...s, kind: kind as StageKind } : s)))
-                }
-              />
-              <IconButton label="Subir" disabled={i === 0} onClick={() => swap(i, i - 1)}>
-                <ArrowUp size={15} strokeWidth={2.5} />
-              </IconButton>
-              <IconButton
-                label="Bajar"
-                disabled={i === list.length - 1}
-                onClick={() => swap(i, i + 1)}
-              >
-                <ArrowDown size={15} strokeWidth={2.5} />
-              </IconButton>
-              <IconButton
-                label="Quitar"
-                danger
-                onClick={() => edit(list.filter((_, j) => j !== i))}
-              >
-                <X size={15} strokeWidth={2.5} />
-              </IconButton>
-            </li>
-          ))}
-        </ul>
-        <div className="mt-3">
-          <Button onClick={() => edit([...list, { name: 'Nueva etapa', kind: 'open' }])}>
-            <Plus size={15} strokeWidth={3} />
-            Añadir etapa
-          </Button>
-        </div>
-      </Section>
+      <p className="mt-9 px-1 text-caption text-milk-soft">
+        Las columnas del pipeline se editan en Pipeline, con «Editar pipeline».
+      </p>
     </Page>
-  )
-}
-
-function IconButton({
-  label,
-  onClick,
-  disabled,
-  danger,
-  children
-}: {
-  label: string
-  onClick: () => void
-  disabled?: boolean
-  danger?: boolean
-  children: React.ReactNode
-}): React.JSX.Element {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      disabled={disabled}
-      onClick={onClick}
-      className={`grid size-8 shrink-0 place-items-center rounded-full text-milk-soft disabled:text-milk-faint ${
-        danger ? 'hover:bg-rose/15 hover:text-rose' : 'hover:bg-hairline hover:text-milk'
-      }`}
-    >
-      {children}
-    </button>
   )
 }
 

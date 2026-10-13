@@ -11,6 +11,7 @@ export const TagModel = new EntitySchema<Tag>({
     slug: { type: 'text', unique: true },
     name: { type: 'text' },
     segmentId: { name: 'segment_id', type: 'text', nullable: true },
+    audience: { type: 'boolean', default: false },
     createdAt: { name: 'created_at', type: 'text' }
   }
 })
@@ -101,7 +102,8 @@ export const NewsletterModel = new EntitySchema<Newsletter>({
  */
 export interface OutboxJob {
   id: string
-  kind: 'contact' | 'event'
+  /** segment_delete = borrar el Segment `payload.segmentId` (tag borrado o que dejó de ser audiencia). */
+  kind: 'contact' | 'event' | 'segment_delete'
   ref: string
   payload: Record<string, unknown>
   attempts: number

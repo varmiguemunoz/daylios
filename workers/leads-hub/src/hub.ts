@@ -142,7 +142,9 @@ async function toResend(
     }
     result.unsubscribed = remote?.unsubscribed ?? false
 
-    for (const slug of outcome.added) {
+    // Solo los tags audiencia tienen Segment (sin `audience` = app antigua: todos).
+    const isAudience = (slug: string): boolean => !config.audience || config.audience.includes(slug)
+    for (const slug of outcome.added.filter(isAudience)) {
       const id = config.segments[slug] ?? (await g.ensureSegment(segmentName(slug)))
       segments[slug] = id
       await g.addToSegment(lead.email, id)
@@ -277,7 +279,8 @@ async function admin(request: Request, url: URL, path: string, deps: HubDeps): P
       await deps.store.putConfig({
         sources: config.sources,
         rules: config.rules,
-        segments: config.segments ?? {}
+        segments: config.segments ?? {},
+        ...(Array.isArray(config.audience) ? { audience: config.audience } : {})
       })
     )
   }

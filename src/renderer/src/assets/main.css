@@ -384,6 +384,18 @@
   animation: toast-in 320ms var(--ease-out-expo);
 }
 
+/* Panel lateral (Drawer) */
+.drawer-in {
+  animation: drawer-in 320ms var(--ease-out-expo);
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(16px);
+    opacity: 0;
+  }
+}
+
 @keyframes toast-in {
   from {
     transform: translateY(12px);
@@ -398,7 +410,8 @@
   .meter-complete::after,
   .tick,
   .row-in,
-  .toast-in {
+  .toast-in,
+  .drawer-in {
     animation: none;
   }
 }

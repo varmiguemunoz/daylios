@@ -10,18 +10,29 @@ const tasks: TasksApi = {
   add: (date, title) => ipcRenderer.invoke('tasks:add', date, title),
   update: (id, patch) => ipcRenderer.invoke('tasks:update', id, patch),
   remove: (id) => ipcRenderer.invoke('tasks:remove', id),
-  restore: (task) => ipcRenderer.invoke('tasks:restore', task),
+  restore: (removed) => ipcRenderer.invoke('tasks:restore', removed),
   moveToDate: (id, date) => ipcRenderer.invoke('tasks:moveToDate', id, date),
   carryOver: (from, to) => ipcRenderer.invoke('tasks:carryOver', from, to),
   history: (query) => ipcRenderer.invoke('tasks:history', query),
   reorder: (date, ids) => ipcRenderer.invoke('tasks:reorder', date, ids),
-  tags: () => ipcRenderer.invoke('tasks:tags')
+  tags: () => ipcRenderer.invoke('tasks:tags'),
+  get: (id) => ipcRenderer.invoke('tasks:get', id),
+  addSubtask: (parentId, title) => ipcRenderer.invoke('tasks:addSubtask', parentId, title),
+  reorderSubtasks: (parentId, ids) => ipcRenderer.invoke('tasks:reorderSubtasks', parentId, ids),
+  completeSubtasks: (parentId) => ipcRenderer.invoke('tasks:completeSubtasks', parentId),
+  tagSummaries: () => ipcRenderer.invoke('tasks:tagSummaries'),
+  renameTag: (from, to) => ipcRenderer.invoke('tasks:renameTag', from, to),
+  removeTag: (tag) => ipcRenderer.invoke('tasks:removeTag', tag)
 }
 
 const notes: NotesApi = {
   list: (page, pageSize) => ipcRenderer.invoke('notes:list', page, pageSize),
   get: (id) => ipcRenderer.invoke('notes:get', id),
-  create: (body) => ipcRenderer.invoke('notes:create', body),
+  create: (body, links) => ipcRenderer.invoke('notes:create', body, links),
+  view: (id) => ipcRenderer.invoke('notes:view', id),
+  search: (query, limit) => ipcRenderer.invoke('notes:search', query, limit),
+  link: (id, target) => ipcRenderer.invoke('notes:link', id, target),
+  unlink: (id, target) => ipcRenderer.invoke('notes:unlink', id, target),
   update: (id, body) => ipcRenderer.invoke('notes:update', id, body),
   remove: (id) => ipcRenderer.invoke('notes:remove', id)
 }
@@ -47,10 +58,17 @@ const consultora: ConsultoraApi = {
   getClient: call('getClient'),
   createClient: call('createClient'),
   updateClient: call('updateClient'),
+  clientImpact: call('clientImpact'),
+  removeClient: call('removeClient'),
   getProject: call('getProject'),
   createProject: call('createProject'),
   updateProject: call('updateProject'),
+  removeProject: call('removeProject'),
+  listPipelines: call('listPipelines'),
   pipeline: call('pipeline'),
+  savePipeline: call('savePipeline'),
+  removePipeline: call('removePipeline'),
+  removeProspect: call('removeProspect'),
   listStages: call('listStages'),
   saveStages: call('saveStages'),
   getProspect: call('getProspect'),
@@ -66,6 +84,8 @@ const consultora: ConsultoraApi = {
   unsubscribeContact: call('unsubscribeContact'),
   tagContact: call('tagContact'),
   promoteContact: call('promoteContact'),
+  convertContact: call('convertContact'),
+  detachContactProspect: call('detachContactProspect'),
   pickRecording: call('pickRecording'),
   importRecording: call('importRecording'),
   listMeetings: call('listMeetings'),
@@ -79,6 +99,10 @@ const consultora: ConsultoraApi = {
   listActionItems: call('listActionItems'),
   listDocuments: call('listDocuments'),
   readDocument: call('readDocument'),
+  openDocument: call('openDocument'),
+  writeDocument: call('writeDocument'),
+  renameDocument: call('renameDocument'),
+  trashDocument: call('trashDocument'),
   appendNote: call('appendNote')
 }
 
@@ -91,6 +115,9 @@ const callMarketing =
 const marketing: MarketingApi = {
   listTags: callMarketing('listTags'),
   renameTag: callMarketing('renameTag'),
+  setTagAudience: callMarketing('setTagAudience'),
+  tagUsage: callMarketing('tagUsage'),
+  removeTag: callMarketing('removeTag'),
   status: callMarketing('status'),
   syncNow: callMarketing('syncNow'),
   testResend: callMarketing('testResend'),
@@ -162,7 +189,12 @@ contextBridge.exposeInMainWorld('api', {
   voice,
   onNotesOpen,
   hideWindow: () => ipcRenderer.send('window:hide'),
-  openConsultora: () => ipcRenderer.send('window:openConsultora'),
+  openConsultora: (target?: { client?: string }) => ipcRenderer.send('window:openConsultora', target),
+  onConsultoraNavigate: (cb: (target: { client?: string }) => void) => {
+    const listener = (_e: unknown, target: { client?: string }): void => cb(target)
+    ipcRenderer.on('consultora:navigate', listener)
+    return () => ipcRenderer.removeListener('consultora:navigate', listener)
+  },
   openPath: (path: string) => ipcRenderer.invoke('shell:open', path),
   /** Ruta en disco de un archivo soltado en la ventana (Electron ya no expone File.path). */
   pathForFile: (file: File) => webUtils.getPathForFile(file),

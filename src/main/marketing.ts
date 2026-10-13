@@ -29,7 +29,7 @@ export function createMarketing(
     sync.kick()
   }
 
-  const tags = new TagService(db)
+  const tags = new TagService(db, configChanged)
   return {
     tags,
     sources: new SourceService(db, configChanged),

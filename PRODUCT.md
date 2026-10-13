@@ -42,7 +42,11 @@ A single-day ledger with a hard ceiling of eight, designed to be read by an AI a
 - Local SQLite storage; files/MCP server readable by Claude.
 - Consultora window (separate, 1100×760): clients with document folders, projects (objective, deliverables, notes), meetings (screen + mic + system audio recording, OpenAI transcription and structured summary), and a sales pipeline with configurable stages. Its purpose is giving Claude real, current context of Ali Muñoz Advisory via MCP.
 - Email marketing inside Consultora (a small GoHighLevel): one contacts base for clients, prospects and opt-in leads; tags that record where each lead came from; inbound webhooks through an always-on Cloudflare Worker; tag rules; sales sequences and a daily newsletter sent by Resend. Claude writes and sends the newsletter through MCP. Opt-in only, around 1000 emails a day.
-- Explicitly out of scope: sprints, complex task tags, task views beyond Today, History and Notes; note search, folders or tags; Zoom/Meet/Teams, invoicing or multi-user integrations; a visual flow builder (Resend's is used), SMS or WhatsApp.
+- Subtasks (v3): one level, unlimited, inside a task's detail; they never count toward the ceiling of eight and travel with their parent.
+- Notes can relate to other notes and to clients; each note shows an index of its relations at the top and the bottom. A minimal note search exists only to pick a relation.
+- Several pipelines (one per offer), each with its own columns, edited from the pipeline itself (board or list view, filters in a right-side panel).
+- One tags screen (contacts and tasks): rename, delete, and mark contact tags as Resend audiences (only audiences get a Segment).
+- Explicitly out of scope: sprints, task views beyond Today, History and Notes; note folders; Zoom/Meet/Teams, invoicing or multi-user integrations; a canvas flow builder (internal automations, planned for a later session, will be a linear list of steps), SMS or WhatsApp.
 - UI language: Spanish (inferred from the owner's brief; confirm).
 
 ## Brand Commitments

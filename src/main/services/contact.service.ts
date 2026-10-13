@@ -8,6 +8,7 @@ import {
   type ContactFilter,
   type ContactInput,
   type ContactsPage,
+  type ConvertInput,
   type Prospect
 } from '@shared/consultora'
 import {
@@ -27,6 +28,9 @@ import { runRules } from '@shared/automation'
 import { ContactModel } from '../models/contact.model'
 import { ClientModel } from '../models/client.model'
 import { ProspectModel } from '../models/prospect.model'
+import { ProjectModel } from '../models/project.model'
+import { StageModel } from '../models/stage.model'
+import { PipelineModel } from '../models/pipeline.model'
 import { MeetingModel } from '../models/meeting.model'
 import { ContactEventModel, ContactTagModel, RuleModel, TagModel } from '../models/marketing.model'
 import { transactionGuard } from '../guards/transaction.guard'
@@ -71,14 +75,18 @@ export class ContactService {
       )
       qb.andWhere('c.prospectId = :prospect', { prospect: prospect.id })
     }
-    if (filter.tag) {
-      qb.innerJoin('ContactTag', 'ct', 'ct.contactId = c.id').innerJoin(
+    // Tags: el contacto debe tenerlos todos (`tag` = uno, por compatibilidad).
+    const wanted = [...new Set([...(filter.tags ?? []), ...(filter.tag ? [filter.tag] : [])].map(slugify))].filter(Boolean)
+    for (const [i, slug] of wanted.entries()) {
+      qb.innerJoin('ContactTag', `ct${i}`, `ct${i}.contactId = c.id`).innerJoin(
         'Tag',
-        't',
-        't.id = ct.tagId AND t.slug = :tag',
-        { tag: slugify(filter.tag) }
+        `t${i}`,
+        `t${i}.id = ct${i}.tagId AND t${i}.slug = :tag${i}`,
+        { [`tag${i}`]: slug }
       )
     }
+    if (filter.inPipeline === true) qb.andWhere('c.prospectId IS NOT NULL')
+    if (filter.inPipeline === false) qb.andWhere('c.prospectId IS NULL')
     if (filter.status)
       qb.andWhere('c.status = :status', {
         status: oneOf(filter.status, CONTACT_STATUSES, 'El estado')
@@ -89,7 +97,7 @@ export class ContactService {
     const q = normalizeName(filter.query ?? '')
     const matched = q
       ? named.filter((c) =>
-          [c.name, c.role, c.email, c.organization].some(
+          [c.name, c.role, c.email, c.organization, c.phone].some(
             (field) => field && normalizeName(field).includes(q)
           )
         )
@@ -131,11 +139,16 @@ export class ContactService {
     const events = await this.db
       .getRepository(ContactEventModel)
       .find({ where: { contactId: contact.id }, order: { createdAt: 'DESC' }, take: 100 })
+    const project = contact.projectId
+      ? await this.db.getRepository(ProjectModel).findOneBy({ id: contact.projectId })
+      : null
     return {
       ...named,
       tags: tags.map(({ slug, name }) => ({ slug, name })),
       meetings: meetings.map(brief),
-      events
+      events,
+      project: project && { id: project.id, name: project.name },
+      prospect: await prospectInfo(this.db.manager, contact.prospectId)
     }
   }
 
@@ -151,6 +164,7 @@ export class ContactService {
         linkedin: optionalText(input.linkedin, 'LinkedIn', 300),
         notesMd: markdown(input.notesMd, 'Las notas'),
         clientId: null,
+        projectId: null,
         prospectId: null,
         status: 'none',
         source: null,
@@ -298,6 +312,40 @@ export class ContactService {
     })
   }
 
+  /**
+   * Convertir en prospecto: elige pipeline, etapa, nombre y valor. El nombre por defecto es su
+   * cliente, `fields.company` o el propio contacto.
+   */
+  convert(id: unknown, input: ConvertInput = {}): Promise<{ contact: Contact; prospect: Prospect }> {
+    return transactionGuard(this.db, async (manager) => {
+      const contact = await this.find(manager, id)
+      const client = contact.clientId
+        ? await manager.getRepository(ClientModel).findOneBy({ id: contact.clientId })
+        : null
+      const prospect = await promoteContact(manager, contact, input.stage ?? '', {
+        pipeline: input.pipeline,
+        company: input.company?.trim() || client?.name,
+        valueUsd: input.valueUsd ?? null
+      })
+      if (client && !prospect.clientId) {
+        prospect.clientId = client.id
+        await manager.getRepository(ProspectModel).update({ id: prospect.id }, { clientId: client.id })
+      }
+      return { contact, prospect }
+    })
+  }
+
+  /** Quita el vínculo con su prospecto (el prospecto se queda). */
+  detachProspect(id: unknown): Promise<Contact> {
+    return transactionGuard(this.db, async (manager) => {
+      const contact = await this.find(manager, id)
+      if (!contact.prospectId) return contact
+      contact.prospectId = null
+      contact.updatedAt = now()
+      return manager.getRepository(ContactModel).save(contact)
+    })
+  }
+
   // ---- internos ----
 
   private async find(manager: EntityManager, id: unknown): Promise<Contact> {
@@ -415,12 +463,15 @@ export async function changeTags(
 export async function promoteContact(
   manager: EntityManager,
   contact: Contact,
-  stage: string
+  stage: string,
+  extra: { pipeline?: string; company?: string; valueUsd?: number | null } = {}
 ): Promise<Prospect> {
   if (contact.prospectId) throw new AppError('invalid', 'Este contacto ya está en el pipeline.')
   const company = typeof contact.fields.company === 'string' && contact.fields.company.trim()
   const prospect = await insertProspect(manager, {
-    company: company || contactLabel(contact),
+    company: extra.company || company || contactLabel(contact),
+    pipeline: extra.pipeline,
+    valueUsd: extra.valueUsd ?? null,
     contactMd: [
       contact.name && `- Nombre: ${contact.name}`,
       contact.email && `- Email: ${contact.email}`,
@@ -485,12 +536,28 @@ function textList(value: unknown, label: string): string[] {
   return value as string[]
 }
 
-/** Aplica `client` / `prospect` (id o nombre; '' quita). Un prospecto ya ganado fija también su cliente. */
+/**
+ * Aplica `client` / `project` / `prospect` (id o nombre; '' quita). Cambiar de cliente quita el proyecto;
+ * el proyecto debe ser de su cliente. Un prospecto ya ganado fija también su cliente.
+ */
 async function link(manager: EntityManager, contact: Contact, input: ContactInput): Promise<void> {
   if (input.client !== undefined) {
-    contact.clientId = input.client
+    const clientId = input.client
       ? (await findByRef(manager.getRepository(ClientModel), input.client, 'name', 'el cliente')).id
       : null
+    if (clientId !== contact.clientId) contact.projectId = null
+    contact.clientId = clientId
+  }
+  if (input.project !== undefined) {
+    if (!input.project) contact.projectId = null
+    else {
+      const project = await findByRef(manager.getRepository(ProjectModel), input.project, 'name', 'el proyecto')
+      if (contact.clientId && project.clientId !== contact.clientId) {
+        throw new AppError('invalid', 'Ese proyecto es de otro cliente.')
+      }
+      contact.clientId = project.clientId
+      contact.projectId = project.id
+    }
   }
   if (input.prospect !== undefined) {
     const prospect = input.prospect
@@ -503,5 +570,21 @@ async function link(manager: EntityManager, contact: Contact, input: ContactInpu
       : null
     contact.prospectId = prospect?.id ?? null
     if (prospect?.clientId && !contact.clientId) contact.clientId = prospect.clientId
+  }
+}
+
+/** Prospecto del contacto con su pipeline y etapa (para la ficha). */
+async function prospectInfo(manager: EntityManager, prospectId: string | null): Promise<ContactDetail['prospect']> {
+  if (!prospectId) return null
+  const prospect = await manager.getRepository(ProspectModel).findOneBy({ id: prospectId })
+  if (!prospect) return null
+  const stage = await manager.getRepository(StageModel).findOneBy({ id: prospect.stageId })
+  const pipeline = stage ? await manager.getRepository(PipelineModel).findOneBy({ id: stage.pipelineId }) : null
+  return {
+    id: prospect.id,
+    company: prospect.company,
+    stage: stage?.name ?? '',
+    stageKind: stage?.kind ?? 'open',
+    pipeline: pipeline?.name ?? ''
   }
 }

@@ -9,14 +9,18 @@ import {
   type ClientDetail,
   type ClientInput,
   type ClientStatus,
-  type Meeting
+  type Meeting,
+  type ClientImpact
 } from '@shared/consultora'
 import { ClientModel } from '../models/client.model'
 import { ProjectModel } from '../models/project.model'
 import { ProspectModel } from '../models/prospect.model'
 import { MeetingModel } from '../models/meeting.model'
 import { ContactModel } from '../models/contact.model'
-import { transactionGuard } from '../guards/transaction.guard'
+import { NoteRelationModel } from '../models/note-relation.model'
+import { afterCommit, transactionGuard } from '../guards/transaction.guard'
+import { notesOfClient, removeRelationsOf } from './note.service'
+import { moveToTrash } from './trash'
 import { config } from '../config'
 import { AppError } from './app.error'
 import { findByRef } from './ref'
@@ -72,8 +76,44 @@ export class ClientService {
       meetings: meetings.map(brief),
       prospects,
       openActionItems: openActionItems(meetings),
-      documents: await listDocuments(client.folderPath)
+      documents: await listDocuments(client.folderPath),
+      notes: await notesOfClient(this.db.manager, client.id)
     }
+  }
+
+  /** Qué se borra o desvincula si se borra el cliente (para confirmarlo con datos). */
+  async impact(ref: unknown): Promise<ClientImpact> {
+    const client = await this.find(ref)
+    const m = this.db.manager
+    return {
+      projects: await m.getRepository(ProjectModel).countBy({ clientId: client.id }),
+      meetings: await m.getRepository(MeetingModel).countBy({ clientId: client.id }),
+      contacts: await m.getRepository(ContactModel).countBy({ clientId: client.id }),
+      prospects: await m.getRepository(ProspectModel).countBy({ clientId: client.id }),
+      notes: await m.getRepository(NoteRelationModel).countBy({ targetType: 'client', targetId: client.id }),
+      folderPath: client.folderPath
+    }
+  }
+
+  /**
+   * Borra el cliente y sus proyectos. Reuniones, contactos y prospectos quedan sin cliente;
+   * las notas pierden la relación. La carpeta queda en el disco salvo `trashFolder`.
+   */
+  remove(ref: unknown, opts: { trashFolder?: boolean } = {}): Promise<void> {
+    return transactionGuard(this.db, async (manager) => {
+      const client = await findByRef(manager.getRepository(ClientModel), ref, 'name', 'el cliente')
+      await manager.getRepository(ProjectModel).delete({ clientId: client.id })
+      await manager.getRepository(MeetingModel).update({ clientId: client.id }, { clientId: null, projectId: null })
+      await manager.getRepository(ContactModel).update({ clientId: client.id }, { clientId: null, projectId: null })
+      await manager.getRepository(ProspectModel).update({ clientId: client.id }, { clientId: null })
+      await removeRelationsOf(manager, 'client', client.id)
+      await manager.getRepository(ClientModel).delete({ id: client.id })
+      if (opts.trashFolder === true) {
+        afterCommit(manager, () => {
+          moveToTrash(client.folderPath).catch((e) => console.error('[clientes] papelera', e))
+        })
+      }
+    })
   }
 
   create(input: ClientInput): Promise<Client> {

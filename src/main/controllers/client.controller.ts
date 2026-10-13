@@ -22,4 +22,19 @@ export class ClientController {
   update = async (req: Request, res: Response): Promise<void> => {
     res.json(await this.service.update(String(req.params.ref), req.body ?? {}))
   }
+
+  impact = async (req: Request, res: Response): Promise<void> => {
+    res.json(await this.service.impact(String(req.params.ref)))
+  }
+
+  /** Sin `?confirm=1` devuelve el impacto y no borra. `?trashFolder=1` manda la carpeta a la Papelera. */
+  remove = async (req: Request, res: Response): Promise<void> => {
+    const ref = String(req.params.ref)
+    if (req.query.confirm !== '1') {
+      res.json({ needsConfirm: true, impact: await this.service.impact(ref) })
+      return
+    }
+    await this.service.remove(ref, { trashFolder: req.query.trashFolder === '1' })
+    res.json({ ok: true })
+  }
 }

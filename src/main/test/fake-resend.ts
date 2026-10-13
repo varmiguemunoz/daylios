@@ -98,6 +98,11 @@ export class FakeResend implements ResendGateway {
     this.contacts.get(email)?.segments.delete(segmentId)
   }
 
+  async deleteSegment(id: string): Promise<void> {
+    this.segments.delete(id)
+    for (const c of this.contacts.values()) c.segments.delete(id)
+  }
+
   async ensureSegment(name: string): Promise<string> {
     this.hit()
     for (const [id, n] of this.segments) if (n === name) return id

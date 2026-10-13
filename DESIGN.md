@@ -351,14 +351,17 @@ The day's ceiling, drawn. Eight equal pill segments in a row.
 
 ### Detail Screens (Task, Note)
 
-- **Header:** a surface pill back button (36px, apricot chevron + caption bold label) at left; a 36px icon button at right for delete (rose on hover). No tab switcher; Esc goes back.
+- **Header:** a surface pill back button (36px, apricot chevron + caption bold label) at left; at right, 36px icon buttons: «Detalles» (sliders, task only) and delete (rose on hover). No tab switcher; Esc goes back.
+- **Task body, nothing else:** title, one caption line (date · «de ayer»), one summary line, then the description. The summary line is a quiet button with the same pieces as the task row (effort bars, «2/5» pill, tag chips); empty it reads «Añadir esfuerzo, tags o subtareas» in milk-soft. Clicking it or ⌘I opens the details drawer.
+- **Details drawer (task):** the shared right drawer, titled «Detalles», with caption-800 milk-soft groups in this order: Esfuerzo (segmented rail), Tags (chips + inline input on a surface field), Subtareas. A subtask's drawer has no Subtareas group.
 - **Task title:** title type, 800; click to edit in place on a surface field (12px radius) that grows with content. Done tasks read milk-soft with the 50% strike.
 - **Note delete:** two steps. First click turns the icon into a rose pill «¿Borrar?» with ink text; leaving the button resets it.
 
 ### Markdown Editor
 
-- **Mode switch:** a small tab-switcher rail (32px items) with «Escribir» / «Ver»; ⌘E toggles. A save label sits at the right: mint check + «Guardado», «Guardando…», or coral «No se guardó».
-- **Write:** a bare textarea on night, body type, apricot caret; no card around it.
+- **No visible modes.** Text always reads rendered. Double click, ⌘E or Enter enters editing (a single click when empty). It returns to reading on blur, on Esc, or after 2 s without typing; the caret comes back where it was. Esc while editing never leaves the screen.
+- **Save label:** silent when saved. «Guardando…» or coral «No se guardó» float as a small surface-raised pill at the bottom right, only while true.
+- **Write:** a bare textarea on night, body type, apricot caret; no card around it. Same position and padding as reading, so entering edit does not move the text.
 - **View:** rendered markdown, line-height 1.55. h1 26px, h2 title, h3 label, h4–h6 caption milk-soft. Links apricot with a 45% underline. Inline code on surface-raised (6px radius, system mono); code blocks on surface (12px radius). Quotes on a surface wash, never a colored side border. Task-list boxes are 18px circles that fill mint when checked, matching task rows. Tables scroll horizontally.
 
 ### Notes List
@@ -405,6 +408,46 @@ All motion uses the expo ease-out curve and runs only in response to a state cha
 - **Tick:** a changed number or status line rises from 35% below with a brief blur, 420ms.
 - **Row in / toast in:** 360ms / 320ms slide and fade.
 - **Reduced motion:** with `prefers-reduced-motion: reduce`, the segment transition is removed and sheen, tick, row-in and toast-in animations do not run; state still changes instantly.
+
+### v3 Primitives (shared, atomic: `src/renderer/src/ui`)
+
+- **Drawer:** right-side panel, 360px, full height, surface with xl radius on its left edge, toast float shadow (the same allowed use as the recording sheet), slides 16px in (320ms expo). Night at 40% behind. Esc, outside click or the X close it; focus returns to the opener. Holds filters (Contacts, Pipeline); a «Limpiar filtros» quiet pill sits in its footer above a hairline.
+- **Modal:** centered surface, xl radius, toast float shadow, focus trapped, night at 60% behind. Sizes sm, md, lg. Only one overlay at a time; Esc closes the top one.
+- **Segmented toggle:** the tab-switcher rail at 32px items (Columnas | Lista, Nota | Cliente). Active = surface-raised, milk text, apricot icon.
+- **Filter button:** 44px quiet pill «Filtros» with a sliders icon; with active filters the icon turns apricot and an apricot count badge with ink text appears.
+- **Confirm button:** the two-step delete («¿Borrar?» rose pill with ink text). Its second label states the consequence when it matters («¿Quitar de 34?», «¿A la Papelera?»).
+- **Action row:** a List row whose main area is a button and whose actions (icon buttons, confirm) fade in on hover or focus. No buttons inside buttons.
+- **Search field:** 44px surface pill, search icon, X to clear.
+
+### Subtasks
+
+- Live in the task details drawer, under a caption «Subtareas 2/5».
+- **In Hoy:** the parent's «2/5» pill becomes a toggle with a small chevron that rotates 90° when open. Subtasks drop down below the parent as compact rows, indented 38px so their circle lines up with the parent's text, entering with `row-in`. → opens, ← closes (← on a subtask returns to its parent). Open state is remembered per task.
+- Capture is a small capture field (48px, md radius, apricot plus). Rows are the task row at compact size: 40px, 20px circle checkbox.
+- Parent rows show progress as a 20px pill with a list-checks icon («2/5»), milk-soft on surface-raised; mint wash when all are done. The meter never counts subtasks.
+- With the parent done and subtasks pending, a quiet pill offers «Completar las N pendientes».
+
+### Related notes
+
+- Top index: one caption line «Relacionadas:» with 28px surface chips (file icon for notes, briefcase for clients). Nothing when empty.
+- Bottom index: «Notas relacionadas» caption heading over a surface list (bold title, caption excerpt), remove X in rose on hover, and a quiet «Relacionar» pill with an apricot link icon. The picker is a small modal with a segmented toggle and a search field.
+
+### Tags screen
+
+- A maintenance table, not a dashboard: rows with the name editable in place, usage in caption, the slug in system mono milk-faint, an «Audiencia» switch pill (active = surface-raised, milk, apricot radio icon) and a confirm button. Tags never take a pastel.
+
+### Contact detail
+
+- Header: 48px initials circle, name editable as headline, «rol · empresa» and the subscription pill in the meta line. Actions: email and LinkedIn icon buttons, one apricot primary («Convertir en prospecto», or a quiet «Ver en pipeline» once converted) and the confirm delete.
+- Two columns: main (Notas, then Actividad, a single timeline of events and meetings) and a 300px side stack of groups without cards: Datos (inline fields, label micro over value, click to edit), Relaciones (Cliente, Proyecto, Prospecto as reference pickers: the link opens it, «Cambiar» opens a searchable modal with «Quitar»), Tags, Email marketing (one line plus its action), Formulario (collapsed).
+
+### Pipelines
+
+- Header is one row: the pipeline selector (a native select: choosing one of N is what a dropdown is for, «+ Nuevo pipeline» last), open value in caption, then the Columnas | Lista toggle, «Filtros», «Editar pipeline» quiet pill and the apricot «Nuevo prospecto».
+- Board: 260px columns on a 50% surface wash. Column header = name pill (won in a mint wash, lost milk-soft) + neutral count badge, value in micro and a quiet «+» that opens an inline input at the top of the column. Cards: surface, sm radius, company bold with value at the right in tabular, main contact in caption, next step in micro (butter when overdue).
+- Navigation: ← / → move one column, ⇧ jumps to the ends. Holding the pointer 500ms on the board background enables panning: grabbing cursor and a 1.5px apricot inset ring at 40% while it lasts.
+- List: the same data in fixed columns with sortable headers (arrow on the active one) and the stage as an inline pill select.
+- Editor modal: name field, rows with a grip handle, inline name, a three-pill kind rail (Abierta, Ganada in mint, Perdida), prospect count and delete. Deleting a column with prospects asks where they go in an apricot 10% notice; deleting the pipeline lives in a rose 8% band at the bottom.
 
 ## Do's and Don'ts
 

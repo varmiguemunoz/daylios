@@ -8,6 +8,7 @@ import { DayHeading } from './DayHeading'
 import { Pager } from './Pager'
 import { Markdown } from './Markdown'
 import { EffortBars, TagChips } from './TaskMeta'
+import { SubtaskProgress } from './SubtaskProgress'
 
 type Period = '7' | '30' | 'month' | 'all' | 'range'
 
@@ -206,7 +207,8 @@ export function HistoryView({ today, onOpenTask }: HistoryViewProps): React.JSX.
                             aria-label="Tiene descripción"
                           />
                         )}
-                        <span className="hidden shrink-0 min-[380px]:inline-flex">
+                        <span className="hidden shrink-0 items-center gap-1 min-[380px]:inline-flex">
+                          <SubtaskProgress progress={t.subtasks} />
                           <TagChips tags={t.tags.slice(0, 2)} />
                         </span>
                         <EffortBars effort={t.effort} />

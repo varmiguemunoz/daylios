@@ -4,6 +4,7 @@ import {
   Users,
   CalendarClock,
   SquareKanban,
+  Tags as TagsIcon,
   Waypoints,
   Workflow,
   MailPlus,
@@ -28,12 +29,16 @@ import { Sources } from './screens/Sources'
 import { Rules } from './screens/Rules'
 import { Sequences } from './screens/Sequences'
 import { Newsletters } from './screens/Newsletters'
+import { Tags } from './screens/Tags'
+import { Note } from './screens/Note'
+import { Document } from './screens/Document'
 
 type Section =
   | 'clients'
   | 'contacts'
   | 'meetings'
   | 'pipeline'
+  | 'tags'
   | 'sources'
   | 'rules'
   | 'sequences'
@@ -44,7 +49,8 @@ const SECTIONS: { id: Section; label: string; icon: typeof Briefcase }[] = [
   { id: 'clients', label: 'Clientes', icon: Briefcase },
   { id: 'contacts', label: 'Contactos', icon: Users },
   { id: 'meetings', label: 'Reuniones', icon: CalendarClock },
-  { id: 'pipeline', label: 'Pipeline', icon: SquareKanban }
+  { id: 'pipeline', label: 'Pipeline', icon: SquareKanban },
+  { id: 'tags', label: 'Tags', icon: TagsIcon }
 ]
 
 /** Email marketing: de dónde entran los leads y qué se les envía. */
@@ -64,12 +70,15 @@ const LABEL: Record<Screen['name'], string> = {
   meeting: 'Reunión',
   pipeline: 'Pipeline',
   prospect: 'Prospecto',
+  tags: 'Tags',
   contacts: 'Contactos',
   contact: 'Contacto',
   sources: 'Fuentes',
   rules: 'Reglas',
   sequences: 'Secuencias',
   newsletters: 'Newsletters',
+  note: 'Nota',
+  document: 'Documento',
   settings: 'Ajustes',
   search: 'Búsqueda'
 }
@@ -82,12 +91,15 @@ const SECTION_OF: Record<Screen['name'], Section | null> = {
   meeting: 'meetings',
   pipeline: 'pipeline',
   prospect: 'pipeline',
+  tags: 'tags',
   contacts: 'contacts',
   contact: 'contacts',
   sources: 'sources',
   rules: 'rules',
   sequences: 'sequences',
   newsletters: 'newsletters',
+  note: null,
+  document: 'clients',
   settings: 'settings',
   search: null
 }
@@ -107,6 +119,15 @@ export function ConsultoraApp(): React.JSX.Element {
   const back = (): void => setStack((s) => (s.length > 1 ? s.slice(0, -1) : s))
   const backLabel = previous ? LABEL[previous.name] : ''
   const section = SECTION_OF[screen.name]
+
+  // Una nota del menubar pidió abrir un cliente.
+  useEffect(
+    () =>
+      window.api.onConsultoraNavigate((target) => {
+        if (target.client) setStack([{ name: 'clients' }, { name: 'client', id: target.client }])
+      }),
+    []
+  )
 
   // ⌘F busca · Esc vuelve atrás (si no se está escribiendo)
   useEffect(() => {
@@ -172,7 +193,7 @@ export function ConsultoraApp(): React.JSX.Element {
       <div className="relative flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center justify-between gap-4 px-6 [-webkit-app-region:drag]">
           <form
-            className="flex h-9 w-80 items-center gap-2 rounded-full bg-surface px-3.5 [-webkit-app-region:no-drag] focus-within:shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--color-apricot)_70%,transparent)]"
+            className="flex h-9 w-full max-w-80 min-w-0 items-center gap-2 rounded-full bg-surface px-3.5 [-webkit-app-region:no-drag] focus-within:shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--color-apricot)_70%,transparent)]"
             onSubmit={(e) => {
               e.preventDefault()
               if (query.trim().length >= 2) go({ name: 'search', query: query.trim() })
@@ -236,6 +257,8 @@ function ScreenView({
       return <Pipeline go={go} />
     case 'prospect':
       return <Prospect id={screen.id} go={go} back={back} backLabel={backLabel} />
+    case 'tags':
+      return <Tags />
     case 'contacts':
       return <Contacts go={go} />
     case 'contact':
@@ -248,6 +271,10 @@ function ScreenView({
       return <Sequences go={go} />
     case 'newsletters':
       return <Newsletters />
+    case 'note':
+      return <Note id={screen.id} go={go} back={back} backLabel={backLabel} />
+    case 'document':
+      return <Document client={screen.client} path={screen.path} back={back} backLabel={backLabel} />
     case 'settings':
       return <Settings />
     case 'search':

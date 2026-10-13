@@ -170,52 +170,27 @@ App instalada en `/Applications`:
 
 ### Herramientas
 
-| Herramienta          | Qué hace                                                                                    |
-| -------------------- | ------------------------------------------------------------------------------------------- |
-| `get_day`            | Tareas del día + resumen (total, hechas, pendientes, huecos libres, techo). Sin fecha = hoy |
-| `get_history`        | Historial por días, paginado, filtrable con `from` / `to`                                   |
-| `create_task`        | Crea una tarea (falla si el día ya tiene 8)                                                 |
-| `update_task`        | Cambia el título y/o marca como hecha o pendiente                                           |
-| `delete_task`        | Elimina una tarea                                                                           |
-| `move_task`          | Mueve una tarea a otro día                                                                  |
-| `carry_over_pending` | Mueve las pendientes de un día a otro (por defecto de ayer a hoy)                           |
-| `list_notes`         | Notas por día (más reciente primero), paginadas; cada una con `title`, `excerpt` y `body`   |
-| `get_note`           | Una nota completa                                                                           |
-| `create_note`        | Crea una nota en markdown (la primera línea es el título)                                   |
-| `update_note`        | Reemplaza el contenido de una nota                                                          |
-| `delete_note`        | Elimina una nota                                                                            |
+Las herramientas que borran piden `confirm: true`: sin él devuelven el impacto y no borran. Las referencias a
+clientes, proyectos, prospectos, pipelines y etapas aceptan id o nombre. Excepciones a propósito: claves y secretos,
+permisos de macOS y empezar o detener una grabación en vivo.
+
+| Dominio      | Herramientas                                                                                                                                                                           |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Día          | `get_day` · `get_history` · `create_task` (con `parent` crea una subtarea) · `get_task` · `update_task` · `delete_task` · `move_task` · `carry_over_pending` · `reorder_tasks` · `reorder_subtasks` · `complete_subtasks` |
+| Notas        | `list_notes` · `get_note` (con relaciones) · `create_note` · `update_note` · `delete_note` · `search_notes` · `link_notes` · `unlink_notes` · `link_note_client` · `unlink_note_client` |
+| Clientes     | `get_overview` · `list_clients` · `get_client` · `save_client` · `get_client_impact` · `delete_client` · `get_project` · `save_project` · `delete_project` · `search` · `append_note` |
+| Documentos   | `list_documents` · `read_document` · `write_document` · `rename_document` · `delete_document` (a la Papelera)                                                                         |
+| Reuniones    | `list_meetings` · `get_meeting` · `create_meeting` · `update_meeting` · `process_meeting` · `delete_meeting` · `list_action_items` · `update_action_item` · `import_recording`         |
+| Pipelines    | `list_pipelines` · `get_pipeline` · `save_pipeline` · `delete_pipeline` · `get_prospect` · `save_prospect` · `move_prospect` · `delete_prospect`                                     |
+| Contactos    | `list_contacts` · `get_contact` · `save_contact` · `delete_contact` · `tag_contact` · `set_contact_subscription` · `convert_contact` (alias `promote_contact`) · `detach_contact_prospect` |
+| Tags         | `list_tags` (`kind`: contact o task) · `rename_tag` · `set_tag_audience` · `delete_tag` · `rename_task_tag` · `delete_task_tag`                                                     |
+| Email        | `list_sources` · `save_source` · `rotate_source_secret` · `delete_source` · `list_rules` · `save_rule` · `delete_rule` · `list_sequences` · `get_sequence` · `save_sequence` · `set_sequence_status` · `get_newsletter_context` · `send_newsletter` · `list_newsletters` · `get_newsletter` · `get_marketing_status` · `sync_marketing_now` |
 
 `create_task` y `update_task` aceptan `description` (markdown), `tags` y `effort` (alto/medio/bajo). En el título también funcionan `#tag` y `!alto` / `!medio` / `!bajo`.
 
-Consultora (las referencias aceptan id o nombre):
-
-| Herramienta                                      | Qué hace                                                                                                   |
-| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| `get_overview`                                   | Panorama: clientes activos y proyectos, action items abiertos, pipeline, próximos pasos, últimas reuniones |
-| `get_client` · `list_clients`                    | Ficha completa de un cliente (proyectos, reuniones, pendientes, documentos) · lista                        |
-| `get_project`                                    | Proyecto con entregables pendientes y reuniones                                                            |
-| `list_meetings` · `get_meeting`                  | Reuniones por día · una reunión (transcripción con `include_transcript`)                                   |
-| `list_action_items` · `update_action_item`       | Pendientes de reuniones · marcar hecho                                                                     |
-| `get_pipeline` · `get_prospect`                  | Pipeline por etapas · un prospecto                                                                         |
-| `list_documents` · `read_document`               | Archivos de la carpeta del cliente · leer texto (.md/.txt/.csv/.json)                                      |
-| `search`                                         | Texto en clientes, proyectos, reuniones (incluidas transcripciones) y prospectos                           |
-| `save_client` · `save_project` · `save_prospect` | Crear o editar                                                                                             |
-| `move_prospect`                                  | Cambiar de etapa (ganado = cliente nuevo + carpeta)                                                        |
-| `create_meeting` · `update_meeting`              | Reunión sin grabación (con `process` para resumir notas) · editar                                          |
-| `append_note`                                    | Nota fechada al final de un cliente, proyecto, prospecto o reunión                                         |
-
-Contactos y email marketing:
-
-| Herramienta                                                       | Qué hace                                                                                                   |
-| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `list_contacts` · `get_contact` · `save_contact`                  | Contactos con filtros (tag, estado, fuente, texto), paginados · ficha con línea de tiempo · crear o editar |
-| `tag_contact`                                                     | Añadir o quitar tags (dispara reglas y, si está suscrito, `tag.<slug>` en Resend)                          |
-| `set_contact_subscription`                                        | Suscribir (solo con su permiso) o dar de baja                                                              |
-| `promote_contact`                                                 | Pasar a pipeline (crea el prospecto)                                                                       |
-| `list_tags` · `list_sources`                                      | Tags con nº de suscritos · fuentes con leads recibidos                                                     |
-| `list_rules` · `save_rule` · `delete_rule`                        | Reglas por tag                                                                                             |
-| `list_sequences` · `save_sequence` · `set_sequence_status`        | Secuencias de Resend: listar · crear o reescribir (evento → espera → email…) · activar o pausar            |
-| `get_newsletter_context` · `send_newsletter` · `list_newsletters` | Antes de escribir · enviar el de hoy (uno por día) · historial                                             |
+Tags audiencia: solo los tags marcados como audiencia (pantalla Tags o `set_tag_audience`) tienen Segment en Resend y
+pueden recibir newsletters. Los eventos `tag.<slug>` de las secuencias funcionan con cualquier tag. Tras actualizar,
+**redespliega el Worker** (`cd workers/leads-hub && npm run deploy`) para que también respete las audiencias.
 
 ## Atajos
 

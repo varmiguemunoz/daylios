@@ -32,6 +32,9 @@ describe('NewsletterService', () => {
     await contacts.tag(c.id, { add: ['clientes-perdidos'] })
     await contacts.subscribe(c.id)
     await contacts.create({ email: 'b@x.com' }).then((b) => contacts.tag(b.id, { add: ['vacio'] }))
+    const tags = new TagService(db)
+    await tags.setAudience('clientes-perdidos', true)
+    await tags.setAudience('vacio', true)
   })
   afterEach(() => db.destroy())
 

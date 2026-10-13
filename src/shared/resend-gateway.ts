@@ -26,6 +26,8 @@ export interface ResendGateway {
   removeFromSegment(email: string, segmentId: string): Promise<void>
   /** Devuelve el id del segment con ese nombre; lo crea si no existe. */
   ensureSegment(name: string): Promise<string>
+  /** Borra un segment (404 = ya no existe, no es error). */
+  deleteSegment(id: string): Promise<void>
   sendEvent(event: string, email: string, payload?: Record<string, unknown>): Promise<void>
   sendEmail(input: {
     from: string
@@ -209,6 +211,10 @@ export function createResendGateway(apiKey: string): ResendGateway {
       ).find((s) => s.name === name)
       if (existing) return existing.id
       return (await must(() => resend.segments.create({ name }))).id
+    },
+
+    async deleteSegment(id) {
+      await call(() => resend.segments.remove(id), true)
     },
 
     async sendEvent(event, email, payload) {

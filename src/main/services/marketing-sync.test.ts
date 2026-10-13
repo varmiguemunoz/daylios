@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { In, type DataSource } from 'typeorm'
 import { ContactService } from './contact.service'
+import { TagService } from './tag.service'
 import { MarketingSync } from './marketing-sync'
 import { OutboxModel, TagModel } from '../models/marketing.model'
 import { ContactModel } from '../models/contact.model'
@@ -28,6 +29,7 @@ describe('MarketingSync (outbox → Resend)', () => {
     const c = await contacts.create({ name: 'Ana López', email: 'ana@x.com' })
     await contacts.subscribe(c.id)
     await contacts.tag(c.id, { add: ['webinar'] })
+    await new TagService(db).setAudience('webinar', true)
     await sync.tick()
 
     const remote = resend.contacts.get('ana@x.com')!
@@ -47,6 +49,9 @@ describe('MarketingSync (outbox → Resend)', () => {
     const c = await contacts.create({ email: 'ana@x.com' })
     await contacts.subscribe(c.id)
     await contacts.tag(c.id, { add: ['a', 'b'] })
+    const tags = new TagService(db)
+    await tags.setAudience('a', true)
+    await tags.setAudience('b', true)
     await sync.tick()
     await contacts.tag(c.id, { remove: ['a'] })
     await contacts.unsubscribe(c.id)
@@ -54,6 +59,19 @@ describe('MarketingSync (outbox → Resend)', () => {
     const remote = resend.contacts.get('ana@x.com')!
     expect([...remote.segments].map((id) => resend.segments.get(id))).toEqual(['tag:b'])
     expect(remote.unsubscribed).toBe(true)
+  })
+
+  it('solo los tags audiencia tienen Segment; quitar la audiencia borra el Segment', async () => {
+    const c = await contacts.create({ email: 'ana@x.com' })
+    await contacts.subscribe(c.id)
+    await contacts.tag(c.id, { add: ['webinar', 'origen-web'] })
+    const tags = new TagService(db)
+    await tags.setAudience('webinar', true)
+    await sync.tick()
+    expect([...resend.segments.values()]).toEqual(['tag:webinar'])
+    await tags.setAudience('webinar', false)
+    await sync.tick()
+    expect(resend.segments.size).toBe(0)
   })
 
   it('un fallo guarda el error, reprograma y se recupera en el siguiente intento', async () => {

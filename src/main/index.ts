@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, powerMonitor } from 'electron'
+import { app, BrowserWindow, ipcMain, powerMonitor, shell } from 'electron'
 import { optimizer } from '@electron-toolkit/utils'
 import { openDatabase } from './db/data-source'
 import { loadConfig } from './config'
@@ -18,6 +18,7 @@ import { VoiceNoteService } from './services/voice-note.service'
 import { VoiceController, notifyNoteCreated } from './voice/voice'
 import { disposeVoiceShortcut } from './voice/shortcut'
 import { noteTitle, type Note } from '@shared/notes'
+import { setTrash } from './services/trash'
 
 // Audio del sistema al grabar pantalla en macOS (ScreenCaptureKit). Debe ir antes de `ready`.
 app.commandLine.appendSwitch(
@@ -36,6 +37,7 @@ async function start(): Promise<void> {
 
   const dataDir = app.getPath('userData')
   loadConfig(dataDir)
+  setTrash((path) => shell.trashItem(path))
   const db = await openDatabase(dataDir)
 
   // Avisa a todas las ventanas de que algo cambió (Claude, grabación, otra ventana).
@@ -77,9 +79,13 @@ async function start(): Promise<void> {
   powerMonitor.on('resume', () => void marketing.sync.tick())
   allowScreenCapture()
   ipcMain.on('window:hide', () => win.hide())
-  ipcMain.on('window:openConsultora', () => {
+  ipcMain.on('window:openConsultora', (_e, target?: { client?: string }) => {
     win.hide()
-    showConsultora()
+    const consultoraWin = showConsultora()
+    if (!target?.client) return
+    const send = (): void => consultoraWin.webContents.send('consultora:navigate', target)
+    if (consultoraWin.webContents.isLoading()) consultoraWin.webContents.once('did-finish-load', send)
+    else send()
   })
   app.on('second-instance', show)
 

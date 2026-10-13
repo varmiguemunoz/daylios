@@ -16,9 +16,30 @@ export class NoteController {
     res.json(noteView(await this.service.get(String(req.params.id))))
   }
 
+  view = async (req: Request, res: Response): Promise<void> => {
+    const v = await this.service.view(String(req.params.id))
+    res.json({ ...v, note: noteView(v.note) })
+  }
+
+  search = async (req: Request, res: Response): Promise<void> => {
+    res.json(await this.service.search(text(req.query.q) ?? '', Number(req.query.limit ?? 20)))
+  }
+
+  /** Body: `{ body, related_notes?, clients? }`. */
   create = async (req: Request, res: Response): Promise<void> => {
     const body = req.body ?? {}
-    res.status(201).json(noteView(await this.service.create(text(body.body) ?? '')))
+    const links = { notes: list(body.related_notes), clients: list(body.clients) }
+    res.status(201).json(noteView(await this.service.create(text(body.body) ?? '', links)))
+  }
+
+  /** Body: `{ type: 'note' | 'client', id }`. */
+  link = async (req: Request, res: Response): Promise<void> => {
+    res.json(await this.service.link(String(req.params.id), req.body ?? {}))
+  }
+
+  unlink = async (req: Request, res: Response): Promise<void> => {
+    const type = String(req.params.type) as 'note' | 'client'
+    res.json(await this.service.unlink(String(req.params.id), { type, id: String(req.params.targetId) }))
   }
 
   update = async (req: Request, res: Response): Promise<void> => {
@@ -33,3 +54,4 @@ export class NoteController {
 }
 
 const text = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined)
+const list = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [])

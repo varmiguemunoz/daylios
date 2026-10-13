@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { addDays, DAILY_LIMIT, type DayKey, type Task } from '@shared/tasks'
+import { addDays, DAILY_LIMIT, type DayKey, type RemovedTask, type Task } from '@shared/tasks'
 import { onDataChanged, onWindowShown, tasksApi } from './api'
 
 export interface Undo {
@@ -20,6 +20,12 @@ export interface DayState {
   reorder: (id: string, index: number) => Promise<void>
   toggle: (task: Task) => Promise<void>
   remove: (task: Task) => Promise<void>
+  /** Borra una subtarea con «Deshacer» (la quita el detalle de su lista). */
+  removeSubtask: (task: Task) => Promise<void>
+  /** Sube en cada recarga: el detalle abierto lo usa para refrescar sus subtareas tras deshacer. */
+  revision: number
+  /** Recalcula el «2/5» de una madre tras cambiar sus subtareas (sin recargar el día). */
+  patchProgress: (parentId: string, subtasks: Task[]) => void
   bringToday: (task: Task) => Promise<void>
   bringAll: () => Promise<void>
   dismiss: (task: Task) => Promise<void>
@@ -39,6 +45,7 @@ export function useDay(date: DayKey): DayState {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [undo, setUndo] = useState<Undo | null>(null)
+  const [revision, setRevision] = useState(0)
   const undoSeq = useRef(0)
 
   const yesterday = addDays(date, -1)
@@ -48,6 +55,7 @@ export function useDay(date: DayKey): DayState {
       const [t, y] = await Promise.all([tasksApi.getDay(date), tasksApi.getDay(yesterday)])
       setToday(t)
       setLeftovers(y.filter((task) => !task.done))
+      setRevision((r) => r + 1)
       setError(null)
     } catch {
       setError('No pude leer tus tareas. Vuelve a abrir la ventana para reintentar.')
@@ -102,7 +110,12 @@ export function useDay(date: DayKey): DayState {
     next.splice(Math.max(0, Math.min(index, next.length)), 0, moved)
     if (next.every((t, i) => t.id === today[i].id)) return
     setToday(next)
-    await safely(() => tasksApi.reorder(date, next.map((t) => t.id)))
+    await safely(() =>
+      tasksApi.reorder(
+        date,
+        next.map((t) => t.id)
+      )
+    )
   }
 
   const toggle = async (task: Task): Promise<void> => {
@@ -113,10 +126,28 @@ export function useDay(date: DayKey): DayState {
 
   /** Borra sin confirmar y ofrece deshacer. */
   const deleteWithUndo = async (task: Task, message: string): Promise<void> => {
-    if (!(await safely(() => tasksApi.remove(task.id)))) return
+    const box: { removed?: RemovedTask } = {}
+    if (!(await safely(async () => void (box.removed = await tasksApi.remove(task.id))))) return
+    const removed = box.removed ?? { task, subtasks: [] }
     undoSeq.current += 1
-    setUndo({ id: undoSeq.current, message, run: () => tasksApi.restore(task).then(reload) })
+    setUndo({ id: undoSeq.current, message, run: () => tasksApi.restore(removed).then(reload) })
   }
+
+  const removeSubtask = async (task: Task): Promise<void> => {
+    await deleteWithUndo(task, 'Subtarea eliminada')
+  }
+
+  const patchProgress = (parentId: string, subtasks: Task[]): void =>
+    setToday((prev) =>
+      prev.map((t) =>
+        t.id === parentId
+          ? {
+              ...t,
+              subtasks: { total: subtasks.length, done: subtasks.filter((s) => s.done).length }
+            }
+          : t
+      )
+    )
 
   const remove = async (task: Task): Promise<void> => {
     setToday((prev) => prev.filter((t) => t.id !== task.id))
@@ -162,6 +193,9 @@ export function useDay(date: DayKey): DayState {
     reorder,
     toggle,
     remove,
+    removeSubtask,
+    revision,
+    patchProgress,
     bringToday,
     bringAll,
     dismiss,

@@ -51,19 +51,26 @@ export function registerConsultoraIpc(c: Consultora, notify: () => void, voice: 
   read('consultora:getClient', (ref: string) => c.clients.get(ref))
   write('consultora:createClient', (input) => c.clients.create(input))
   write('consultora:updateClient', (ref: string, patch) => c.clients.update(ref, patch))
+  read('consultora:clientImpact', (ref: string) => c.clients.impact(ref))
+  write('consultora:removeClient', (ref: string, opts) => c.clients.remove(ref, opts ?? {}))
 
   read('consultora:getProject', (ref: string) => c.projects.get(ref))
   write('consultora:createProject', (input) => c.projects.create(input))
   write('consultora:updateProject', (ref: string, patch) => c.projects.update(ref, patch))
+  write('consultora:removeProject', (ref: string) => c.projects.remove(ref))
 
-  read('consultora:pipeline', () => c.prospects.pipeline())
-  read('consultora:listStages', () => c.prospects.listStages())
+  read('consultora:listPipelines', () => c.prospects.listPipelines())
+  read('consultora:pipeline', (ref?: string) => c.prospects.pipeline(ref))
+  write('consultora:savePipeline', (input) => c.prospects.savePipeline(input))
+  write('consultora:removePipeline', (ref: string, moveTo) => c.prospects.removePipeline(ref, moveTo))
+  write('consultora:removeProspect', (ref: string) => c.prospects.remove(ref))
+  read('consultora:listStages', (pipeline?: string) => c.prospects.listStages(pipeline))
   write('consultora:saveStages', (stages) => c.prospects.saveStages(stages))
   read('consultora:getProspect', (ref: string) => c.prospects.get(ref))
   write('consultora:createProspect', (input) => c.prospects.create(input))
   write('consultora:updateProspect', (ref: string, patch) => c.prospects.update(ref, patch))
-  write('consultora:moveProspect', (ref: string, stage: string, index?: number) =>
-    c.prospects.move(ref, stage, index)
+  write('consultora:moveProspect', (ref: string, stage: string, index?: number, pipeline?: string) =>
+    c.prospects.move(ref, stage, index, pipeline)
   )
 
   read('consultora:listContacts', (filter) => c.contacts.list(filter ?? {}))
@@ -75,6 +82,8 @@ export function registerConsultoraIpc(c: Consultora, notify: () => void, voice: 
   write('consultora:unsubscribeContact', (id: string) => c.contacts.unsubscribe(id))
   write('consultora:tagContact', (id: string, change) => c.contacts.tag(id, change ?? {}))
   write('consultora:promoteContact', (id: string, stage?: string) => c.contacts.promote(id, stage))
+  write('consultora:convertContact', (id: string, input) => c.contacts.convert(id, input ?? {}))
+  write('consultora:detachContactProspect', (id: string) => c.contacts.detachProspect(id))
 
   ipcMain.handle('consultora:pickRecording', async (event) => {
     const options: Electron.OpenDialogOptions = {
@@ -101,6 +110,14 @@ export function registerConsultoraIpc(c: Consultora, notify: () => void, voice: 
   read('consultora:listActionItems', (filter) => c.meetings.listActionItems(filter))
 
   read('consultora:listDocuments', (client: string) => c.context.listDocuments(client))
+  read('consultora:openDocument', (client: string, path: string) => c.context.openDocument(client, path))
+  write('consultora:writeDocument', (client: string, path: string, content: string, expected?: string) =>
+    c.context.writeDocument(client, path, content, expected)
+  )
+  write('consultora:renameDocument', (client: string, path: string, name: string) =>
+    c.context.renameDocument(client, path, name)
+  )
+  write('consultora:trashDocument', (client: string, path: string) => c.context.trashDocument(client, path))
   read('consultora:readDocument', (client: string, path: string) =>
     c.context.readDocument(client, path)
   )

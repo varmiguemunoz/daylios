@@ -3,6 +3,7 @@ import { ArrowUpRight } from 'lucide-react'
 import type { ProspectInput } from '@shared/consultora'
 import { api, attempt, dateTime, useLoad, type Go } from '../lib'
 import {
+  ConfirmButton,
   EditableText,
   Empty,
   ErrorNote,
@@ -12,8 +13,7 @@ import {
   MeetingStatusPill,
   Page,
   Row,
-  Section,
-  Select
+  Section
 } from '../ui'
 import { ContactsSection } from '../ContactsSection'
 
@@ -33,6 +33,8 @@ export function Prospect({
   const { data: p, error: loadError } = useLoad(load)
   const stagesLoad = useCallback(() => api.listStages(), [])
   const { data: stages } = useLoad(stagesLoad)
+  const pipelinesLoad = useCallback(() => api.listPipelines(), [])
+  const { data: pipelines } = useLoad(pipelinesLoad)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
@@ -56,6 +58,7 @@ export function Prospect({
     )
 
   const input = 'bg-transparent text-caption font-semibold outline-none [color-scheme:dark]'
+  const groups: { id: string; name: string }[] = pipelines ?? [{ id: p.pipeline.id, name: p.pipeline.name }]
 
   return (
     <Page
@@ -68,25 +71,49 @@ export function Prospect({
         />
       }
       meta={
-        p.clientId ? (
-          <button
-            type="button"
-            onClick={() => go({ name: 'client', id: p.clientId! })}
-            className="flex items-center gap-1 font-bold text-mint"
-          >
-            Cliente <ArrowUpRight size={14} strokeWidth={2.5} />
-          </button>
-        ) : (
-          <span>Prospecto</span>
-        )
+        <>
+          <span>{p.pipeline.name}</span>
+          {p.clientId ? (
+            <button
+              type="button"
+              onClick={() => go({ name: 'client', id: p.clientId! })}
+              className="flex items-center gap-1 font-bold text-mint"
+            >
+              Cliente <ArrowUpRight size={14} strokeWidth={2.5} />
+            </button>
+          ) : (
+            <span>Prospecto</span>
+          )}
+        </>
       }
       actions={
-        <Select
-          label="Etapa"
-          value={p.stageId}
-          options={(stages ?? [p.stage]).map((s) => ({ value: s.id, label: s.name }))}
-          onChange={(stage) => void move(stage)}
-        />
+        <>
+          {/* Etapas de todos los pipelines: elegir una de otro pipeline lo mueve allí. */}
+          <select
+            value={p.stageId}
+            aria-label="Etapa"
+            onChange={(e) => void move(e.target.value)}
+            className="h-9 max-w-full cursor-pointer rounded-full bg-surface px-3.5 text-caption font-bold text-milk outline-none hover:bg-surface-raised"
+          >
+            {groups.map((pl) => (
+              <optgroup key={pl.id} label={pl.name}>
+                {(stages ?? [p.stage])
+                  .filter((st) => st.pipelineId === pl.id)
+                  .map((st) => (
+                    <option key={st.id} value={st.id}>
+                      {st.name}
+                    </option>
+                  ))}
+              </optgroup>
+            ))}
+          </select>
+          <ConfirmButton
+            label="Borrar prospecto (sus contactos y reuniones se quedan)"
+            onConfirm={() =>
+              void attempt(() => api.removeProspect(id)).then((failed) => (failed ? setError(failed) : back()))
+            }
+          />
+        </>
       }
     >
       {notice && (

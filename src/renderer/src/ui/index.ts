@@ -1,0 +1,12 @@
+// Primitivas compartidas (diseño atómico). Las usan la ventana del menubar y Consultora.
+export { IconButton } from './atoms/IconButton'
+export { CountBadge } from './atoms/CountBadge'
+export { Kbd } from './atoms/Kbd'
+export { ConfirmButton } from './molecules/ConfirmButton'
+export { SegmentedToggle } from './molecules/SegmentedToggle'
+export { SearchField } from './molecules/SearchField'
+export { FilterButton } from './molecules/FilterButton'
+export { ActionRow } from './molecules/ActionRow'
+export { Drawer } from './organisms/Drawer'
+export { Modal } from './organisms/Modal'
+export { isOverlayOpen } from './organisms/overlay'

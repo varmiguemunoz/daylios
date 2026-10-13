@@ -1,123 +1,175 @@
-import { useEffect, useState } from 'react'
-import { Check, Eye, PenLine } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toggleTaskLine } from '@shared/consultora'
 import type { SaveStatus } from '../lib/useAutosave'
+import { useIdleExit } from '../lib/useIdleExit'
 import { Markdown } from './Markdown'
 
-type Mode = 'write' | 'view'
+/** Sin escribir durante este tiempo, el editor vuelve solo a lectura. */
+export const IDLE_MS = 2000
 
-const MODES: { id: Mode; label: string; icon: typeof Eye }[] = [
-  { id: 'write', label: 'Escribir', icon: PenLine },
-  { id: 'view', label: 'Ver', icon: Eye }
-]
+/** Marca del campo en edición (ver `fromMarkdownEditor`). */
+const EDITOR_SELECTOR = '[data-md-editor]'
+
+/**
+ * true si la tecla viene del editor en modo edición: las pantallas no deben tratar ese Esc
+ * (el editor lo usa para volver a lectura).
+ */
+export const fromMarkdownEditor = (e: KeyboardEvent): boolean =>
+  e.target instanceof HTMLElement && e.target.closest(EDITOR_SELECTOR) !== null
 
 interface MarkdownEditorProps {
   value: string
   onChange: (value: string) => void
   status: SaveStatus
   placeholder: string
-  /** Texto en modo Ver cuando no hay nada escrito. */
+  /** Texto en lectura cuando no hay nada escrito. */
   emptyHint: string
+  /** Guarda ya lo pendiente. Se llama al volver a lectura. */
+  onCommit?: () => Promise<void>
+  /** Empezar editando (p. ej. una nota recién creada y vacía). */
+  autoEdit?: boolean
 }
 
 /**
- * Editor markdown: `textarea` para escribir y vista previa para leer. Sin WYSIWYG.
- * Abre en Ver si ya hay texto, en Escribir si está vacío. ⌘E alterna. Doble clic en Ver = Escribir.
+ * Markdown sin modos visibles: siempre se lee. Doble clic, ⌘E o Enter entra a editar
+ * (un clic basta si está vacío). Vuelve a lectura al salir del campo, con Esc o tras
+ * `IDLE_MS` sin escribir. El cursor vuelve a donde estaba.
  */
 export function MarkdownEditor({
   value,
   onChange,
   status,
   placeholder,
-  emptyHint
+  emptyHint,
+  onCommit,
+  autoEdit = false
 }: MarkdownEditorProps): React.JSX.Element {
-  const [mode, setMode] = useState<Mode>(() => (value.trim() ? 'view' : 'write'))
+  const [editing, setEditing] = useState(autoEdit)
+  const editingRef = useRef(autoEdit)
+  const caret = useRef<number | null>(null)
+  const area = useRef<HTMLTextAreaElement>(null)
+  const commit = useRef(onCommit)
 
   useEffect(() => {
+    commit.current = onCommit
+  }, [onCommit])
+
+  const enter = useCallback(() => {
+    window.getSelection()?.removeAllRanges()
+    editingRef.current = true
+    setEditing(true)
+  }, [])
+
+  const leave = useCallback(() => {
+    // Esc o el temporizador desmontan el campo y el navegador puede disparar además su blur.
+    if (!editingRef.current) return
+    editingRef.current = false
+    if (area.current) caret.current = area.current.selectionStart
+    setEditing(false)
+    void commit.current?.()
+  }, [])
+
+  const { poke } = useIdleExit(editing, IDLE_MS, leave)
+
+  // ⌘E entra a editar desde lectura.
+  useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'e') {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'e' && !editing) {
         e.preventDefault()
-        setMode((m) => (m === 'write' ? 'view' : 'write'))
+        enter()
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [editing, enter])
 
-  /** Tab inserta dos espacios (para listas anidadas) en vez de saltar de campo. */
+  // Al entrar: foco y cursor donde se dejó (o al final).
+  useEffect(() => {
+    const el = area.current
+    if (!editing || !el) return
+    const at = Math.min(caret.current ?? el.value.length, el.value.length)
+    el.focus()
+    el.setSelectionRange(at, at)
+  }, [editing])
+
   const onTextKey = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      e.stopPropagation()
+      leave()
+      return
+    }
+    // Tab inserta dos espacios (listas anidadas) en vez de saltar de campo.
     if (e.key !== 'Tab' || e.shiftKey) return
     e.preventDefault()
     const el = e.currentTarget
     el.setRangeText('  ', el.selectionStart, el.selectionEnd, 'end')
     onChange(el.value)
+    poke()
   }
 
-  return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex items-center justify-between gap-3 px-6">
-        <div role="radiogroup" aria-label="Modo" className="flex rounded-full bg-surface p-1">
-          {MODES.map(({ id, label, icon: Icon }) => {
-            const active = mode === id
-            return (
-              <button
-                key={id}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                onClick={() => setMode(id)}
-                title={`${label} (⌘E)`}
-                className={`flex h-8 items-center gap-1.5 rounded-full px-3.5 text-caption font-bold transition-colors ${
-                  active ? 'bg-surface-raised text-milk' : 'text-milk-soft hover:text-milk'
-                }`}
-              >
-                <Icon size={14} strokeWidth={2.5} className={active ? 'text-apricot' : ''} />
-                {label}
-              </button>
-            )
-          })}
-        </div>
-        <SaveLabel status={status} />
-      </div>
+  const empty = !value.trim()
 
-      {mode === 'write' ? (
+  return (
+    <div className="relative flex min-h-0 flex-1 flex-col">
+      {editing ? (
         <textarea
-          autoFocus
+          ref={area}
+          data-md-editor=""
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => {
+            onChange(e.target.value)
+            poke()
+          }}
           onKeyDown={onTextKey}
+          onBlur={leave}
           placeholder={placeholder}
           aria-label="Texto en markdown"
           spellCheck
-          className="scroll-area mt-4 min-h-0 flex-1 resize-none bg-transparent pb-6 pl-6 text-body outline-none"
+          className="scroll-area min-h-0 flex-1 resize-none bg-transparent pb-6 pl-6 text-body outline-none"
         />
       ) : (
         <div
-          onDoubleClick={() => setMode('write')}
-          className="scroll-area fade-bottom mt-4 min-h-0 flex-1 overflow-y-auto pb-6 pl-6"
+          role="textbox"
+          aria-readonly="true"
+          aria-label="Texto en markdown. Doble clic o Enter para editar"
+          tabIndex={0}
+          onDoubleClick={enter}
+          onClick={empty ? enter : undefined}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && e.target === e.currentTarget) {
+              e.preventDefault()
+              enter()
+            }
+          }}
+          title={empty ? undefined : 'Doble clic para editar (⌘E)'}
+          className={`scroll-area fade-bottom min-h-0 flex-1 overflow-y-auto pb-6 pl-6 outline-none transition-colors focus-visible:bg-surface/40 ${
+            empty ? 'cursor-text' : ''
+          }`}
         >
-          {value.trim() ? (
-            <Markdown text={value} onToggleTask={(line) => onChange(toggleTaskLine(value, line))} />
-          ) : (
+          {empty ? (
             <p className="text-caption text-milk-soft">{emptyHint}</p>
+          ) : (
+            <Markdown text={value} onToggleTask={(line) => onChange(toggleTaskLine(value, line))} />
           )}
         </div>
       )}
+      <SaveLabel status={status} />
     </div>
   )
 }
 
+/** Solo habla cuando hay algo que decir: guardando o error. Flota abajo a la derecha. */
 function SaveLabel({ status }: { status: SaveStatus }): React.JSX.Element {
   return (
-    <p aria-live="polite" className="flex items-center gap-1 text-caption font-semibold">
-      {status === 'saved' && (
-        <>
-          <Check size={14} strokeWidth={3} className="text-mint" />
-          <span className="text-milk-soft">Guardado</span>
-        </>
-      )}
-      {status === 'saving' && <span className="text-milk-soft">Guardando…</span>}
-      {status === 'error' && <span className="text-coral">No se guardó</span>}
+    <p
+      aria-live="polite"
+      className={`pointer-events-none absolute right-6 bottom-3 rounded-full px-3 py-1 text-micro font-semibold transition-opacity ${
+        status === 'saved' ? 'opacity-0' : 'bg-surface-raised opacity-100'
+      } ${status === 'error' ? 'text-coral' : 'text-milk-soft'}`}
+    >
+      {status === 'saving' && 'Guardando…'}
+      {status === 'error' && 'No se guardó'}
     </p>
   )
 }

@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import type { ProjectInput, ProjectStatus } from '@shared/consultora'
 import { api, attempt, dateTime, useLoad, type Go } from '../lib'
 import {
+  ConfirmButton,
   EditableText,
   Empty,
   ErrorNote,
@@ -68,16 +69,24 @@ export function Project({
         </>
       }
       actions={
-        <Select
-          label="Estado"
-          value={p.status}
-          options={[
-            { value: 'activo', label: 'Activo' },
-            { value: 'pausa', label: 'En pausa' },
-            { value: 'cerrado', label: 'Cerrado' }
-          ]}
-          onChange={(status) => void save({ status: status as ProjectStatus })}
-        />
+        <>
+          <Select
+            label="Estado"
+            value={p.status}
+            options={[
+              { value: 'activo', label: 'Activo' },
+              { value: 'pausa', label: 'En pausa' },
+              { value: 'cerrado', label: 'Cerrado' }
+            ]}
+            onChange={(status) => void save({ status: status as ProjectStatus })}
+          />
+          <ConfirmButton
+            label="Borrar proyecto (sus reuniones se quedan en el cliente)"
+            onConfirm={() =>
+              void attempt(() => api.removeProject(id)).then((failed) => (failed ? setError(failed) : back()))
+            }
+          />
+        </>
       }
     >
       <ErrorNote message={error ?? loadError} />

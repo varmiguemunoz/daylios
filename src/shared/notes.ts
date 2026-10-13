@@ -13,6 +13,34 @@ export interface Note {
   updatedAt: string
 }
 
+/** Nota en listas (relacionadas, buscador, ficha de cliente). */
+export interface NoteBrief {
+  id: string
+  title: string
+  excerpt: string
+  date: DayKey
+  updatedAt: string
+}
+
+/** Con qué se puede relacionar una nota. */
+export type NoteTargetType = 'note' | 'client'
+export interface NoteTarget {
+  type: NoteTargetType
+  id: string
+}
+
+/** Nota con sus relaciones (índice al inicio y al final del editor). */
+export interface NoteView {
+  note: Note
+  related: NoteBrief[]
+  clients: { id: string; name: string }[]
+}
+
+export interface NoteLinks {
+  notes?: string[]
+  clients?: string[]
+}
+
 export interface NotesDay {
   date: DayKey
   notes: Note[]
@@ -30,9 +58,22 @@ export interface NotesPage {
 export interface NotesApi {
   list(page: number, pageSize: number): Promise<NotesPage>
   get(id: string): Promise<Note>
-  create(body: string): Promise<Note>
+  /** Nota con notas y clientes relacionados. */
+  view(id: string): Promise<NoteView>
+  /** Busca por título y texto (para relacionar). */
+  search(query: string, limit?: number): Promise<NoteBrief[]>
+  /** Puede nacer ya relacionada (p. ej. «Nueva nota» desde un cliente). */
+  create(body: string, links?: NoteLinks): Promise<Note>
   update(id: string, body: string): Promise<Note>
+  /** Borra la nota y sus relaciones. */
   remove(id: string): Promise<void>
+  link(id: string, target: NoteTarget): Promise<NoteView>
+  unlink(id: string, target: NoteTarget): Promise<NoteView>
+}
+
+/** Nota → NoteBrief. */
+export function noteBrief(n: Note): NoteBrief {
+  return { id: n.id, title: noteTitle(n.body), excerpt: noteExcerpt(n.body), date: n.date, updatedAt: n.updatedAt }
 }
 
 /** Primera línea con texto, sin marcas de markdown. */

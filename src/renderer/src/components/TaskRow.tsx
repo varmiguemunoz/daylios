@@ -3,6 +3,7 @@ import { AlignLeft, Check, Trash2 } from 'lucide-react'
 import type { Task } from '@shared/tasks'
 import { Markdown } from './Markdown'
 import { EffortBars, TagChips } from './TaskMeta'
+import { SubtaskProgress } from './SubtaskProgress'
 
 interface TaskRowProps {
   task: Task
@@ -17,15 +18,23 @@ interface TaskRowProps {
   dragging: boolean
   /** Línea apricot de «caerá aquí» encima o debajo de la fila. */
   dropLine: 'before' | 'after' | null
+  /** compact = subtarea (fila y círculo más pequeños). */
+  size?: 'regular' | 'compact'
+  /** Campo al que vuelve el foco desde la primera fila o tras borrar la última. */
+  captureId?: string
+  /** Hoy: las subtareas están desplegadas debajo. */
+  expanded?: boolean
+  /** Presente = la madre tiene subtareas y se pueden desplegar (clic en «2/5», → y ←). */
+  onExpand?: (open: boolean) => void
 }
 
 /** Mueve el foco a la fila anterior/siguiente, o al campo de captura desde la primera. */
-function focusSibling(from: HTMLElement, dir: 1 | -1): void {
+function focusSibling(from: HTMLElement, dir: 1 | -1, captureId: string): void {
   const rows = [...document.querySelectorAll<HTMLElement>('[data-row]')]
   const i = rows.indexOf(from)
   const next = rows[i + dir]
   if (next) next.focus()
-  else if (dir === -1) document.getElementById('capture')?.focus()
+  else if (dir === -1) document.getElementById(captureId)?.focus()
 }
 
 /**
@@ -40,8 +49,13 @@ export function TaskRow({
   onMoveBy,
   drag,
   dragging,
-  dropLine
+  dropLine,
+  size = 'regular',
+  captureId = 'capture',
+  expanded = false,
+  onExpand
 }: TaskRowProps): React.JSX.Element {
+  const compact = size === 'compact'
   // Recién creada = animar la entrada. useState con función: se calcula una sola vez al montar.
   const [fresh] = useState(() => Date.now() - Date.parse(task.createdAt) < 2000)
 
@@ -65,10 +79,29 @@ export function TaskRow({
         // Mantener el foco en un vecino tras borrar
         requestAnimationFrame(() => {
           const after = [...document.querySelectorAll<HTMLElement>('[data-row]')]
-          ;(after[i] ?? after[i - 1] ?? document.getElementById('capture'))?.focus()
+          ;(after[i] ?? after[i - 1] ?? document.getElementById(captureId))?.focus()
         })
         break
       }
+      case 'ArrowRight':
+        if (!onExpand) break
+        e.preventDefault()
+        if (!expanded) onExpand(true)
+        else focusSibling(e.currentTarget, 1, captureId)
+        break
+      case 'ArrowLeft':
+        if (onExpand && expanded) {
+          e.preventDefault()
+          onExpand(false)
+        } else if (task.parentId) {
+          // Subtarea desplegada en Hoy: vuelve a su madre.
+          const mother = document.querySelector<HTMLElement>(`[data-row="${task.parentId}"]`)
+          if (mother) {
+            e.preventDefault()
+            mother.focus()
+          }
+        }
+        break
       case 'ArrowDown':
       case 'ArrowUp': {
         e.preventDefault()
@@ -76,9 +109,11 @@ export function TaskRow({
         if (e.altKey) {
           onMoveBy(dir)
           // Tras reordenar, el foco sigue en esta tarea
-          requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-row="${task.id}"]`)?.focus())
+          requestAnimationFrame(() =>
+            document.querySelector<HTMLElement>(`[data-row="${task.id}"]`)?.focus()
+          )
         } else {
-          focusSibling(e.currentTarget, dir)
+          focusSibling(e.currentTarget, dir, captureId)
         }
         break
       }
@@ -92,7 +127,9 @@ export function TaskRow({
       {...drag}
       onKeyDown={onRowKey}
       aria-label={`${task.title}${task.done ? ', hecha' : ''}. Enter para abrir, ⌥↑/⌥↓ para mover`}
-      className={`group flex min-h-[46px] items-center gap-3 rounded-md bg-surface py-1 pr-1.5 pl-3.5 transition-colors outline-offset-0 hover:bg-surface-raised focus-visible:bg-surface-raised ${
+      className={`group flex items-center gap-3 rounded-md bg-surface py-1 pr-1.5 pl-3.5 ${
+        compact ? 'min-h-[40px] text-list' : 'min-h-[46px]'
+      } transition-colors outline-offset-0 hover:bg-surface-raised focus-visible:bg-surface-raised ${
         fresh ? 'row-in' : ''
       } ${dragging ? 'opacity-40' : ''} ${
         dropLine === 'before'
@@ -107,13 +144,15 @@ export function TaskRow({
         tabIndex={-1}
         onClick={onToggle}
         aria-label={task.done ? 'Marcar como pendiente' : 'Completar'}
-        className={`grid size-[26px] shrink-0 place-items-center rounded-full transition-[background-color,box-shadow,transform] duration-200 active:scale-90 ${
+        className={`grid shrink-0 place-items-center rounded-full transition-[background-color,box-shadow,transform] duration-200 active:scale-90 ${
+          compact ? 'size-5' : 'size-[26px]'
+        } ${
           task.done
             ? 'bg-mint text-ink'
             : 'shadow-[inset_0_0_0_2px_var(--color-milk-faint)] hover:shadow-[inset_0_0_0_2px_var(--color-apricot)]'
         }`}
       >
-        {task.done && <Check size={16} strokeWidth={3} />}
+        {task.done && <Check size={compact ? 13 : 16} strokeWidth={3} />}
       </button>
 
       <div className="flex min-w-0 flex-1 cursor-pointer flex-col py-1" onClick={onOpen}>
@@ -135,11 +174,18 @@ export function TaskRow({
             />
           )}
         </span>
-        {((task.carriedFrom && !task.done) || task.tags.length > 0) && (
+        {((task.carriedFrom && !task.done && !compact) ||
+          task.tags.length > 0 ||
+          !!task.subtasks?.total) && (
           <span className="mt-0.5 flex min-w-0 items-center gap-1.5">
-            {task.carriedFrom && !task.done && (
+            {task.carriedFrom && !task.done && !compact && (
               <span className="text-micro leading-tight font-semibold text-butter/80">de ayer</span>
             )}
+            <SubtaskProgress
+              progress={task.subtasks}
+              onToggle={onExpand && (() => onExpand(!expanded))}
+              expanded={expanded}
+            />
             <TagChips tags={task.tags} />
           </span>
         )}

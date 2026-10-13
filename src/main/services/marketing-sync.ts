@@ -122,6 +122,7 @@ export class MarketingSync {
     for (const job of jobs) {
       try {
         if (job.kind === 'contact') await this.syncContact(gateway, job)
+        else if (job.kind === 'segment_delete') await gateway.deleteSegment(String(job.payload.segmentId))
         else await this.sendEvent(gateway, job)
         await transactionGuard(this.db, (m) => m.getRepository(OutboxModel).delete({ id: job.id }))
         changed = true
@@ -206,11 +207,13 @@ export class MarketingSync {
     )
   }
 
-  /** Ids de los segments de los tags del contacto (crea en Resend los que falten). */
+  /** Ids de los segments de los tags audiencia del contacto (crea en Resend los que falten). */
   private async segmentsFor(gateway: ResendGateway, contactId: string): Promise<string[]> {
     const links = await this.db.getRepository(ContactTagModel).findBy({ contactId })
     if (!links.length) return []
-    const tags = await this.db.getRepository(TagModel).findBy({ id: In(links.map((l) => l.tagId)) })
+    const tags = await this.db
+      .getRepository(TagModel)
+      .findBy({ id: In(links.map((l) => l.tagId)), audience: true })
     const ids: string[] = []
     for (const tag of tags) {
       if (!tag.segmentId) {

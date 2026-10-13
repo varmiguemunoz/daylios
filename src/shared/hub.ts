@@ -18,6 +18,8 @@ export interface HubConfig {
   rules: Rule[]
   /** slug del tag → id del Segment en Resend. Lo completan la app y el Worker. */
   segments: Record<string, string>
+  /** Tags audiencia (solo ellos tienen Segment). Ausente = Worker/app antiguos: todos. */
+  audience?: string[]
 }
 
 /** Resultado de lo que el Worker hizo en Resend al recibir un lead. */

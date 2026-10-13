@@ -19,7 +19,11 @@ export const TaskModel = new EntitySchema<Task>({
     carriedFrom: { name: 'carried_from', type: 'text', nullable: true },
     description: { type: 'text', nullable: true },
     tags: { type: 'simple-json' },
-    effort: { type: 'text', nullable: true }
+    effort: { type: 'text', nullable: true },
+    parentId: { name: 'parent_id', type: 'text', nullable: true }
   },
-  indices: [{ name: 'idx_tasks_date', columns: ['date', 'position'] }]
+  indices: [
+    { name: 'idx_tasks_date', columns: ['date', 'position'] },
+    { name: 'idx_tasks_parent', columns: ['parentId', 'position'] }
+  ]
 })

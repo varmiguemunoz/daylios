@@ -18,6 +18,34 @@ export interface Task {
   /** Tags libres en minúsculas, sin `#`. */
   tags: string[]
   effort: Effort | null
+  /** Tarea madre. null = tarea del día (cuenta para el techo). */
+  parentId: string | null
+  /** Avance de sus subtareas (solo en listas de madres: día e historial). */
+  subtasks?: SubtaskProgress
+}
+
+export interface SubtaskProgress {
+  total: number
+  done: number
+}
+
+/** Detalle: la tarea, su madre (si es subtarea) y sus subtareas (si es madre). */
+export interface TaskView {
+  task: Task
+  parent: Pick<Task, 'id' | 'title'> | null
+  subtasks: Task[]
+}
+
+/** Tag de tareas con su uso (tareas y subtareas). */
+export interface TaskTagSummary {
+  tag: string
+  tasks: number
+}
+
+/** Lo que se borró, para deshacer (la madre vuelve con todas sus subtareas). */
+export interface RemovedTask {
+  task: Task
+  subtasks: Task[]
 }
 
 export type Effort = 'alto' | 'medio' | 'bajo'
@@ -73,18 +101,34 @@ export interface DaySummary {
 
 /** Contrato que la UI consume (vía IPC) y que implementa TaskService. */
 export interface TasksApi {
+  /** Tareas madre del día, con el avance de sus subtareas. */
   getDay(date: DayKey): Promise<Task[]>
+  /** Detalle con madre y subtareas. */
+  get(id: string): Promise<TaskView>
   /** El título puede llevar `#tags` y `!alto|!medio|!bajo` (ver parseCapture). */
   add(date: DayKey, title: string, description?: string): Promise<Task>
+  /** Subtarea al final de su madre. No cuenta para el techo. */
+  addSubtask(parentId: string, title: string, description?: string): Promise<Task>
+  /** Nuevo orden de las subtareas: todos los ids de esa madre. */
+  reorderSubtasks(parentId: string, ids: string[]): Promise<Task[]>
+  /** Marca hechas todas las subtareas pendientes. */
+  completeSubtasks(parentId: string): Promise<Task[]>
   /** Nuevo orden del día: ids en el orden deseado. */
   reorder(date: DayKey, ids: string[]): Promise<Task[]>
   /** Tags usados alguna vez, del más usado al menos usado (para sugerencias). */
   tags(): Promise<string[]>
+  /** Tags con cuántas tareas los usan (pantalla Tags). */
+  tagSummaries(): Promise<TaskTagSummary[]>
+  /** Renombra un tag en todas las tareas (si el nuevo ya existe, se fusionan). Devuelve cuántas cambió. */
+  renameTag(from: string, to: string): Promise<number>
+  /** Quita un tag de todas las tareas. Devuelve cuántas cambió. */
+  removeTag(tag: string): Promise<number>
   update(id: string, patch: TaskPatch): Promise<Task>
-  remove(id: string): Promise<void>
-  /** Reinserta una tarea borrada (deshacer). */
-  restore(task: Task): Promise<Task>
-  /** Mueve una tarea a otro día. */
+  /** Borra la tarea (y sus subtareas). Devuelve lo borrado para deshacer. */
+  remove(id: string): Promise<RemovedTask>
+  /** Reinserta lo borrado (deshacer). */
+  restore(removed: RemovedTask): Promise<Task>
+  /** Mueve una tarea madre (con sus subtareas) a otro día. */
   moveToDate(id: string, date: DayKey): Promise<Task>
   /** Mueve las pendientes de `from` a `to` mientras haya hueco. */
   carryOver(from: DayKey, to: DayKey): Promise<CarryOverResult>

@@ -1,8 +1,8 @@
 import { useCallback, useState } from 'react'
-import { Check, Copy, KeyRound, Plus, Trash2 } from 'lucide-react'
+import { Check, Copy, KeyRound, Plus } from 'lucide-react'
 import { sourceTag, type LeadSource, type TagRef } from '@shared/marketing'
 import { api, attempt, shortDate, useLoad, type Go } from '../lib'
-import { Button, Empty, ErrorNote, Page } from '../ui'
+import { Button, ConfirmButton, Empty, ErrorNote, Page } from '../ui'
 import { TagEditor } from '../marketing-ui'
 
 const marketing = window.api.marketing
@@ -103,7 +103,6 @@ function SourceCard({
   tags: TagRef[]
   onError: (message: string | null) => void
 }): React.JSX.Element {
-  const [confirmDelete, setConfirmDelete] = useState(false)
   const [confirmRotate, setConfirmRotate] = useState(false)
   const [showSecret, setShowSecret] = useState(false)
   const url = hubUrl ? `${hubUrl}/in/${s.slug}` : `<URL del hub>/in/${s.slug}`
@@ -149,24 +148,10 @@ function SourceCard({
           >
             {confirmRotate ? '¿Secreto nuevo?' : <KeyRound size={16} />}
           </button>
-          <button
-            type="button"
-            onClick={() =>
-              confirmDelete
-                ? void run(() => marketing.removeSource(s.slug))
-                : setConfirmDelete(true)
-            }
-            onMouseLeave={() => setConfirmDelete(false)}
-            onBlur={() => setConfirmDelete(false)}
-            aria-label={confirmDelete ? 'Confirmar: borrar fuente' : 'Borrar fuente'}
-            className={`flex h-9 items-center justify-center rounded-full text-caption font-extrabold transition-colors ${
-              confirmDelete
-                ? 'bg-rose px-4 text-ink'
-                : 'w-9 text-milk-soft hover:bg-rose/15 hover:text-rose'
-            }`}
-          >
-            {confirmDelete ? '¿Borrar?' : <Trash2 size={16} />}
-          </button>
+          <ConfirmButton
+            label="Borrar fuente"
+            onConfirm={() => void run(() => marketing.removeSource(s.slug))}
+          />
         </div>
       </div>
 

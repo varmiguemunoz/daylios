@@ -20,8 +20,9 @@ type Tab = 'today' | 'history' | 'notes'
  */
 type Screen =
   | { name: Tab }
-  | { name: 'task'; task: Task; from: 'today' | 'history' }
-  | { name: 'note'; note: Note }
+  /** `parent` = es una subtarea; `fromList` = se abrió desde Hoy (Atrás vuelve a la lista, no a la madre). */
+  | { name: 'task'; task: Task; from: 'today' | 'history'; parent?: Task; fromList?: boolean }
+  | { name: 'note'; note: Note; trail?: Note[] }
 
 const TABS: { id: Tab; label: string; icon: typeof Sun; key: string }[] = [
   { id: 'today', label: 'Hoy', icon: Sun, key: '⌘1' },
@@ -57,7 +58,23 @@ function App(): React.JSX.Element {
     [reload]
   )
 
-  const backFromNote = useCallback(() => setScreen({ name: 'notes' }), [])
+  /** Atrás desde una nota: a la nota anterior (si se llegó por una relacionada) o a la lista. */
+  const backFromNote = useCallback((trail: Note[] = []) => {
+    const previous = trail[trail.length - 1]
+    setScreen(
+      previous ? { name: 'note', note: previous, trail: trail.slice(0, -1) } : { name: 'notes' }
+    )
+  }, [])
+
+  const openRelatedNote = useCallback(async (id: string, current: Note, trail: Note[] = []) => {
+    try {
+      const next = await notesApi.get(id)
+      const latest = await notesApi.get(current.id).catch(() => current)
+      setScreen({ name: 'note', note: next, trail: [...trail, latest] })
+    } catch {
+      // La nota ya no existe: se queda donde está.
+    }
+  }, [])
 
   const removeTask = useCallback(
     (task: Task, from: Tab) => {
@@ -65,6 +82,12 @@ function App(): React.JSX.Element {
       void remove(task) // borra con toast «Deshacer»
     },
     [remove]
+  )
+
+  /** Desde una subtarea, Atrás (o borrarla) vuelve al detalle de su madre. */
+  const backToParent = useCallback(
+    (parent: Task, from: 'today' | 'history') => setScreen({ name: 'task', task: parent, from }),
+    []
   )
 
   // Clic en la notificación «Nota creada» (nota de voz): abrir esa nota.
@@ -109,7 +132,9 @@ function App(): React.JSX.Element {
           <TodayView
             date={today}
             day={day}
-            onOpenTask={(task) => setScreen({ name: 'task', task, from: 'today' })}
+            onOpenTask={(task, parent) =>
+              setScreen({ name: 'task', task, from: 'today', parent, fromList: Boolean(parent) })
+            }
           />
         )}
         {screen.name === 'history' && (
@@ -130,13 +155,40 @@ function App(): React.JSX.Element {
             key={screen.task.id}
             task={screen.task}
             today={today}
-            backLabel={TAB_LABEL[screen.from]}
-            onBack={() => backFromTask(screen.from)}
-            onRemove={(task) => removeTask(task, screen.from)}
+            parent={screen.parent}
+            revision={day.revision}
+            backLabel={
+              screen.parent && !screen.fromList
+                ? shortTitle(screen.parent.title)
+                : TAB_LABEL[screen.from]
+            }
+            onBack={() =>
+              screen.parent && !screen.fromList
+                ? backToParent(screen.parent, screen.from)
+                : backFromTask(screen.from)
+            }
+            onRemove={(task) => {
+              if (!screen.parent) return removeTask(task, screen.from)
+              if (screen.fromList) setScreen({ name: screen.from })
+              else backToParent(screen.parent, screen.from)
+              void day.removeSubtask(task)
+            }}
+            onOpenSubtask={(sub, self) =>
+              setScreen({ name: 'task', task: sub, from: screen.from, parent: self })
+            }
+            onRemoveSubtask={(sub) => void day.removeSubtask(sub)}
           />
         )}
         {screen.name === 'note' && (
-          <NoteEditor key={screen.note.id} note={screen.note} today={today} onBack={backFromNote} />
+          <NoteEditor
+            key={screen.note.id}
+            note={screen.note}
+            today={today}
+            backLabel={screen.trail?.length ? 'Nota anterior' : 'Notas'}
+            onBack={() => backFromNote(screen.trail)}
+            onOpenNote={(id) => void openRelatedNote(id, screen.note, screen.trail)}
+            onOpenClient={(id) => window.api.openConsultora({ client: id })}
+          />
         )}
       </div>
 
@@ -177,6 +229,12 @@ function App(): React.JSX.Element {
       )}
     </div>
   )
+}
+
+/** Título de la madre para el botón Atrás (sin markdown, corto). */
+function shortTitle(title: string): string {
+  const plain = title.replace(/[*_`~[\]()#]/g, '').trim()
+  return plain.length > 22 ? `${plain.slice(0, 21)}…` : plain
 }
 
 export default App

@@ -16,6 +16,9 @@ export function registerMarketingIpc(m: Marketing, notify: () => void): void {
 
   read('listTags', () => m.tags.list())
   write('renameTag', (slug: string, name: string) => m.tags.rename(slug, name))
+  write('setTagAudience', (slug: string, audience: boolean) => m.tags.setAudience(slug, audience))
+  read('tagUsage', (slug: string) => m.tags.usage(slug))
+  write('removeTag', (slug: string) => m.tags.remove(slug))
   read('status', () => m.sync.status())
   write('syncNow', async () => {
     await m.sync.tick()

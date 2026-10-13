@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Check, Trash2 } from 'lucide-react'
+import { Check, SlidersHorizontal, Trash2 } from 'lucide-react'
 import type { DayKey, Task, TaskPatch } from '@shared/tasks'
 import { errorMessage, tasksApi } from '../lib/api'
 import { longDate, relativeDay } from '../lib/format'
 import { useAutosave } from '../lib/useAutosave'
+import { useSubtasks } from '../lib/useSubtasks'
+import { IconButton, isOverlayOpen } from '../ui'
 import { BackButton } from './BackButton'
 import { Markdown } from './Markdown'
-import { MarkdownEditor } from './MarkdownEditor'
-import { TaskTagsEffort } from './TaskTagsEffort'
+import { MarkdownEditor, fromMarkdownEditor } from './MarkdownEditor'
+import { TaskSummary } from './TaskSummary'
+import { TaskDetailsDrawer } from './TaskDetailsDrawer'
 
 interface TaskDetailProps {
   task: Task
@@ -16,10 +19,18 @@ interface TaskDetailProps {
   backLabel: string
   onBack: () => void
   onRemove: (task: Task) => void
+  /** Madre, si esta tarea es una subtarea. */
+  parent?: Pick<Task, 'id' | 'title'>
+  /** Sube cuando el día se recarga (p. ej. tras deshacer): refresca las subtareas. */
+  revision: number
+  /** Abre una subtarea. `self` = esta tarea al día (para volver sin perder cambios). */
+  onOpenSubtask: (task: Task, self: Task) => void
+  onRemoveSubtask: (task: Task) => void
 }
 
 /**
- * Detalle de una tarea: título (markdown en línea), hecha/pendiente y descripción en markdown.
+ * Detalle de una tarea, sin ruido: título, fecha, una línea de resumen y la descripción.
+ * Esfuerzo, tags y subtareas viven en el panel «Detalles» (clic en el resumen o ⌘I).
  * El título se guarda al salir del campo; la descripción, sola mientras escribes.
  */
 export function TaskDetail({
@@ -27,13 +38,27 @@ export function TaskDetail({
   today,
   backLabel,
   onBack,
-  onRemove
+  onRemove,
+  parent,
+  revision,
+  onOpenSubtask,
+  onRemoveSubtask
 }: TaskDetailProps): React.JSX.Element {
   const [task, setTask] = useState(initial)
   const [description, setDescription] = useState(initial.description ?? '')
   const [draft, setDraft] = useState<string | null>(null) // null = no se está editando el título
   const [error, setError] = useState<string | null>(null)
+  const [panel, setPanel] = useState(false)
   const id = initial.id
+  const isSubtask = initial.parentId !== null
+
+  // El «2/5» del resumen sigue a los cambios hechos en el panel.
+  const subtasks = useSubtasks(isSubtask ? null : id, revision, (list) =>
+    setTask((t) => ({
+      ...t,
+      subtasks: { total: list.length, done: list.filter((x) => x.done).length }
+    }))
+  )
 
   const saveDescription = useCallback(
     (text: string) => tasksApi.update(id, { description: text }),
@@ -46,10 +71,15 @@ export function TaskDetail({
     onBack()
   }, [flush, onBack])
 
-  // Esc vuelve atrás (guardando antes). El campo de título lo intercepta mientras se edita.
+  // Esc vuelve atrás (guardando antes), salvo que lo use el editor o el panel. ⌘I abre o cierra el panel.
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') void back()
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'i') {
+        e.preventDefault()
+        setPanel((open) => !open)
+      } else if (e.key === 'Escape' && !isOverlayOpen() && !fromMarkdownEditor(e)) {
+        void back()
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -57,11 +87,19 @@ export function TaskDetail({
 
   const update = async (patch: TaskPatch): Promise<void> => {
     try {
-      setTask(await tasksApi.update(id, patch))
+      const saved = await tasksApi.update(id, patch)
+      setTask((t) => ({ ...saved, subtasks: t.subtasks }))
       setError(null)
     } catch (e) {
       setError(errorMessage(e))
     }
+  }
+
+  /** Guarda la descripción y cierra el panel antes de ir a la subtarea. */
+  const openSubtask = async (sub: Task): Promise<void> => {
+    await flush()
+    setPanel(false)
+    onOpenSubtask(sub, { ...task, description: description.trim() ? description : null })
   }
 
   const commitTitle = (): void => {
@@ -74,15 +112,17 @@ export function TaskDetail({
     <div className="flex h-full flex-col">
       <header className="flex items-center justify-between gap-3 px-6 pt-5">
         <BackButton label={backLabel} onClick={() => void back()} />
-        <button
-          type="button"
-          onClick={() => onRemove(task)}
-          aria-label="Eliminar tarea"
-          title="Eliminar tarea"
-          className="grid size-9 place-items-center rounded-full text-milk-soft transition-colors hover:bg-rose/15 hover:text-rose"
-        >
-          <Trash2 size={17} />
-        </button>
+        <span className="flex items-center gap-1">
+          <IconButton
+            label="Detalles: esfuerzo, tags y subtareas (⌘I)"
+            onClick={() => setPanel(true)}
+          >
+            <SlidersHorizontal size={16} strokeWidth={2.5} />
+          </IconButton>
+          <IconButton label="Eliminar tarea" tone="danger" onClick={() => onRemove(task)}>
+            <Trash2 size={17} />
+          </IconButton>
+        </span>
       </header>
 
       <section className="px-6 pt-6">
@@ -143,22 +183,27 @@ export function TaskDetail({
           )}
         </div>
 
-        <p className="mt-2 flex items-center gap-2 pl-[38px] text-caption text-milk-soft">
-          <span>
-            {relativeDay(task.date, today)} · {longDate(task.date)}
-          </span>
-          {task.carriedFrom && !task.done && (
-            <span className="text-micro font-semibold text-butter/80">de ayer</span>
-          )}
-        </p>
-
-        <div className="mt-4 pl-[38px]">
-          <TaskTagsEffort
-            tags={task.tags}
-            effort={task.effort}
-            onTags={(tags) => void update({ tags })}
-            onEffort={(effort) => void update({ effort })}
-          />
+        <div className="pl-[38px]">
+          <p className="mt-2 flex items-center gap-2 text-caption text-milk-soft">
+            {parent ? (
+              <span className="min-w-0 truncate">
+                Subtarea de{' '}
+                <span className="font-bold text-milk">
+                  <Markdown text={parent.title} inline />
+                </span>
+              </span>
+            ) : (
+              <span>
+                {relativeDay(task.date, today)} · {longDate(task.date)}
+              </span>
+            )}
+            {task.carriedFrom && !task.done && (
+              <span className="text-micro font-semibold text-butter/80">de ayer</span>
+            )}
+          </p>
+          <div className="mt-2">
+            <TaskSummary task={task} onOpen={() => setPanel(true)} />
+          </div>
         </div>
 
         {error && (
@@ -168,15 +213,26 @@ export function TaskDetail({
         )}
       </section>
 
-      <div className="mt-6 flex min-h-0 flex-1 flex-col">
+      <div className="mt-5 flex min-h-0 flex-1 flex-col">
         <MarkdownEditor
           value={description}
           onChange={setDescription}
+          onCommit={flush}
           status={status}
           placeholder="Descripción en markdown: pasos, enlaces, `código`, - [ ] casillas…"
-          emptyHint="Sin descripción. Pulsa Escribir o ⌘E para añadir una."
+          emptyHint="Sin descripción. Clic para escribir."
         />
       </div>
+
+      <TaskDetailsDrawer
+        open={panel}
+        onClose={() => setPanel(false)}
+        task={task}
+        onUpdate={(patch) => void update(patch)}
+        subtasks={isSubtask ? undefined : subtasks}
+        onOpenSubtask={(sub) => void openSubtask(sub)}
+        onRemoveSubtask={onRemoveSubtask}
+      />
     </div>
   )
 }

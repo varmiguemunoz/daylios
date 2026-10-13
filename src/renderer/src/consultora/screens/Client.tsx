@@ -1,12 +1,15 @@
 import { useCallback, useState } from 'react'
-import { FolderOpen, Plus } from 'lucide-react'
-import type { ClientInput } from '@shared/consultora'
+import { FilePen, FolderOpen, NotebookPen, Pencil, Plus, Trash2 } from 'lucide-react'
+import type { ClientInput, DocFile } from '@shared/consultora'
 import { api, attempt, bytes, dateTime, openPath, shortDate, useLoad, type Go } from '../lib'
 import {
+  ActionRow,
   Button,
+  ConfirmButton,
   EditableText,
   Empty,
   ErrorNote,
+  IconButton,
   List,
   MarkdownField,
   MeetingStatusPill,
@@ -17,8 +20,17 @@ import {
   Select
 } from '../ui'
 import { ContactsSection } from '../ContactsSection'
+import { DeleteClientModal } from '../organisms/DeleteClientModal'
+import { NotePicker } from '../../components/NotePicker'
+import { notesApi } from '../../lib/api'
 
-/** Ficha de cliente: datos, proyectos, reuniones, action items abiertos, notas y documentos. */
+/** Documentos que se pueden editar dentro de la app. */
+const EDITABLE = /\.(md|txt|csv|json)$/i
+
+/**
+ * Ficha de cliente: datos, proyectos, reuniones, action items abiertos, notas y documentos.
+ * Desde aquí se borran el cliente y sus proyectos y se renombran, editan o borran documentos.
+ */
 export function Client({
   id,
   go,
@@ -34,6 +46,26 @@ export function Client({
   const { data: c, error: loadError } = useLoad(load)
   const [error, setError] = useState<string | null>(null)
   const [newProject, setNewProject] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [linking, setLinking] = useState(false)
+  const [renaming, setRenaming] = useState<string | null>(null)
+
+  const run = async (fn: () => Promise<unknown>): Promise<void> => setError(await attempt(fn))
+
+  /** «Nueva nota»: nace relacionada con el cliente y se abre. */
+  const newNote = async (): Promise<void> => {
+    let noteId = ''
+    const failed = await attempt(async () => {
+      noteId = (await notesApi.create('', { clients: [id] })).id
+    })
+    setError(failed)
+    if (!failed) go({ name: 'note', id: noteId })
+  }
+
+  const renameDoc = async (doc: DocFile, name: string): Promise<void> => {
+    setRenaming(null)
+    if (name.trim() && name.trim() !== doc.name) await run(() => api.renameDocument(id, doc.path, name.trim()))
+  }
 
   const save = async (patch: ClientInput): Promise<void> =>
     setError(await attempt(() => api.updateClient(id, patch)))
@@ -97,9 +129,21 @@ export function Client({
             <FolderOpen size={15} strokeWidth={2.5} />
             Carpeta
           </Button>
+          <IconButton label="Borrar cliente" tone="danger" onClick={() => setDeleting(true)}>
+            <Trash2 size={16} />
+          </IconButton>
         </>
       }
     >
+      <DeleteClientModal
+        open={deleting}
+        client={{ id: c.id, name: c.name }}
+        onClose={() => setDeleting(false)}
+        onDeleted={() => {
+          setDeleting(false)
+          back()
+        }}
+      />
       <ErrorNote message={error ?? loadError} />
 
       <Section
@@ -135,7 +179,17 @@ export function Client({
         ) : (
           <List>
             {c.projects.map((p) => (
-              <Row key={p.id} onClick={() => go({ name: 'project', id: p.id })}>
+              <ActionRow
+                key={p.id}
+                onClick={() => go({ name: 'project', id: p.id })}
+                actions={
+                  <ConfirmButton
+                    label={`Borrar proyecto ${p.name}`}
+                    onConfirm={() => void run(() => api.removeProject(p.id))}
+                    size="sm"
+                  />
+                }
+              >
                 <span className="min-w-0 flex-1 truncate text-list font-bold">{p.name}</span>
                 {p.openDeliverables.length > 0 && (
                   <span className="text-caption text-milk-soft">
@@ -146,7 +200,7 @@ export function Client({
                   </span>
                 )}
                 <ProjectStatusPill status={p.status} />
-              </Row>
+              </ActionRow>
             ))}
           </List>
         )}
@@ -198,6 +252,60 @@ export function Client({
 
       <ContactsSection contacts={c.contacts} client={c.id} go={go} />
 
+      <Section
+        title="Notas"
+        aside={
+          <div className="flex gap-2">
+            <Button onClick={() => setLinking(true)}>Relacionar nota</Button>
+            <Button onClick={() => void newNote()}>
+              <Plus size={15} strokeWidth={3} />
+              Nueva nota
+            </Button>
+          </div>
+        }
+      >
+        {c.notes.length === 0 ? (
+          <Empty title="Sin notas relacionadas." hint="Crea una aquí o relaciónala desde la propia nota." />
+        ) : (
+          <List>
+            {c.notes.map((n) => (
+              <ActionRow
+                key={n.id}
+                onClick={() => go({ name: 'note', id: n.id })}
+                actions={
+                  <IconButton
+                    label={`Quitar relación con ${n.title}`}
+                    size="sm"
+                    tone="danger"
+                    onClick={() => void run(() => notesApi.unlink(n.id, { type: 'client', id }))}
+                  >
+                    <Trash2 size={14} />
+                  </IconButton>
+                }
+              >
+                <NotebookPen size={15} className="shrink-0 text-milk-soft" aria-hidden />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-list font-bold">{n.title}</span>
+                  {n.excerpt && <span className="block truncate text-caption text-milk-soft">{n.excerpt}</span>}
+                </span>
+                <span className="shrink-0 text-caption text-milk-soft">{shortDate(n.updatedAt)}</span>
+              </ActionRow>
+            ))}
+          </List>
+        )}
+        <NotePicker
+          open={linking}
+          noteId=""
+          exclude={c.notes.map((n) => n.id)}
+          notesOnly
+          onPick={(target) => {
+            setLinking(false)
+            void run(() => notesApi.link(target.id, { type: 'client', id }))
+          }}
+          onClose={() => setLinking(false)}
+        />
+      </Section>
+
       <Section title="Notas de contexto">
         <MarkdownField
           value={c.notesMd}
@@ -228,25 +336,70 @@ export function Client({
           />
         ) : (
           <List>
-            {c.documents.map((d) => (
-              <Row
-                key={d.path}
-                onClick={() =>
-                  void openPath(`${c.folderPath}/${d.path}`).catch((e) => setError(String(e)))
-                }
-              >
-                <span className="min-w-0 flex-1 truncate text-list">{d.name}</span>
-                <span className="shrink-0 text-caption text-milk-soft">
-                  {d.folder === '.' ? '' : d.folder}
-                </span>
-                <span className="w-20 shrink-0 text-right text-caption text-milk-soft">
-                  {bytes(d.size)}
-                </span>
-                <span className="w-28 shrink-0 text-right text-caption text-milk-soft">
-                  {shortDate(d.modifiedAt)}
-                </span>
-              </Row>
-            ))}
+            {c.documents.map((d) =>
+              renaming === d.path ? (
+                <li key={d.path} className="px-3 py-2">
+                  <input
+                    autoFocus
+                    defaultValue={d.name}
+                    aria-label={`Nuevo nombre de ${d.name}`}
+                    onFocus={(e) => {
+                      const dot = e.currentTarget.value.lastIndexOf('.')
+                      e.currentTarget.setSelectionRange(0, dot > 0 ? dot : e.currentTarget.value.length)
+                    }}
+                    onBlur={(e) => void renameDoc(d, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') e.currentTarget.blur()
+                      if (e.key === 'Escape') {
+                        e.stopPropagation()
+                        setRenaming(null)
+                      }
+                    }}
+                    className="h-10 w-full rounded-sm bg-night/60 px-3 text-list outline-none focus:shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--color-apricot)_70%,transparent)]"
+                  />
+                </li>
+              ) : (
+                <ActionRow
+                  key={d.path}
+                  onClick={() =>
+                    void openPath(`${c.folderPath}/${d.path}`).catch((e) => setError(String(e)))
+                  }
+                  actions={
+                    <>
+                      {EDITABLE.test(d.name) && (
+                        <IconButton
+                          label={`Editar ${d.name}`}
+                          size="sm"
+                          onClick={() => go({ name: 'document', client: id, path: d.path })}
+                        >
+                          <FilePen size={15} />
+                        </IconButton>
+                      )}
+                      <IconButton label={`Renombrar ${d.name}`} size="sm" onClick={() => setRenaming(d.path)}>
+                        <Pencil size={14} />
+                      </IconButton>
+                      <ConfirmButton
+                        label={`Mandar ${d.name} a la Papelera`}
+                        confirmLabel="¿A la Papelera?"
+                        onConfirm={() => void run(() => api.trashDocument(id, d.path))}
+                        size="sm"
+                      />
+                    </>
+                  }
+                >
+                  <span className="min-w-0 flex-1 truncate text-list">{d.name}</span>
+                  <span className="shrink-0 text-caption text-milk-soft">
+                    {d.folder === '.' ? '' : d.folder}
+                  </span>
+                  <span className="w-20 shrink-0 text-right text-caption text-milk-soft">
+                    {bytes(d.size)}
+                  </span>
+                  <span className="w-28 shrink-0 text-right text-caption text-milk-soft">
+                    {shortDate(d.modifiedAt)}
+                  </span>
+                </ActionRow>
+              )
+            )}
           </List>
         )}
       </Section>

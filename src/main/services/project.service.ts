@@ -10,6 +10,7 @@ import {
 import { ClientModel } from '../models/client.model'
 import { ProjectModel } from '../models/project.model'
 import { MeetingModel } from '../models/meeting.model'
+import { ContactModel } from '../models/contact.model'
 import { transactionGuard } from '../guards/transaction.guard'
 import { findByRef } from './ref'
 import { markdown, now, oneOf, requiredText } from './fields'
@@ -62,6 +63,16 @@ export class ProjectService {
       }
       await manager.getRepository(ProjectModel).insert(project)
       return project
+    })
+  }
+
+  /** Borra el proyecto. Sus reuniones y contactos se quedan en el cliente, sin proyecto. */
+  remove(ref: unknown): Promise<void> {
+    return transactionGuard(this.db, async (manager) => {
+      const project = await findByRef(manager.getRepository(ProjectModel), ref, 'name', 'el proyecto')
+      await manager.getRepository(MeetingModel).update({ projectId: project.id }, { projectId: null })
+      await manager.getRepository(ContactModel).update({ projectId: project.id }, { projectId: null })
+      await manager.getRepository(ProjectModel).delete({ id: project.id })
     })
   }
 

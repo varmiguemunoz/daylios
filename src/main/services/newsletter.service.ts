@@ -65,7 +65,7 @@ export class NewsletterService {
       sentToday: recent.some((n) => n.day === today && n.status !== 'failed'),
       recent: recent.map(({ day, tag, subject, status }) => ({ day, tag, subject, status })),
       tags: (await this.tags.list())
-        .filter((t) => t.subscribed > 0)
+        .filter((t) => t.audience && t.subscribed > 0)
         .map(({ slug, name, subscribed }) => ({ slug, name, subscribed }))
     }
   }
@@ -100,6 +100,11 @@ export class NewsletterService {
     const summary = (await this.tags.list()).find((t) => t.slug === slug)
     if (!summary)
       throw new AppError('invalid', `No existe el tag «${input.tag}». Usa get_newsletter_context.`)
+    if (!summary.audience)
+      throw new AppError(
+        'invalid',
+        `«${summary.name}» no es audiencia. Márcalo como audiencia en Tags (o con set_tag_audience).`
+      )
     if (summary.subscribed === 0)
       throw new AppError('invalid', `«${summary.name}» no tiene suscritos. No se envió nada.`)
 

@@ -26,14 +26,14 @@ export function Page({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="scroll-area min-h-0 flex-1 overflow-y-auto pt-6 pb-16 pl-10">
-        <div className="mx-auto max-w-[880px]">
+        <div className="@container mx-auto max-w-[880px]">
           {back && (
             <div className="mb-4">
               <BackButton label={back.label} onClick={back.onClick} />
             </div>
           )}
-          <header className="flex items-start justify-between gap-6">
-            <div className="min-w-0 flex-1">
+          <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+            <div className="min-w-[240px] flex-1">
               <div className="text-headline font-extrabold">{title}</div>
               {meta && (
                 <div className="mt-1.5 flex flex-wrap items-center gap-2 text-caption text-milk-soft">
@@ -41,7 +41,7 @@ export function Page({
                 </div>
               )}
             </div>
-            {actions && <div className="flex shrink-0 items-center gap-2 pt-2">{actions}</div>}
+            {actions && <div className="flex flex-wrap items-center gap-2 pt-2">{actions}</div>}
           </header>
           {children}
         </div>
@@ -367,3 +367,6 @@ export function Field({
     </label>
   )
 }
+
+// Primitivas v3 (diseño atómico), re-exportadas para no tocar imports.
+export * from '../ui'

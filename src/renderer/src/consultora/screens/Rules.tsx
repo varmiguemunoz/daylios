@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'react'
-import { ArrowDown, ArrowUp, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, Pencil, Plus, X } from 'lucide-react'
 import type { Stage } from '@shared/consultora'
 import type { Rule, RuleAction, RuleInput, TagRef } from '@shared/marketing'
 import { api, attempt, useLoad } from '../lib'
-import { Button, Empty, ErrorNote, Field, Page, Select } from '../ui'
+import { Button, ConfirmButton, Empty, ErrorNote, Field, Page, Select } from '../ui'
 import { TagPill } from '../marketing-ui'
 
 const marketing = window.api.marketing
@@ -130,7 +130,6 @@ function RuleCard({
   onToggle: (active: boolean) => void
   onRemove: () => void
 }): React.JSX.Element {
-  const [confirm, setConfirm] = useState(false)
   const tag = (slug: string): React.JSX.Element => (
     <TagPill tag={tags.find((t) => t.slug === slug) ?? { slug, name: slug }} />
   )
@@ -161,20 +160,7 @@ function RuleCard({
           <IconButton label="Editar" onClick={onEdit}>
             <Pencil size={15} />
           </IconButton>
-          <button
-            type="button"
-            onClick={() => (confirm ? onRemove() : setConfirm(true))}
-            onMouseLeave={() => setConfirm(false)}
-            onBlur={() => setConfirm(false)}
-            aria-label={confirm ? 'Confirmar: borrar regla' : 'Borrar regla'}
-            className={`flex h-8 items-center justify-center rounded-full text-caption font-extrabold transition-colors ${
-              confirm
-                ? 'bg-rose px-3 text-ink'
-                : 'w-8 text-milk-soft hover:bg-rose/15 hover:text-rose'
-            }`}
-          >
-            {confirm ? '¿Borrar?' : <Trash2 size={15} />}
-          </button>
+          <ConfirmButton label="Borrar regla" onConfirm={onRemove} size="sm" />
         </div>
       </div>
       <p className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-caption text-milk-soft">

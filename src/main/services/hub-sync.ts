@@ -104,8 +104,9 @@ export class HubSync {
       })),
       rules,
       segments: Object.fromEntries(
-        tags.filter((t) => t.segmentId).map((t) => [t.slug, t.segmentId!])
-      )
+        tags.filter((t) => t.audience && t.segmentId).map((t) => [t.slug, t.segmentId!])
+      ),
+      audience: tags.filter((t) => t.audience).map((t) => t.slug)
     }
   }
 
@@ -158,6 +159,7 @@ async function applyLead(manager: EntityManager, item: HubLeadItem): Promise<voi
       linkedin: null,
       notesMd: '',
       clientId: null,
+      projectId: null,
       prospectId: null,
       status: item.resend.unsubscribed ? 'unsubscribed' : 'subscribed',
       source: item.source,
