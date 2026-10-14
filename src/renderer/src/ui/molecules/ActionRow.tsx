@@ -3,13 +3,12 @@ import type { ReactNode } from 'react'
 interface ActionRowProps {
   onClick?: () => void
   children: ReactNode
-  /** Acciones a la derecha; aparecen al pasar el ratón o con el foco dentro. */
+
   actions?: ReactNode
-  /** Acciones siempre visibles (p. ej. mientras se renombra). */
+
   pinned?: boolean
 }
 
-/** Fila de List con zona clicable y acciones aparte (sin botones dentro de botones). */
 export function ActionRow({
   onClick,
   children,

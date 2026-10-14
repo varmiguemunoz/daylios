@@ -32,16 +32,12 @@ import {
 } from './documents'
 import type { ClientService } from './client.service'
 
-/**
- * Lecturas que cruzan módulos, pensadas para Claude: panorama, búsqueda, documentos y notas rápidas.
- */
 export class ContextService {
   constructor(
     private readonly db: DataSource,
     private readonly clients: ClientService
   ) {}
 
-  /** Todo el negocio en una respuesta: clientes activos y sus proyectos, pendientes, pipeline y últimas reuniones. */
   async overview(): Promise<Overview> {
     const clients = await this.db
       .getRepository(ClientModel)
@@ -52,10 +48,15 @@ export class ContextService {
     const meetings = await this.db.getRepository(MeetingModel).find({ order: { date: 'DESC' } })
     const stages = await this.db.getRepository(StageModel).find({ order: { position: 'ASC' } })
     const prospects = await this.db.getRepository(ProspectModel).find()
-    const pipelines = await this.db.getRepository(PipelineModel).find({ order: { position: 'ASC' } })
+    const pipelines = await this.db
+      .getRepository(PipelineModel)
+      .find({ order: { position: 'ASC' } })
     const pipelineName = new Map(pipelines.map((p) => [p.id, p.name]))
     const order = new Map(pipelines.map((p, i) => [p.id, i]))
-    stages.sort((a, b) => (order.get(a.pipelineId) ?? 0) - (order.get(b.pipelineId) ?? 0) || a.position - b.position)
+    stages.sort(
+      (a, b) =>
+        (order.get(a.pipelineId) ?? 0) - (order.get(b.pipelineId) ?? 0) || a.position - b.position
+    )
 
     const openStages = new Set(stages.filter((s) => s.kind === 'open').map((s) => s.id))
 
@@ -100,7 +101,6 @@ export class ContextService {
     }
   }
 
-  /** Nombres para selectores. */
   async refs(): Promise<Refs> {
     const clients = await this.db.getRepository(ClientModel).find({ order: { name: 'ASC' } })
     const projects = await this.db.getRepository(ProjectModel).find({ order: { name: 'ASC' } })
@@ -112,7 +112,6 @@ export class ContextService {
     }
   }
 
-  /** Busca texto en clientes, proyectos, reuniones (incluida la transcripción) y prospectos. */
   async search(query: string): Promise<SearchHit[]> {
     const q = requiredText(query, 'La búsqueda', 200)
     const like = Like(`%${q}%`)
@@ -142,7 +141,9 @@ export class ContextService {
       .find({ where: [{ name: like }, { email: like }, { role: like }, { notesMd: like }] })
 
     return [
-      ...contacts.map((c) => hit('contact', c.id, contactLabel(c), q, [c.name, c.role, c.email, c.notesMd])),
+      ...contacts.map((c) =>
+        hit('contact', c.id, contactLabel(c), q, [c.name, c.role, c.email, c.notesMd])
+      ),
       ...clients.map((c) =>
         hit('client', c.id, c.name, q, [c.name, c.sector, c.notesMd, c.contactsMd])
       ),
@@ -185,7 +186,12 @@ export class ContextService {
     expectedModifiedAt?: string
   ): Promise<{ path: string; modifiedAt: string }> {
     const folder = (await this.clients.find(client)).folderPath
-    return writeDocument(folder, requiredText(path, 'La ruta', 1000), content, expectedModifiedAt || undefined)
+    return writeDocument(
+      folder,
+      requiredText(path, 'La ruta', 1000),
+      content,
+      expectedModifiedAt || undefined
+    )
   }
 
   async renameDocument(client: string, path: string, name: string): Promise<{ path: string }> {
@@ -198,10 +204,6 @@ export class ContextService {
     await trashDocument(folder, requiredText(path, 'La ruta', 1000))
   }
 
-  /**
-   * Añade una nota fechada al final de las notas de un cliente, proyecto, prospecto o reunión:
-   * `**2026-10-02** — texto`. La forma más rápida de alimentar contexto.
-   */
   async appendNote(entity: NoteEntity, ref: string, text: string): Promise<void> {
     const line = `**${todayKey()}** — ${requiredText(text, 'La nota', 5000)}`
     const add = (md: string): string => (md.trim() ? `${md.trimEnd()}\n\n${line}` : line)
@@ -232,7 +234,6 @@ export class ContextService {
   }
 }
 
-/** Resultado de búsqueda con ~160 caracteres alrededor de la primera coincidencia. */
 function hit(
   type: SearchHit['type'],
   id: string,

@@ -6,8 +6,9 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   resolve: { alias: { '@shared': resolve('src/shared') } },
   test: {
-    // La lógica del Worker (workers/leads-hub) es independiente de Cloudflare y se prueba aquí.
-    include: ['src/**/*.test.ts', 'workers/*/src/**/*.test.ts'],
+    // Todas las pruebas viven en src/test, también las del dominio de services/cloud.
+    // La lógica del Worker (workers/leads-hub) no depende de Cloudflare y se prueba aquí.
+    include: ['src/test/**/*.test.ts', 'workers/*/src/**/*.test.ts'],
     environment: 'node',
     pool: 'forks'
   }

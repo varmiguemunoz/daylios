@@ -1,7 +1,6 @@
 import { Router } from 'express'
 import type { WorkspaceController } from '../controllers/workspace.controller'
 
-/** Rutas del workspace bajo `/workspace`. `:ref` = id o ruta de la bóveda (codificada). */
 export function workspaceRoutes(c: WorkspaceController): Router {
   return Router()
     .get('/info', c.info)

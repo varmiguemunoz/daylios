@@ -2,7 +2,6 @@ import { memo } from 'react'
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from '@xyflow/react'
 import { colorValue, type BoardEdge } from './flow'
 
-/** Conexión de Obsidian: curva fina gris; color del canvas si lo tiene; acento al seleccionarla. */
 export const ObsidianEdge = memo(function ObsidianEdge({
   id,
   sourceX,

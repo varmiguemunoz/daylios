@@ -2,7 +2,6 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import { api, tool, day, query, enc } from '../client'
 
-/** Herramientas MCP: meetings. */
 export function register(server: McpServer): void {
   server.registerTool(
     'list_meetings',
@@ -170,10 +169,16 @@ export function register(server: McpServer): void {
   server.registerTool(
     'delete_meeting',
     {
-      description: 'Borra una reunión de la app (la grabación se queda en la carpeta del cliente). Sin confirm no borra.',
+      description:
+        'Borra una reunión de la app (la grabación se queda en la carpeta del cliente). Sin confirm no borra.',
       inputSchema: { id: z.string(), confirm: z.literal(true).optional() }
     },
     ({ id, confirm }) =>
-      tool(() => api('DELETE', `/consultora/meetings/${enc(id)}${query({ confirm: confirm ? 1 : undefined })}`))
+      tool(() =>
+        api(
+          'DELETE',
+          `/consultora/meetings/${enc(id)}${query({ confirm: confirm ? 1 : undefined })}`
+        )
+      )
   )
 }

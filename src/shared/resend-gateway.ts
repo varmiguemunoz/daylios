@@ -1,12 +1,6 @@
 import { Resend } from 'resend'
 
-/**
- * Puerta a Resend. La usan la app (main) y el Worker `leads-hub`.
- * Es una interfaz para poder usar un fake en los tests; `createResendGateway` es la real.
- * Todas las operaciones lanzan `ResendError` si Resend responde con error.
- */
 export interface ResendGateway {
-  /** Comprueba que la API key funciona. */
   test(): Promise<void>
   findContact(email: string): Promise<RemoteContact | null>
   createContact(input: {
@@ -20,13 +14,13 @@ export interface ResendGateway {
     email: string,
     patch: { firstName?: string | null; lastName?: string | null; unsubscribed?: boolean }
   ): Promise<void>
-  /** Segments del contacto (todos, no solo los `tag:*`). */
+
   contactSegments(email: string): Promise<{ id: string; name: string }[]>
   addToSegment(email: string, segmentId: string): Promise<void>
   removeFromSegment(email: string, segmentId: string): Promise<void>
-  /** Devuelve el id del segment con ese nombre; lo crea si no existe. */
+
   ensureSegment(name: string): Promise<string>
-  /** Borra un segment (404 = ya no existe, no es error). */
+
   deleteSegment(id: string): Promise<void>
   sendEvent(event: string, email: string, payload?: Record<string, unknown>): Promise<void>
   sendEmail(input: {
@@ -36,7 +30,7 @@ export interface ResendGateway {
     subject: string
     html: string
   }): Promise<string>
-  /** Crea y envía (o programa) un broadcast a un segment. */
+
   sendBroadcast(input: {
     segmentId: string
     from: string
@@ -50,7 +44,7 @@ export interface ResendGateway {
   getAutomation(id: string): Promise<RemoteAutomationDetail>
   createAutomation(input: AutomationDraft): Promise<string>
   updateAutomation(id: string, input: Partial<AutomationDraft>): Promise<void>
-  /** Crea un template y lo publica. Devuelve su id. */
+
   createTemplate(input: {
     name: string
     subject: string
@@ -100,7 +94,6 @@ export class ResendError extends Error {
     this.name = 'ResendError'
   }
 
-  /** La key no sirve: no tiene sentido seguir intentando hasta que cambie. */
   get fatal(): boolean {
     return ['missing_api_key', 'invalid_api_key', 'restricted_api_key'].includes(this.code)
   }
@@ -111,10 +104,8 @@ type Result<T> = {
   error: { message: string; name?: string; statusCode?: number | null } | null
 }
 
-/** ~9 peticiones/s: Resend admite 10/s por equipo y no hay ráfagas. */
 const MIN_INTERVAL_MS = 110
 
-/** Separa "Ana María López" en nombre ("Ana") y apellidos ("María López"). */
 export function splitName(name: string | null | undefined): {
   firstName: string | null
   lastName: string | null
@@ -129,7 +120,6 @@ export function createResendGateway(apiKey: string): ResendGateway {
   let last = 0
   let chain: Promise<unknown> = Promise.resolve()
 
-  /** Serializa y espacia las llamadas; convierte `{ error }` en excepción. */
   const call = <T>(fn: () => PromiseLike<Result<T>>, allowNotFound = false): Promise<T | null> => {
     const run = async (): Promise<T | null> => {
       const wait = last + MIN_INTERVAL_MS - Date.now()
@@ -148,7 +138,6 @@ export function createResendGateway(apiKey: string): ResendGateway {
   }
   const must = async <T>(fn: () => PromiseLike<Result<T>>): Promise<T> => (await call(fn)) as T
 
-  /** Recorre una lista paginada por cursor (`after` = id del último). */
   const all = async <T extends { id: string }>(
     page: (after?: string) => Promise<Result<{ data: T[]; has_more: boolean }>>
   ): Promise<T[]> => {

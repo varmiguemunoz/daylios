@@ -1,13 +1,13 @@
 import { EntitySchema } from 'typeorm'
+import { DELETED_AT, type SoftDeletable } from './soft-delete'
 import type { PipelineRef } from '@shared/consultora'
 
-/** Pipelines (uno por oferta, p. ej.). Sus columnas viven en `pipeline_stages`. */
 export interface PipelineRow extends PipelineRef {
   createdAt: string
   updatedAt: string
 }
 
-export const PipelineModel = new EntitySchema<PipelineRow>({
+export const PipelineModel = new EntitySchema<PipelineRow & SoftDeletable>({
   name: 'Pipeline',
   tableName: 'pipelines',
   columns: {
@@ -15,6 +15,7 @@ export const PipelineModel = new EntitySchema<PipelineRow>({
     name: { type: 'text' },
     position: { type: 'integer', default: 0 },
     createdAt: { name: 'created_at', type: 'text' },
-    updatedAt: { name: 'updated_at', type: 'text' }
+    updatedAt: { name: 'updated_at', type: 'text' },
+    deletedAt: DELETED_AT
   }
 })

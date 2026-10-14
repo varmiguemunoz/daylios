@@ -1,6 +1,5 @@
 import { TableColumn, type MigrationInterface, type QueryRunner } from 'typeorm'
 
-/** Añade `tasks.description` (markdown, opcional). Las tareas existentes quedan sin descripción. */
 export class AddTaskDescription1727800000000 implements MigrationInterface {
   name = 'AddTaskDescription1727800000000'
 

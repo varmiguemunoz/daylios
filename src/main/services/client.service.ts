@@ -27,8 +27,8 @@ import { findByRef } from './ref'
 import { markdown, now, oneOf, optionalDay, optionalText, requiredText } from './fields'
 import { ensureClientFolder, listDocuments, safeFolderName } from './documents'
 import { brief, openActionItems } from './meeting.helpers'
+import { unlinkTasks } from './task.service'
 
-/** Clientes: alta (con carpeta de documentos), edición y ficha completa. */
 export class ClientService {
   constructor(private readonly db: DataSource) {}
 
@@ -36,7 +36,6 @@ export class ClientService {
     return findByRef(this.db.getRepository(ClientModel), ref, 'name', 'el cliente')
   }
 
-  /** Lista con nº de proyectos activos y fecha de la última reunión. */
   async list(
     status?: ClientStatus
   ): Promise<(Client & { activeProjects: number; lastMeetingDate: string | null })[]> {
@@ -55,7 +54,6 @@ export class ClientService {
     }))
   }
 
-  /** Todo lo que hay de un cliente: proyectos, reuniones, prospectos, action items abiertos y documentos. */
   async get(ref: unknown): Promise<ClientDetail> {
     const client = await this.find(ref)
     const projects = await this.db
@@ -81,7 +79,6 @@ export class ClientService {
     }
   }
 
-  /** Qué se borra o desvincula si se borra el cliente (para confirmarlo con datos). */
   async impact(ref: unknown): Promise<ClientImpact> {
     const client = await this.find(ref)
     const m = this.db.manager
@@ -90,24 +87,27 @@ export class ClientService {
       meetings: await m.getRepository(MeetingModel).countBy({ clientId: client.id }),
       contacts: await m.getRepository(ContactModel).countBy({ clientId: client.id }),
       prospects: await m.getRepository(ProspectModel).countBy({ clientId: client.id }),
-      notes: await m.getRepository(NoteRelationModel).countBy({ targetType: 'client', targetId: client.id }),
+      notes: await m
+        .getRepository(NoteRelationModel)
+        .countBy({ targetType: 'client', targetId: client.id }),
       folderPath: client.folderPath
     }
   }
 
-  /**
-   * Borra el cliente y sus proyectos. Reuniones, contactos y prospectos quedan sin cliente;
-   * las notas pierden la relación. La carpeta queda en el disco salvo `trashFolder`.
-   */
   remove(ref: unknown, opts: { trashFolder?: boolean } = {}): Promise<void> {
     return transactionGuard(this.db, async (manager) => {
       const client = await findByRef(manager.getRepository(ClientModel), ref, 'name', 'el cliente')
-      await manager.getRepository(ProjectModel).delete({ clientId: client.id })
-      await manager.getRepository(MeetingModel).update({ clientId: client.id }, { clientId: null, projectId: null })
-      await manager.getRepository(ContactModel).update({ clientId: client.id }, { clientId: null, projectId: null })
+      await manager.getRepository(ProjectModel).softDelete({ clientId: client.id })
+      await manager
+        .getRepository(MeetingModel)
+        .update({ clientId: client.id }, { clientId: null, projectId: null })
+      await manager
+        .getRepository(ContactModel)
+        .update({ clientId: client.id }, { clientId: null, projectId: null })
       await manager.getRepository(ProspectModel).update({ clientId: client.id }, { clientId: null })
       await removeRelationsOf(manager, 'client', client.id)
-      await manager.getRepository(ClientModel).delete({ id: client.id })
+      await unlinkTasks(manager, 'client', client.id)
+      await manager.getRepository(ClientModel).softDelete({ id: client.id })
       if (opts.trashFolder === true) {
         afterCommit(manager, () => {
           moveToTrash(client.folderPath).catch((e) => console.error('[clientes] papelera', e))
@@ -143,11 +143,6 @@ export class ClientService {
   }
 }
 
-/**
- * Crea un cliente y su carpeta `CLIENTS_DOCS_PATH/<Nombre>/…` dentro de la transacción en curso.
- * Si la carpeta no se puede crear, la transacción se revierte y no queda el cliente a medias.
- * Exportada para que el pipeline (prospecto ganado) cree el cliente en su misma transacción.
- */
 export async function insertClient(manager: EntityManager, input: ClientInput): Promise<Client> {
   const clients = manager.getRepository(ClientModel)
   const name = requiredText(input.name, 'El nombre')

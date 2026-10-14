@@ -24,18 +24,18 @@ Brief según impeccable `shape`. Modo: **Operate** (el dueño trabaja dentro de 
 Un ámbito de CSS propio: `.theme-obsidian` en la raíz del workspace. Los tokens de la app no se
 tocan; dentro del ámbito se redefinen:
 
-| Token                | Valor                     | Uso                                      |
-| -------------------- | ------------------------- | ---------------------------------------- |
-| `--ob-bg`            | `#1e1e1e`                 | Panel principal y lienzo                 |
-| `--ob-bg-alt`        | `#262626`                 | Cinta, explorador, franja superior       |
-| `--ob-bg-hover`      | `#2f2f2f`                 | Filas al pasar el ratón                  |
-| `--ob-border`        | `#363636`                 | Separadores, borde de tarjeta sin color  |
-| `--ob-text`          | `#dadada`                 | Texto                                    |
-| `--ob-muted`         | `#999999`                 | Texto secundario, iconos                 |
-| `--ob-faint`         | `#666666`                 | Puntos del fondo, conexiones             |
-| `--ob-accent`        | `#8a5cf5`                 | Selección, foco, archivo activo          |
-| `--ob-radius`        | `8px` tarjetas, `4px` filas |                                        |
-| `--ob-font`          | `-apple-system, BlinkMacSystemFont, "Inter", sans-serif`, 13 px interfaz, 16 px notas |
+| Token           | Valor                                                                                 | Uso                                     |
+| --------------- | ------------------------------------------------------------------------------------- | --------------------------------------- |
+| `--ob-bg`       | `#1e1e1e`                                                                             | Panel principal y lienzo                |
+| `--ob-bg-alt`   | `#262626`                                                                             | Cinta, explorador, franja superior      |
+| `--ob-bg-hover` | `#2f2f2f`                                                                             | Filas al pasar el ratón                 |
+| `--ob-border`   | `#363636`                                                                             | Separadores, borde de tarjeta sin color |
+| `--ob-text`     | `#dadada`                                                                             | Texto                                   |
+| `--ob-muted`    | `#999999`                                                                             | Texto secundario, iconos                |
+| `--ob-faint`    | `#666666`                                                                             | Puntos del fondo, conexiones            |
+| `--ob-accent`   | `#8a5cf5`                                                                             | Selección, foco, archivo activo         |
+| `--ob-radius`   | `8px` tarjetas, `4px` filas                                                           |                                         |
+| `--ob-font`     | `-apple-system, BlinkMacSystemFont, "Inter", sans-serif`, 13 px interfaz, 16 px notas |
 
 Colores de canvas, los de Obsidian: «1» `#fb464c`, «2» `#e9973f`, «3» `#e0de71`, «4» `#44cf6e`,
 «5» `#53dfdd`, «6» `#a882ff`. Tarjeta con color: borde 2 px del color y fondo `color-mix` del color

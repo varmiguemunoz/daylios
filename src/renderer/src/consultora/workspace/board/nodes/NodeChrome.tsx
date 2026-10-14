@@ -8,10 +8,6 @@ const SIDES = [
   { id: 'left', position: Position.Left }
 ] as const
 
-/**
- * Lo que rodea a cada nodo, como en Obsidian: el tamaño se cambia arrastrando cualquier borde
- * (sin tiradores visibles) y salen cuatro puntos de conexión fuera de los lados al pasar el ratón.
- */
 export const NodeChrome = memo(function NodeChrome({
   selected,
   connectable = true,

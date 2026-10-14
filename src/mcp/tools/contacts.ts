@@ -2,7 +2,6 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import { api, tool, query, enc } from '../client'
 
-/** Herramientas MCP: contacts. */
 export function register(server: McpServer): void {
   // ---- Contactos ----
   const contactStatus = z
@@ -151,7 +150,9 @@ export function register(server: McpServer): void {
       }
     },
     ({ id, value_usd, ...rest }) =>
-      tool(() => api('POST', `/consultora/contacts/${enc(id)}/convert`, { ...rest, valueUsd: value_usd }))
+      tool(() =>
+        api('POST', `/consultora/contacts/${enc(id)}/convert`, { ...rest, valueUsd: value_usd })
+      )
   )
 
   server.registerTool(
@@ -172,6 +173,11 @@ export function register(server: McpServer): void {
       inputSchema: { id: z.string(), confirm: z.literal(true).optional() }
     },
     ({ id, confirm }) =>
-      tool(() => api('DELETE', `/consultora/contacts/${enc(id)}${query({ confirm: confirm ? 1 : undefined })}`))
+      tool(() =>
+        api(
+          'DELETE',
+          `/consultora/contacts/${enc(id)}${query({ confirm: confirm ? 1 : undefined })}`
+        )
+      )
   )
 }

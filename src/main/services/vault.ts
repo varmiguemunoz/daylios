@@ -17,7 +17,6 @@ import { AppError } from './app.error'
 import { safeFolderName } from './documents'
 import { moveToTrash } from './trash'
 
-/** Lo que el disco dice de un elemento. */
 export interface DiskEntry {
   path: string
   kind: ItemKind
@@ -30,7 +29,6 @@ export interface DiskEntry {
 const MAX_DEPTH = 24
 const MAX_NAME = 120
 
-/** Nombre válido en macOS, sin punto inicial (oculto) ni barras. Lanza si queda vacío. */
 export function safeName(name: unknown): string {
   const clean = safeFolderName(String(name ?? ''))
     .replace(/^\.+/, '')
@@ -40,10 +38,6 @@ export function safeName(name: unknown): string {
   return clean
 }
 
-/**
- * Puerto de disco de la bóveda. Todas las rutas que recibe son relativas a la raíz y se validan:
- * nada sale de la bóveda (ni con `..`, ni rutas absolutas, ni symlinks, que no se siguen).
- */
 export class Vault {
   constructor(private readonly rootPath: () => string) {}
 
@@ -55,17 +49,12 @@ export class Vault {
     await mkdir(this.root(), { recursive: true })
   }
 
-  /** Ruta absoluta de `rel`, validada. */
   abs(rel: string): string {
     const clean = normalizePath(String(rel ?? ''))
     if (clean === null) throw new AppError('invalid', 'Esa ruta está fuera del workspace.')
     return clean ? join(this.root(), ...clean.split('/')) : this.root()
   }
 
-  /**
-   * Como `abs`, y además comprueba con `realpath` que el ancestro existente más cercano sigue dentro
-   * de la bóveda (un symlink a otra carpeta no cuela).
-   */
   async safe(rel: string): Promise<string> {
     const full = this.abs(rel)
     const root = await realpath(this.root())
@@ -85,7 +74,6 @@ export class Vault {
     return existsSync(this.abs(rel))
   }
 
-  /** Todo lo de la bóveda (sin ocultos ni symlinks), carpetas antes que su contenido. */
   async scan(): Promise<DiskEntry[]> {
     await this.ensure()
     const out: DiskEntry[] = []
@@ -149,7 +137,6 @@ export class Vault {
     await writeFile(full, data)
   }
 
-  /** Fecha de modificación (p. ej. conservar la de una nota migrada). */
   async touch(rel: string, date: Date): Promise<void> {
     await utimes(await this.safe(rel), date, date)
   }
@@ -158,7 +145,6 @@ export class Vault {
     await mkdir(await this.safe(rel), { recursive: true })
   }
 
-  /** Renombra o mueve. Falla si el destino ya existe (no pisa nada). */
   async move(from: string, to: string): Promise<void> {
     const src = await this.safe(from)
     const dest = await this.safe(to)
@@ -169,7 +155,6 @@ export class Vault {
     await rename(src, dest)
   }
 
-  /** Copia un archivo de fuera (ruta absoluta elegida por el usuario) a `destRel`. */
   async copyIn(source: string, destRel: string): Promise<void> {
     const dest = await this.safe(destRel)
     await mkdir(dirname(dest), { recursive: true })
@@ -181,7 +166,6 @@ export class Vault {
     await moveToTrash(await this.safe(rel))
   }
 
-  /** «Nombre.ext» libre en la carpeta: si existe, «Nombre 2.ext», «Nombre 3.ext»… */
   uniqueName(dirRel: string, fileName: string): string {
     const ext = extOf(fileName)
     const stem = ext ? fileName.slice(0, -ext.length) : fileName

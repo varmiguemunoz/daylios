@@ -7,14 +7,13 @@ import { KIND_ICON, acceptsDrop, dragItem, itemMeta, itemUrl } from '../lib'
 interface ItemViewProps {
   items: WorkspaceItem[]
   onOpen: (item: WorkspaceItem) => void
-  /** Menú del elemento: en el cursor (clic derecho) o bajo el botón «…». */
+
   onMenu: (item: WorkspaceItem, e: React.MouseEvent, anchor?: HTMLElement) => void
-  /** Soltar sobre una carpeta. */
+
   onDropOn: (folder: WorkspaceItem, e: React.DragEvent) => void
   onDelete: (item: WorkspaceItem) => void
 }
 
-/** Teclas en un elemento: Enter abre; ⌘⌫ borra (con confirmación). */
 function keys(item: WorkspaceItem, props: ItemViewProps) {
   return (e: React.KeyboardEvent): void => {
     if (e.key === 'Backspace' && e.metaKey) {
@@ -24,7 +23,6 @@ function keys(item: WorkspaceItem, props: ItemViewProps) {
   }
 }
 
-/** Arrastrar y soltar comunes a lista y cuadrícula. */
 function useDrop(props: ItemViewProps): {
   over: string | null
   dropProps: (item: WorkspaceItem) => React.HTMLAttributes<HTMLElement>

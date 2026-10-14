@@ -1,19 +1,20 @@
 import { EntitySchema } from 'typeorm'
+import { ALIVE, DELETED_AT, type SoftDeletable } from './soft-delete'
 import type { ContactEvent, LeadSource, Newsletter, Rule, Tag } from '@shared/marketing'
 
-/** Modelos del email marketing (ver migración AddMarketing). */
-
-export const TagModel = new EntitySchema<Tag>({
+export const TagModel = new EntitySchema<Tag & SoftDeletable>({
   name: 'Tag',
   tableName: 'tags',
   columns: {
     id: { type: 'text', primary: true },
-    slug: { type: 'text', unique: true },
+    slug: { type: 'text' },
     name: { type: 'text' },
     segmentId: { name: 'segment_id', type: 'text', nullable: true },
     audience: { type: 'boolean', default: false },
-    createdAt: { name: 'created_at', type: 'text' }
-  }
+    createdAt: { name: 'created_at', type: 'text' },
+    deletedAt: DELETED_AT
+  },
+  indices: [{ name: 'uq_tags_slug', columns: ['slug'], unique: true, where: ALIVE }]
 })
 
 export interface ContactTag {
@@ -46,23 +47,25 @@ export const ContactEventModel = new EntitySchema<ContactEvent>({
   indices: [{ name: 'idx_contact_events_contact', columns: ['contactId', 'createdAt'] }]
 })
 
-export const LeadSourceModel = new EntitySchema<LeadSource>({
+export const LeadSourceModel = new EntitySchema<LeadSource & SoftDeletable>({
   name: 'LeadSource',
   tableName: 'lead_sources',
   columns: {
     id: { type: 'text', primary: true },
-    slug: { type: 'text', unique: true },
+    slug: { type: 'text' },
     name: { type: 'text' },
     secret: { type: 'text' },
     defaultTags: { name: 'default_tags', type: 'simple-json', default: '[]' },
     receivedCount: { name: 'received_count', type: 'integer', default: 0 },
     lastReceivedAt: { name: 'last_received_at', type: 'text', nullable: true },
     createdAt: { name: 'created_at', type: 'text' },
-    updatedAt: { name: 'updated_at', type: 'text' }
-  }
+    updatedAt: { name: 'updated_at', type: 'text' },
+    deletedAt: DELETED_AT
+  },
+  indices: [{ name: 'uq_lead_sources_slug', columns: ['slug'], unique: true, where: ALIVE }]
 })
 
-export const RuleModel = new EntitySchema<Rule>({
+export const RuleModel = new EntitySchema<Rule & SoftDeletable>({
   name: 'Rule',
   tableName: 'rules',
   columns: {
@@ -73,7 +76,8 @@ export const RuleModel = new EntitySchema<Rule>({
     triggerTag: { name: 'trigger_tag', type: 'text' },
     actions: { type: 'simple-json', default: '[]' },
     createdAt: { name: 'created_at', type: 'text' },
-    updatedAt: { name: 'updated_at', type: 'text' }
+    updatedAt: { name: 'updated_at', type: 'text' },
+    deletedAt: DELETED_AT
   }
 })
 
@@ -96,13 +100,9 @@ export const NewsletterModel = new EntitySchema<Newsletter>({
   indices: [{ name: 'idx_newsletters_day', columns: ['day'] }]
 })
 
-/**
- * Trabajo pendiente hacia Resend. `contact` = sincronizar un contacto (uno pendiente por
- * contacto); `event` = disparar un evento (`payload.event`) para el contacto `ref`.
- */
 export interface OutboxJob {
   id: string
-  /** segment_delete = borrar el Segment `payload.segmentId` (tag borrado o que dejó de ser audiencia). */
+
   kind: 'contact' | 'event' | 'segment_delete'
   ref: string
   payload: Record<string, unknown>
@@ -128,7 +128,6 @@ export const OutboxModel = new EntitySchema<OutboxJob>({
   indices: [{ name: 'idx_outbox_next', columns: ['nextAt'] }]
 })
 
-/** Items de la cola del Worker ya aplicados (hace idempotente reprocesarlos). */
 export interface HubReceipt {
   id: string
   processedAt: string

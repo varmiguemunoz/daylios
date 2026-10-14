@@ -12,7 +12,7 @@ interface MarkdownEditorProps {
   onChange: (value: string) => void
   status: SaveStatus
   placeholder: string
-  emptyHint: string            // ahora: «Doble clic para escribir…»
+  emptyHint: string // ahora: «Doble clic para escribir…»
   /** Guarda ya. Lo llama al salir de edición. */
   onCommit?: () => Promise<void>
   /** Empezar editando: nota nueva y vacía. */
@@ -63,13 +63,16 @@ Sin datos muestra el texto de R2.2 en `text-milk-soft`.
 vive en `TaskDetail` se mueve a un hook `lib/useSubtasks.ts`, que también usa la lista de Hoy:
 
 ```ts
-function useSubtasks(parentId: string | null, revision: number): {
+function useSubtasks(
+  parentId: string | null,
+  revision: number
+): {
   subtasks: Task[]
   add(title: string): Promise<boolean>
   toggle(sub: Task): void
   reorder(id: string, index: number): void
   completeAll(): void
-  drop(sub: Task): void        // quita en local; el borrado con Deshacer lo hace useDay
+  drop(sub: Task): void // quita en local; el borrado con Deshacer lo hace useDay
   error: string | null
 }
 ```
@@ -123,7 +126,7 @@ interface SubtaskDropdownProps {
   revision: number
   onOpen: (sub: Task) => void
   onRemove: (sub: Task) => void
-  onChanged: () => void        // recarga el día: actualiza el 2/5
+  onChanged: () => void // recarga el día: actualiza el 2/5
 }
 ```
 

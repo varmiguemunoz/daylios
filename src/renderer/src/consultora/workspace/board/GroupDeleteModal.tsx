@@ -1,7 +1,6 @@
 import { Modal } from '../../../ui'
 import { Button } from '../../ui'
 
-/** Al borrar un grupo con contenido: Obsidian solo quita el marco; aquí se puede elegir. */
 export function GroupDeleteModal({
   count,
   onCancel,

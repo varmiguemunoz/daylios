@@ -1,6 +1,5 @@
 import { Table, TableIndex, type MigrationInterface, type QueryRunner } from 'typeorm'
 
-/** Índice de la bóveda del workspace (carpetas y archivos) y referencias entre elementos. */
 export class CreateWorkspace1728700000000 implements MigrationInterface {
   name = 'CreateWorkspace1728700000000'
 

@@ -8,12 +8,10 @@ import { useWorkspace } from '../context'
 import { BoardCanvas } from '../board/BoardCanvas'
 import { fromFlow, toFlow } from '../board/flow'
 
-/** Espera tras el último cambio antes de escribir el `.canvas`. */
 const SAVE_MS = 500
 
 type Status = 'saved' | 'saving' | 'error'
 
-/** Un board de la bóveda a pantalla completa. Carga el `.canvas` y se recarga si hay conflicto. */
 export function BoardPane({ id }: { id: string }): React.JSX.Element {
   const { go, setError } = useWorkspace()
   const [board, setBoard] = useState<{ content: BoardContent; canvas: CanvasFile } | null>(null)
@@ -74,10 +72,6 @@ export function BoardPane({ id }: { id: string }): React.JSX.Element {
   )
 }
 
-/**
- * Lienzo y guardado. El lienzo avisa de cambios; aquí se serializa una sola vez, 500 ms después del
- * último. Si el archivo cambió fuera (Obsidian, Claude), se ofrece recargar o quedarse con lo propio.
- */
 function BoardEditor({
   content,
   canvas,
@@ -160,9 +154,10 @@ function BoardEditor({
           initial={initial}
           base={canvas}
           onDirty={onDirty}
-          snapshot={snapshot}
+          snapshotRef={snapshot}
           onOpenPath={onOpenPath}
           onError={onError}
+          viewportKey={`board.viewport:${content.item.id}`}
         />
       </ReactFlowProvider>
       {conflict && (

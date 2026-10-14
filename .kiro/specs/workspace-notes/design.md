@@ -31,7 +31,7 @@
 - `Markdown.tsx` resuelve `src` relativos contra la ruta de la nota y los convierte a
   `vault://path/<ruta>`. El protocolo de W1 acepta también `path/`, siempre validado.
 - `MarkdownEditor` gana `onPasteFiles(files)`: la pantalla los sube con `workspace.attach(noteId,
-  file)` y recibe la ruta relativa para insertar.
+file)` y recibe la ruta relativa para insertar.
 
 ## UI
 

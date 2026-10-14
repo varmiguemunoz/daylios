@@ -44,17 +44,9 @@ import { insertProspect } from './prospect.service'
 
 const PAGE_SIZE = 50
 
-/**
- * Contactos: personas de clientes y prospectos, y leads de email marketing (misma tabla).
- * Todo cambio que Resend deba conocer se encola en la outbox dentro de la misma transacción.
- */
 export class ContactService {
   constructor(private readonly db: DataSource) {}
 
-  /**
-   * Lista paginada con organización y tags. Filtros exactos en SQL (cliente, prospecto, tag,
-   * estado, fuente); el texto se compara sin acentos (nombre, rol, email, empresa).
-   */
   async list(filter: ContactFilter = {}): Promise<ContactsPage> {
     const qb = this.db.getRepository(ContactModel).createQueryBuilder('c')
     if (filter.client) {
@@ -76,7 +68,9 @@ export class ContactService {
       qb.andWhere('c.prospectId = :prospect', { prospect: prospect.id })
     }
     // Tags: el contacto debe tenerlos todos (`tag` = uno, por compatibilidad).
-    const wanted = [...new Set([...(filter.tags ?? []), ...(filter.tag ? [filter.tag] : [])].map(slugify))].filter(Boolean)
+    const wanted = [
+      ...new Set([...(filter.tags ?? []), ...(filter.tag ? [filter.tag] : [])].map(slugify))
+    ].filter(Boolean)
     for (const [i, slug] of wanted.entries()) {
       qb.innerJoin('ContactTag', `ct${i}`, `ct${i}.contactId = c.id`).innerJoin(
         'Tag',
@@ -125,7 +119,6 @@ export class ContactService {
     }
   }
 
-  /** Contacto + organización + tags + línea de tiempo + reuniones donde aparece su nombre. */
   async get(id: unknown): Promise<ContactDetail> {
     const contact = await this.find(this.db.manager, id)
     const [named] = await this.withOrganization([contact])
@@ -226,23 +219,18 @@ export class ContactService {
     })
   }
 
-  /** Borra el contacto, sus tags y su línea de tiempo. Si recibía emails, se da de baja en Resend. */
   async remove(id: unknown): Promise<void> {
     await transactionGuard(this.db, async (manager) => {
       const contact = await this.find(manager, id)
       await manager.getRepository(ContactTagModel).delete({ contactId: contact.id })
       await manager.getRepository(ContactEventModel).delete({ contactId: contact.id })
-      await manager.getRepository(ContactModel).delete({ id: contact.id })
+      await manager.getRepository(ContactModel).softDelete({ id: contact.id })
       if (contact.status !== 'none' && contact.email) {
         await enqueueContactSync(manager, contact.id, { previousEmail: contact.email })
       }
     })
   }
 
-  /**
-   * Suscribe a marketing con consentimiento `manual`. La primera suscripción dispara
-   * `lead.created` (secuencia de bienvenida). Rebotes y quejas no se reactivan a mano.
-   */
   subscribe(id: unknown): Promise<Contact> {
     return transactionGuard(this.db, async (manager) => {
       const contact = await this.find(manager, id)
@@ -280,11 +268,6 @@ export class ContactService {
     })
   }
 
-  /**
-   * Añade y/o quita tags. Los añadidos disparan las reglas (que pueden añadir o quitar más,
-   * disparar eventos o pasar a pipeline). Si el contacto está suscrito, cada tag nuevo
-   * dispara `tag.<slug>` en Resend.
-   */
   tag(id: unknown, change: { add?: unknown; remove?: unknown }): Promise<ContactBrief> {
     return transactionGuard(this.db, async (manager) => {
       const contact = await this.find(manager, id)
@@ -299,7 +282,6 @@ export class ContactService {
     })
   }
 
-  /** Pasa a pipeline: crea un prospecto con sus datos y lo enlaza. Uno por contacto. */
   promote(id: unknown, stage?: unknown): Promise<{ contact: Contact; prospect: Prospect }> {
     return transactionGuard(this.db, async (manager) => {
       const contact = await this.find(manager, id)
@@ -312,11 +294,10 @@ export class ContactService {
     })
   }
 
-  /**
-   * Convertir en prospecto: elige pipeline, etapa, nombre y valor. El nombre por defecto es su
-   * cliente, `fields.company` o el propio contacto.
-   */
-  convert(id: unknown, input: ConvertInput = {}): Promise<{ contact: Contact; prospect: Prospect }> {
+  convert(
+    id: unknown,
+    input: ConvertInput = {}
+  ): Promise<{ contact: Contact; prospect: Prospect }> {
     return transactionGuard(this.db, async (manager) => {
       const contact = await this.find(manager, id)
       const client = contact.clientId
@@ -329,13 +310,14 @@ export class ContactService {
       })
       if (client && !prospect.clientId) {
         prospect.clientId = client.id
-        await manager.getRepository(ProspectModel).update({ id: prospect.id }, { clientId: client.id })
+        await manager
+          .getRepository(ProspectModel)
+          .update({ id: prospect.id }, { clientId: client.id })
       }
       return { contact, prospect }
     })
   }
 
-  /** Quita el vínculo con su prospecto (el prospecto se queda). */
   detachProspect(id: unknown): Promise<Contact> {
     return transactionGuard(this.db, async (manager) => {
       const contact = await this.find(manager, id)
@@ -376,7 +358,6 @@ export class ContactService {
 
 // ---- Piezas compartidas con la ingesta del hub (marketing-sync) ----
 
-/** Deja un evento en la línea de tiempo del contacto. */
 export async function logEvent(
   manager: EntityManager,
   contactId: string,
@@ -388,7 +369,6 @@ export async function logEvent(
     .insert({ id: randomUUID(), contactId, type, detail, createdAt: now() })
 }
 
-/** Cambia el estado de suscripción, lo anota y avisa a Resend. */
 export async function setStatus(
   manager: EntityManager,
   contact: Contact,
@@ -403,10 +383,6 @@ export async function setStatus(
   await enqueueContactSync(manager, contact.id)
 }
 
-/**
- * Aplica un cambio de tags. Con `rules: true` evalúa las reglas sobre los añadidos.
- * `remoteDone: true` = el Worker ya avisó a Resend (no se vuelven a disparar eventos).
- */
 export async function changeTags(
   manager: EntityManager,
   contact: Contact,
@@ -459,7 +435,6 @@ export async function changeTags(
   return { added, removed }
 }
 
-/** Crea el prospecto de un contacto y lo enlaza (falla si ya está en el pipeline). */
 export async function promoteContact(
   manager: EntityManager,
   contact: Contact,
@@ -492,12 +467,10 @@ export async function promoteContact(
   return prospect
 }
 
-/** Slugs actuales de un contacto. */
 async function ensureTagsOf(manager: EntityManager, contactId: string): Promise<string[]> {
   return ((await tagsByContact(manager, [contactId])).get(contactId) ?? []).map((t) => t.slug)
 }
 
-/** Email limpio (minúsculas), válido y sin repetir entre contactos. Vacío = null. */
 export async function uniqueEmail(
   manager: EntityManager,
   value: unknown,
@@ -514,7 +487,6 @@ export async function uniqueEmail(
   return email
 }
 
-/** Campos libres: objeto plano con valores simples. */
 export function cleanFields(value: unknown): ContactFields {
   if (value === undefined || value === null) return {}
   if (typeof value !== 'object' || Array.isArray(value))
@@ -536,10 +508,6 @@ function textList(value: unknown, label: string): string[] {
   return value as string[]
 }
 
-/**
- * Aplica `client` / `project` / `prospect` (id o nombre; '' quita). Cambiar de cliente quita el proyecto;
- * el proyecto debe ser de su cliente. Un prospecto ya ganado fija también su cliente.
- */
 async function link(manager: EntityManager, contact: Contact, input: ContactInput): Promise<void> {
   if (input.client !== undefined) {
     const clientId = input.client
@@ -551,7 +519,12 @@ async function link(manager: EntityManager, contact: Contact, input: ContactInpu
   if (input.project !== undefined) {
     if (!input.project) contact.projectId = null
     else {
-      const project = await findByRef(manager.getRepository(ProjectModel), input.project, 'name', 'el proyecto')
+      const project = await findByRef(
+        manager.getRepository(ProjectModel),
+        input.project,
+        'name',
+        'el proyecto'
+      )
       if (contact.clientId && project.clientId !== contact.clientId) {
         throw new AppError('invalid', 'Ese proyecto es de otro cliente.')
       }
@@ -573,13 +546,17 @@ async function link(manager: EntityManager, contact: Contact, input: ContactInpu
   }
 }
 
-/** Prospecto del contacto con su pipeline y etapa (para la ficha). */
-async function prospectInfo(manager: EntityManager, prospectId: string | null): Promise<ContactDetail['prospect']> {
+async function prospectInfo(
+  manager: EntityManager,
+  prospectId: string | null
+): Promise<ContactDetail['prospect']> {
   if (!prospectId) return null
   const prospect = await manager.getRepository(ProspectModel).findOneBy({ id: prospectId })
   if (!prospect) return null
   const stage = await manager.getRepository(StageModel).findOneBy({ id: prospect.stageId })
-  const pipeline = stage ? await manager.getRepository(PipelineModel).findOneBy({ id: stage.pipelineId }) : null
+  const pipeline = stage
+    ? await manager.getRepository(PipelineModel).findOneBy({ id: stage.pipelineId })
+    : null
   return {
     id: prospect.id,
     company: prospect.company,

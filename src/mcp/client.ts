@@ -1,4 +1,3 @@
-/** Cliente HTTP de la API local de DayliOS y ayudantes compartidos por las herramientas MCP. */
 import { readFileSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
@@ -10,7 +9,6 @@ const CONNECTION_PATH =
 
 const NOT_RUNNING = 'DayliOS no está abierto. Ábrelo desde el menubar y vuelve a intentarlo.'
 
-/** Llama a la API local. Lee la conexión en cada llamada: la app puede haber reiniciado. */
 export async function api(method: string, path: string, body?: object): Promise<unknown> {
   let connection: { port: number; token: string }
   try {
@@ -38,7 +36,6 @@ export async function api(method: string, path: string, body?: object): Promise<
   return data
 }
 
-/** Envuelve una llamada como resultado de herramienta MCP. */
 export async function tool(run: () => Promise<unknown>): Promise<{
   content: { type: 'text'; text: string }[]
   isError?: boolean

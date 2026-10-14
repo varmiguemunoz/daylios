@@ -7,7 +7,6 @@ import { Vault } from '../services/vault'
 import { WorkspaceService } from '../services/workspace.service'
 import { memoryDb } from './helpers'
 
-/** Bóveda en una carpeta temporal, base en memoria y Papelera falsa (mueve a `<tmp>/.trash`). */
 export async function tempWorkspace(): Promise<{
   db: DataSource
   root: string

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useScrollMemory, useUiState } from '../lib/ui-state'
 import { Plus } from 'lucide-react'
 import type { DayKey } from '@shared/tasks'
 import { noteExcerpt, noteTitle, type Note, type NotesPage } from '@shared/notes'
@@ -15,20 +16,28 @@ interface NotesViewProps {
   onCreate: () => void
 }
 
-/** Todas las notas por día, de la más reciente a la más antigua. Mismo esqueleto que Historial. */
 export function NotesView({ today, onOpen, onCreate }: NotesViewProps): React.JSX.Element {
-  const [page, setPage] = useState(1)
+  const [page, setPage] = useUiState(
+    'notes.page',
+    1,
+    (v) => Number.isInteger(v) && (v as number) > 0
+  )
+  const scroller = useRef<HTMLElement>(null)
+  useScrollMemory(scroller, 'scroll.menubar.notes')
   const [data, setData] = useState<NotesPage | null>(null)
   const [error, setError] = useState(false)
 
   const load = useCallback(async () => {
     try {
-      setData(await notesApi.list(page, PAGE_SIZE))
+      const result = await notesApi.list(page, PAGE_SIZE)
+      // Página recordada que ya no existe (se borraron notas): la última que sí.
+      if (result.totalPages > 0 && page > result.totalPages) return setPage(result.totalPages)
+      setData(result)
       setError(false)
     } catch {
       setError(true)
     }
-  }, [page])
+  }, [page, setPage])
 
   // Cargar al montar, al cambiar de página y cuando Claude cambia notas.
   useEffect(() => {
@@ -52,7 +61,10 @@ export function NotesView({ today, onOpen, onCreate }: NotesViewProps): React.JS
         </button>
       </header>
 
-      <main className="scroll-area fade-bottom mt-5 min-h-0 flex-1 overflow-y-auto pb-6 pl-6">
+      <main
+        ref={scroller}
+        className="scroll-area fade-bottom mt-5 min-h-0 flex-1 overflow-y-auto pb-6 pl-6"
+      >
         {error && (
           <p role="alert" className="rounded-md bg-coral/12 px-4 py-3 text-caption text-coral">
             No pude cargar las notas. Vuelve a abrir la ventana para reintentar.

@@ -426,7 +426,22 @@
   }
 }
 
+/* Algo que otra persona acaba de cambiar */
+.ob-fresh {
+  animation: ob-fresh 1200ms var(--ease-out-expo);
+}
+
+@keyframes ob-fresh {
+  from {
+    background-color: color-mix(in srgb, var(--color-ob-accent) 22%, transparent);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .ob-fresh {
+    animation: none;
+    outline: 1px solid color-mix(in srgb, var(--color-ob-accent) 50%, transparent);
+  }
   .seg-fill {
     transition: none;
   }

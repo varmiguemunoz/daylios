@@ -8,10 +8,6 @@ import { NotePane } from './screens/NotePane'
 import { BoardPane } from './screens/BoardPane'
 import { ImagePane } from './screens/ImagePane'
 
-/**
- * El panel del workspace: el archivo abierto y los avisos. El marco y el explorador son de la
- * ventana. Mientras está delante, main lo sabe (el atajo global lo oculta en vez de abrirlo).
- */
 export function WorkspacePane({
   screen,
   back

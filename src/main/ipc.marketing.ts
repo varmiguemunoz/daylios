@@ -1,7 +1,6 @@
 import { ipcMain } from 'electron'
 import type { Marketing } from './marketing'
 
-/** IPC `marketing:<método>` para la ventana Consultora (contrato `MarketingApi`). */
 export function registerMarketingIpc(m: Marketing, notify: () => void): void {
   const read = (channel: string, fn: (...args: never[]) => unknown): void => {
     ipcMain.handle(`marketing:${channel}`, (_e, ...args) => fn(...(args as never[])))

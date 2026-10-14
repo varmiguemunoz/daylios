@@ -11,22 +11,17 @@ export interface RefOption {
 }
 
 interface RefPickerProps {
-  /** Qué es («Cliente», «Proyecto», «Prospecto»). */
   label: string
   value: { id: string; label: string; hint?: string } | null
   options: RefOption[]
   onChange: (id: string) => void
-  /** Abrir lo seleccionado (p. ej. ir a la ficha del cliente). */
+
   onOpen?: (id: string) => void
   disabled?: boolean
   disabledHint?: string
   icon?: LucideIcon
 }
 
-/**
- * Propiedad que enlaza a otra ficha, con buscador en lugar de un desplegable largo: el valor es un
- * enlace violeta como en Obsidian (clic lo abre) y «Cambiar» abre el buscador con «Quitar».
- */
 export function RefPicker({
   label,
   value,

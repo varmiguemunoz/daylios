@@ -2,7 +2,6 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import { api, tool, query } from '../client'
 
-/** Herramientas MCP: notes. */
 export function register(server: McpServer): void {
   // ---- Notas ----
   server.registerTool(

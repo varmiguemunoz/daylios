@@ -1,31 +1,21 @@
 import type { Rule } from './marketing'
 
-/** Profundidad máxima de encadenamiento (un tag añadido por una regla que activa otra…). */
 export const MAX_RULE_DEPTH = 5
 
 export interface RuleOutcome {
-  /** Tags finales (slugs). */
   tags: string[]
-  /** Tags nuevos respecto a `current` (incluye los de entrada que no tenía). */
+
   added: string[]
-  /** Tags de `current` que las reglas quitaron. */
+
   removed: string[]
-  /** Eventos de Resend pedidos por reglas `fire_event` (sin repetidos). */
+
   events: string[]
-  /** Etapa de la última regla `promote` que se disparó, o null. */
+
   promote: string | null
-  /** Reglas que se dispararon, en orden. */
+
   fired: string[]
 }
 
-/**
- * Motor de reglas por tag. Puro: lo usan la app y el Worker.
- *
- * Recorre en anchura los tags que entran. Para cada uno, las reglas activas con ese
- * `triggerTag` se aplican por `position`. Cada regla se dispara como mucho una vez por
- * ejecución y la profundidad está limitada, así un ciclo (A añade B, B añade A) termina.
- * Un tag que entra y sale en la misma ejecución no cuenta como añadido.
- */
 export function runRules(rules: Rule[], current: string[], incoming: string[]): RuleOutcome {
   const active = rules.filter((r) => r.active).sort((a, b) => a.position - b.position)
   const tags = new Set(current)

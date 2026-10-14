@@ -7,9 +7,9 @@ export interface SwitcherOption {
   icon: ReactNode
   title: string
   hint?: string
-  /** Encabezado del grupo que empieza en esta opción. */
+
   group?: string
-  /** Opción de acción (crear, ver todos): texto tenue y sin pista. */
+
   action?: boolean
 }
 
@@ -21,17 +21,13 @@ interface SwitcherFrameProps {
   options: SwitcherOption[]
   index: number
   onIndex: (index: number) => void
-  /** `alt`: ⇧ o ⌘ pulsado al elegir. */
+
   onChoose: (index: number, alt: boolean) => void
   empty: string
   hints: string[]
   onClose: () => void
 }
 
-/**
- * Caja flotante de Obsidian para buscar y abrir: campo arriba, opciones con flechas y Enter.
- * La usan el selector de archivos (⌘O) y el buscador global (⌘K).
- */
 export function SwitcherFrame({
   label,
   placeholder,

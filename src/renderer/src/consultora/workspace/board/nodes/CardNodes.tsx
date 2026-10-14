@@ -4,7 +4,6 @@ import { colorValue, type BoardNode } from '../flow'
 import { NodeChrome } from './NodeChrome'
 import { CardText } from './CardText'
 
-/** Estilo de color de Obsidian: borde del color y un tinte suave de fondo. */
 export const tint = (color: string | null): React.CSSProperties | undefined =>
   color
     ? {
@@ -13,7 +12,6 @@ export const tint = (color: string | null): React.CSSProperties | undefined =>
       }
     : undefined
 
-/** Tarjeta de texto (la de JSON Canvas). */
 export const CardNode = memo(function CardNode({
   id,
   data,
@@ -29,7 +27,6 @@ export const CardNode = memo(function CardNode({
   )
 })
 
-/** Texto suelto, sin tarjeta. */
 export const TextNode = memo(function TextNode({
   id,
   data,
@@ -46,7 +43,6 @@ export const TextNode = memo(function TextNode({
   )
 })
 
-/** Forma (rectángulo, elipse o rombo) con texto centrado. Se dibuja en SVG para que escale nítida. */
 export const ShapeNode = memo(function ShapeNode({
   id,
   data,

@@ -10,25 +10,24 @@ interface TaskRowProps {
   onToggle: () => void
   onOpen: () => void
   onRemove: () => void
-  /** ⌥↑ / ⌥↓: mover la fila una posición. */
+
   onMoveBy: (delta: -1 | 1) => void
-  /** Props de arrastrar (useReorder). */
+
   drag: React.HTMLAttributes<HTMLElement> & { draggable: boolean }
-  /** Se está arrastrando esta fila. */
+
   dragging: boolean
-  /** Línea apricot de «caerá aquí» encima o debajo de la fila. */
+
   dropLine: 'before' | 'after' | null
-  /** compact = subtarea (fila y círculo más pequeños). */
+
   size?: 'regular' | 'compact'
-  /** Campo al que vuelve el foco desde la primera fila o tras borrar la última. */
+
   captureId?: string
-  /** Hoy: las subtareas están desplegadas debajo. */
+
   expanded?: boolean
-  /** Presente = la madre tiene subtareas y se pueden desplegar (clic en «2/5», → y ←). */
+
   onExpand?: (open: boolean) => void
 }
 
-/** Mueve el foco a la fila anterior/siguiente, o al campo de captura desde la primera. */
 function focusSibling(from: HTMLElement, dir: 1 | -1, captureId: string): void {
   const rows = [...document.querySelectorAll<HTMLElement>('[data-row]')]
   const i = rows.indexOf(from)
@@ -37,10 +36,6 @@ function focusSibling(from: HTMLElement, dir: 1 | -1, captureId: string): void {
   else if (dir === -1) document.getElementById(captureId)?.focus()
 }
 
-/**
- * Fila de tarea. Clic en el texto o Enter abre el detalle; el círculo (o Espacio) la completa.
- * Editar el título y la descripción se hace en el detalle. Se arrastra para cambiar el orden (o ⌥↑/⌥↓).
- */
 export function TaskRow({
   task,
   onToggle,

@@ -27,17 +27,17 @@ import {
   Select
 } from '../ui'
 import { ContactChips } from '../MeetingSheet'
-import { useScreenTitle } from '../chrome'
+import { useGoneRedirect, useScreenTitle } from '../chrome'
 import { Properties, PropertyRow } from '../molecules/Properties'
+import { Authorship } from '../organisms/orgs/Authorship'
+import { AssigneeRow } from '../organisms/orgs/AssigneeRow'
+import { EntityActivity } from '../organisms/activity/EntityActivity'
 
-/**
- * Detalle de reunión: resumen, decisiones, action items, asociación, notas crudas y transcripción.
- * Todo lo que generó el modelo se puede editar a mano.
- */
 export function Meeting({ id, back }: { id: string; back: () => void }): React.JSX.Element {
   const load = useCallback(() => api.getMeeting(id), [id])
   const { data: m, error: loadError } = useLoad(load)
   useScreenTitle(m?.title)
+  useGoneRedirect(loadError)
   const refsLoad = useCallback(() => api.refs(), [])
   const { data: refs } = useLoad(refsLoad)
   const [error, setError] = useState<string | null>(null)
@@ -203,7 +203,9 @@ export function Meeting({ id, back }: { id: string; back: () => void }): React.J
             </span>
           </PropertyRow>
         )}
+        <AssigneeRow value={m.assigneeId} onChange={(assigneeId) => void save({ assigneeId })} />
       </Properties>
+      <Authorship table="meetings" id={m.id} />
 
       <Section title="Resumen ejecutivo">
         <MarkdownField
@@ -320,6 +322,7 @@ export function Meeting({ id, back }: { id: string; back: () => void }): React.J
           </details>
         </Section>
       )}
+      <EntityActivity entity="meetings" id={id} />
     </Page>
   )
 }

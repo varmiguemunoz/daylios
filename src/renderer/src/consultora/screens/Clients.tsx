@@ -2,9 +2,11 @@ import { useCallback, useState } from 'react'
 import { Plus } from 'lucide-react'
 import type { Client, ClientStatus } from '@shared/consultora'
 import { api, attempt, shortDate, useLoad, type Go } from '../lib'
+import { useUiState } from '../../lib/ui-state'
 import { Button, Empty, ErrorNote, INPUT, Page, Pill } from '../ui'
 import { Chips } from '../marketing-ui'
 import { Table, type Column } from '../molecules/Table'
+import { freshClass, useFresh } from '../organisms/live/RemoteChanges'
 
 const FILTERS: { id: ClientStatus | 'all'; label: string }[] = [
   { id: 'activo', label: 'Activos' },
@@ -52,9 +54,11 @@ const COLUMNS: Column<ClientRow>[] = [
   }
 ]
 
-/** Clientes como una tabla de Obsidian, con alta rápida (nombre y Enter). */
 export function Clients({ go }: { go: Go }): React.JSX.Element {
-  const [filter, setFilter] = useState<ClientStatus | 'all'>('activo')
+  const fresh = useFresh('clients')
+  const [filter, setFilter] = useUiState<ClientStatus | 'all'>('clients.filter', 'activo', (v) =>
+    FILTERS.some((f) => f.id === v)
+  )
   const [name, setName] = useState<string | null>(null) // null = formulario cerrado
   const [error, setError] = useState<string | null>(null)
 
@@ -131,6 +135,7 @@ export function Clients({ go }: { go: Go }): React.JSX.Element {
             rows={data}
             rowKey={(c) => c.id}
             onOpen={(c) => go({ name: 'client', id: c.id })}
+            rowClass={(c) => freshClass(fresh(c.id))}
           />
         )}
       </div>

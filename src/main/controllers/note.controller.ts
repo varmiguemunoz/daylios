@@ -2,7 +2,6 @@ import type { Request, Response } from 'express'
 import type { NoteService } from '../services/note.service'
 import { noteView, notesPageView } from '../views/note.view'
 
-/** Controlador de notas: lee la petición, llama al servicio y responde con la vista. */
 export class NoteController {
   constructor(private readonly service: NoteService) {}
 
@@ -25,14 +24,12 @@ export class NoteController {
     res.json(await this.service.search(text(req.query.q) ?? '', Number(req.query.limit ?? 20)))
   }
 
-  /** Body: `{ body, related_notes?, clients? }`. */
   create = async (req: Request, res: Response): Promise<void> => {
     const body = req.body ?? {}
     const links = { notes: list(body.related_notes), clients: list(body.clients) }
     res.status(201).json(noteView(await this.service.create(text(body.body) ?? '', links)))
   }
 
-  /** Body: `{ type: 'note' | 'client', id }`. */
   link = async (req: Request, res: Response): Promise<void> => {
     res.json(await this.service.link(String(req.params.id), req.body ?? {}))
   }

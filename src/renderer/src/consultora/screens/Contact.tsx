@@ -37,14 +37,10 @@ import { ContactStatusPill, TagEditor } from '../marketing-ui'
 import { InlineField } from '../molecules/InlineField'
 import { RefPicker } from '../molecules/RefPicker'
 import { Properties, PropertyRow } from '../molecules/Properties'
-import { useScreenTitle } from '../chrome'
+import { useGoneRedirect, useScreenTitle } from '../chrome'
 import { ConvertToProspectModal } from '../organisms/ConvertToProspectModal'
+import { EntityActivity } from '../organisms/activity/EntityActivity'
 
-/**
- * Ficha de contacto como una nota de Obsidian (impeccable · Operate): propiedades con datos,
- * relaciones y tags; después notas, email marketing, formulario y actividad. Una sola acción
- * primaria: convertir en prospecto (o verlo).
- */
 export function Contact({
   id,
   go,
@@ -57,6 +53,7 @@ export function Contact({
   const load = useCallback(() => api.getContact(id), [id])
   const { data: c, error: loadError } = useLoad(load)
   useScreenTitle(c ? contactLabel(c) : null)
+  useGoneRedirect(loadError)
   const refsLoad = useCallback(() => api.refs(), [])
   const { data: refs } = useLoad(refsLoad)
   const tagsLoad = useCallback(() => window.api.marketing.listTags(), [])
@@ -309,11 +306,11 @@ export function Contact({
       )}
 
       <Timeline contact={c} go={go} />
+      <EntityActivity entity="contacts" id={id} />
     </Page>
   )
 }
 
-/** Actividad: eventos del contacto y reuniones donde aparece, en una sola línea de tiempo. */
 function Timeline({ contact, go }: { contact: ContactDetail; go: Go }): React.JSX.Element | null {
   const items = useMemo(
     () =>
@@ -357,7 +354,6 @@ function Timeline({ contact, go }: { contact: ContactDetail; go: Go }): React.JS
   )
 }
 
-/** "Desde 2 oct 2026 · entró por webinar" / qué falta para poder suscribir. */
 function consentLine(c: {
   status: string
   email: string | null

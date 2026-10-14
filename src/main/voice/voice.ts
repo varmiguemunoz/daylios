@@ -6,11 +6,6 @@ import type { VoiceNoteService } from '../services/voice-note.service'
 import { createVoiceWindow, showVoiceWindow } from './voice-window'
 import { registerVoiceShortcut, unregisterVoiceShortcut, type ShortcutState } from './shortcut'
 
-/**
- * Nota de voz de principio a fin:
- * atajo pulsado → pastilla visible + `voice:start` (la pastilla graba el micro)
- * atajo soltado → `voice:stop` → la pastilla manda el audio con `voice:finish` → VoiceNoteService.
- */
 export class VoiceController {
   private readonly win: BrowserWindow
   private state: ShortcutState = { registered: false, mode: 'toggle' }
@@ -18,11 +13,12 @@ export class VoiceController {
   constructor(private readonly service: VoiceNoteService) {
     this.win = createVoiceWindow()
 
-    ipcMain.handle('voice:finish', (_e, data: Uint8Array, seconds: number) => this.service.finish(data, seconds))
+    ipcMain.handle('voice:finish', (_e, data: Uint8Array, seconds: number) =>
+      this.service.finish(data, seconds)
+    )
     ipcMain.on('voice:hide', () => this.win.hide())
   }
 
-  /** (Re)registra el atajo con los ajustes actuales. Llamar al arrancar y al cambiar Ajustes. */
   async refresh(): Promise<VoiceStatus> {
     if (config.voiceEnabled()) {
       this.state = await registerVoiceShortcut(config.voiceShortcut(), {
@@ -55,7 +51,6 @@ export class VoiceController {
   }
 }
 
-/** Notificación «Nota creada»; clic abre la nota en el popover. */
 export function notifyNoteCreated(note: Note, title: string, open: (note: Note) => void): void {
   const notification = new Notification({ title: 'Nota creada', body: title })
   notification.on('click', () => open(note))

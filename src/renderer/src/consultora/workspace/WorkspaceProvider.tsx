@@ -11,7 +11,6 @@ import { QuickSwitcher } from './organisms/QuickSwitcher'
 const LAST_KEY = 'ws.last'
 export const WORKSPACE_HOME: Screen = { name: 'workspace', folder: null }
 
-/** Recuerda la última pantalla del workspace (el atajo global vuelve ahí). */
 export function rememberWorkspaceScreen(screen: Screen): void {
   prefs.set(LAST_KEY, JSON.stringify(screen))
 }
@@ -39,10 +38,6 @@ const activeIdOf = (s: Screen): string | null =>
       ? s.id
       : null
 
-/**
- * Estado del workspace para toda la ventana: el explorador vive en la barra lateral de todas las
- * secciones, así que lo que necesita (acciones, elemento abierto, selector) se monta en el marco.
- */
 export function WorkspaceProvider({
   screen,
   go,

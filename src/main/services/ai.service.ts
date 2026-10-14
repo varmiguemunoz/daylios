@@ -8,7 +8,7 @@ export interface SummaryContext {
   title: string
   date: string
   participants: string[]
-  /** "Cliente Acme · Proyecto Portal" */
+
   about: string
 }
 
@@ -18,10 +18,8 @@ export interface Summary {
   actionItems: ActionItem[]
 }
 
-/** Texto máximo por llamada de resumen; más largo se resume por partes y luego se une. */
 const PART_CHARS = 120_000
 
-/** Lo que el modelo debe devolver (Structured Outputs: JSON validado, sin parsear texto libre). */
 const SUMMARY_SCHEMA = {
   type: 'object',
   additionalProperties: false,
@@ -51,7 +49,6 @@ const SUMMARY_SCHEMA = {
   }
 } as const
 
-/** OpenAI: transcripción (Whisper) y resumen estructurado. Solo corre en main; la key nunca sale de aquí. */
 export class AiService {
   private client(): OpenAI {
     const apiKey = config.openaiKey()
@@ -61,7 +58,6 @@ export class AiService {
     return new OpenAI({ apiKey })
   }
 
-  /** Comprueba la API key guardada con una llamada mínima (lista de modelos). */
   async testKey(): Promise<{ ok: boolean; message: string }> {
     try {
       await this.client().models.list()
@@ -71,10 +67,6 @@ export class AiService {
     }
   }
 
-  /**
-   * Transcribe los trozos en orden y los une. `hint` mejora nombres propios (clientes, personas);
-   * `language` es el idioma hablado ('es' | 'en'), si se conoce.
-   */
   async transcribe(files: string[], hint: string, language?: 'es' | 'en' | null): Promise<string> {
     const openai = this.client()
     const parts: string[] = []
@@ -91,10 +83,6 @@ export class AiService {
     return parts.filter(Boolean).join('\n\n')
   }
 
-  /**
-   * Convierte un dictado en una nota markdown: primera línea `# Título`, párrafos, listas
-   * y casillas `- [ ]` para tareas. Mismo idioma del dictado, sin muletillas y sin inventar.
-   */
   async formatNote(transcript: string): Promise<string> {
     const response = await this.client().chat.completions.create({
       model: config.summaryModel(),
@@ -110,16 +98,21 @@ export class AiService {
             'escribe en el mismo idioma del dictado; quita muletillas y repeticiones; ' +
             'no añadas nada que no se haya dicho. Responde solo con el markdown, sin ``` ni comentarios.'
         },
-        { role: 'user', content: `Fecha: ${new Date().toISOString().slice(0, 10)}\n\nDictado:\n${transcript}` }
+        {
+          role: 'user',
+          content: `Fecha: ${new Date().toISOString().slice(0, 10)}\n\nDictado:\n${transcript}`
+        }
       ]
     })
     const text = response.choices[0]?.message?.content?.trim()
     if (!text) throw new AppError('invalid', 'El modelo no devolvió la nota.')
     // Por si el modelo envuelve la respuesta en ```markdown … ```
-    return text.replace(/^```(?:markdown|md)?\s*/i, '').replace(/\s*```$/, '').trim()
+    return text
+      .replace(/^```(?:markdown|md)?\s*/i, '')
+      .replace(/\s*```$/, '')
+      .trim()
   }
 
-  /** Resumen ejecutivo, decisiones y action items. Textos largos: resume por partes y luego une. */
   async summarize(context: SummaryContext, text: string): Promise<Summary> {
     if (text.length <= PART_CHARS) return this.summarizeOnce(context, text)
 
@@ -185,7 +178,6 @@ export class AiService {
   }
 }
 
-/** Parte un texto largo en trozos de ~`size` caracteres, cortando en saltos de línea. */
 function splitText(text: string, size: number): string[] {
   const parts: string[] = []
   let rest = text

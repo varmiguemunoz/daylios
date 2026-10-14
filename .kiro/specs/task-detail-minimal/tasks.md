@@ -14,7 +14,7 @@
 - [x] 8. `SubtaskDropdown` con su `useReorder`; `useDay.patchProgress`; subtarea abierta desde Hoy vuelve a Hoy
 - [x] 9. `TodayView`: estado desplegado por tarea en `localStorage`, `<li>` aparte por desplegable
 - [x] 10. impeccable: pasada `critique` del detalle, el panel y la lista desplegada; corregir en
-       un lote
+      un lote
 - [x] 11. DESIGN.md: editor sin modos, línea de resumen, panel de detalles, subtareas en Hoy
 
 ## Checklist

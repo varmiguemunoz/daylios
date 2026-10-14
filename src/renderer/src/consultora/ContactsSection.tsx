@@ -5,7 +5,6 @@ import { contactLabel } from '@shared/marketing'
 import { api, attempt, type Go } from './lib'
 import { Button, Empty, ErrorNote, List, Row, Section } from './ui'
 
-/** Contactos de un cliente o prospecto, con alta rápida (nombre + Enter → abre el contacto para completarlo). */
 export function ContactsSection({
   contacts,
   client,

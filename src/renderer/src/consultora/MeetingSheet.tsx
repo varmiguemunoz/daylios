@@ -16,10 +16,6 @@ export interface SheetInfo {
 
 const LANGUAGE_LABEL: Record<Language, string> = { es: 'Español', en: 'English' }
 
-/**
- * Hoja antes de procesar una reunión (al detener una grabación o al subir un archivo):
- * título, participantes, asociación (sugerida por el título) e idioma hablado.
- */
 export function MeetingSheet({
   heading,
   hint,
@@ -49,7 +45,6 @@ export function MeetingSheet({
     void api.refs().then(setRefs)
   }, [])
 
-  /** Sugerencia por título: solo rellena lo que aún está vacío. */
   const suggest = async (): Promise<void> => {
     const s = await api.suggestAssociation(title)
     if (!clientId && s.clientId) setClientId(s.clientId)
@@ -204,7 +199,6 @@ export function MeetingSheet({
   )
 }
 
-/** Contactos del cliente/prospecto elegido como botones «+ Nombre» para añadir a participantes. */
 export function ContactChips({
   clientId,
   prospectId,

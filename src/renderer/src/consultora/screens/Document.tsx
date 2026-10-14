@@ -3,12 +3,11 @@ import { isOverlayOpen } from '../../ui'
 import type { DocContent } from '@shared/consultora'
 import { api } from '../lib'
 import { ErrorNote } from '../ui'
-import { useScreenTitle } from '../chrome'
+import { useGoneRedirect, useScreenTitle } from '../chrome'
 import { MarkdownEditor, fromMarkdownEditor } from '../../components/MarkdownEditor'
 import { useAutosave } from '../../lib/useAutosave'
 import { errorMessage } from '../../lib/api'
 
-/** Editar un documento de texto de la carpeta del cliente. Guarda solo mientras escribes. */
 export function Document({
   client,
   path,
@@ -21,6 +20,7 @@ export function Document({
   const [doc, setDoc] = useState<DocContent | null>(null)
   const [error, setError] = useState<string | null>(null)
   useScreenTitle(doc?.name)
+  useGoneRedirect(error)
 
   useEffect(() => {
     api
@@ -38,7 +38,6 @@ export function Document({
   return <DocumentEditor client={client} doc={doc} back={back} />
 }
 
-/** Como una nota de Obsidian: título en línea, ruta tenue y el texto en la columna de 760 px. */
 function DocumentEditor({
   client,
   doc,

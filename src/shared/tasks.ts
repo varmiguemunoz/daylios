@@ -1,7 +1,5 @@
-/** Techo diario de tareas. */
 export const DAILY_LIMIT = 8
 
-/** Fecha local en formato YYYY-MM-DD. */
 export type DayKey = string
 
 export interface Task {
@@ -13,36 +11,73 @@ export interface Task {
   createdAt: string
   completedAt: string | null
   carriedFrom: DayKey | null
-  /** Descripción en markdown. null = sin descripción. */
+
   description: string | null
-  /** Tags libres en minúsculas, sin `#`. */
+
   tags: string[]
   effort: Effort | null
-  /** Tarea madre. null = tarea del día (cuenta para el techo). */
+
   parentId: string | null
-  /** Avance de sus subtareas (solo en listas de madres: día e historial). */
+
+  status: TaskStatus
+
+  clientId: string | null
+  projectId: string | null
+  prospectId: string | null
+  assigneeId: string | null
+
   subtasks?: SubtaskProgress
+
+  links?: TaskLinkNames
 }
+
+export type TaskStatus = 'todo' | 'doing' | 'done'
+export const TASK_STATUSES: TaskStatus[] = ['todo', 'doing', 'done']
+export const TASK_STATUS_LABEL: Record<TaskStatus, string> = {
+  todo: 'Pendiente',
+  doing: 'En curso',
+  done: 'Hecha'
+}
+
+export interface TaskLinkNames {
+  client?: { id: string; name: string }
+  project?: { id: string; name: string }
+  prospect?: { id: string; company: string }
+}
+
+export interface TaskBoardQuery {
+  from?: DayKey
+  to?: DayKey
+
+  onlyOpen?: boolean
+
+  query?: string
+  tags?: string[]
+  effort?: Effort
+  client?: string
+  project?: string
+  prospect?: string
+  assignee?: string
+}
+
+export type TaskRecordKind = 'client' | 'project' | 'prospect'
 
 export interface SubtaskProgress {
   total: number
   done: number
 }
 
-/** Detalle: la tarea, su madre (si es subtarea) y sus subtareas (si es madre). */
 export interface TaskView {
   task: Task
   parent: Pick<Task, 'id' | 'title'> | null
   subtasks: Task[]
 }
 
-/** Tag de tareas con su uso (tareas y subtareas). */
 export interface TaskTagSummary {
   tag: string
   tasks: number
 }
 
-/** Lo que se borró, para deshacer (la madre vuelve con todas sus subtareas). */
 export interface RemovedTask {
   task: Task
   subtasks: Task[]
@@ -56,10 +91,17 @@ export const MAX_TAGS = 5
 export interface TaskPatch {
   title?: string
   done?: boolean
-  /** Cadena vacía borra la descripción. */
+
+  status?: TaskStatus
+
+  client?: string
+  project?: string
+  prospect?: string
+  assignee?: string
+
   description?: string
   tags?: string[]
-  /** null quita el esfuerzo. */
+
   effort?: Effort | null
 }
 
@@ -99,50 +141,46 @@ export interface DaySummary {
   tasks: Task[]
 }
 
-/** Contrato que la UI consume (vía IPC) y que implementa TaskService. */
 export interface TasksApi {
-  /** Tareas madre del día, con el avance de sus subtareas. */
   getDay(date: DayKey): Promise<Task[]>
-  /** Detalle con madre y subtareas. */
+
   get(id: string): Promise<TaskView>
-  /** El título puede llevar `#tags` y `!alto|!medio|!bajo` (ver parseCapture). */
+
   add(date: DayKey, title: string, description?: string): Promise<Task>
-  /** Subtarea al final de su madre. No cuenta para el techo. */
+
   addSubtask(parentId: string, title: string, description?: string): Promise<Task>
-  /** Nuevo orden de las subtareas: todos los ids de esa madre. */
+
   reorderSubtasks(parentId: string, ids: string[]): Promise<Task[]>
-  /** Marca hechas todas las subtareas pendientes. */
+
   completeSubtasks(parentId: string): Promise<Task[]>
-  /** Nuevo orden del día: ids en el orden deseado. */
+
   reorder(date: DayKey, ids: string[]): Promise<Task[]>
-  /** Tags usados alguna vez, del más usado al menos usado (para sugerencias). */
+
   tags(): Promise<string[]>
-  /** Tags con cuántas tareas los usan (pantalla Tags). */
+
   tagSummaries(): Promise<TaskTagSummary[]>
-  /** Renombra un tag en todas las tareas (si el nuevo ya existe, se fusionan). Devuelve cuántas cambió. */
+
   renameTag(from: string, to: string): Promise<number>
-  /** Quita un tag de todas las tareas. Devuelve cuántas cambió. */
+
   removeTag(tag: string): Promise<number>
   update(id: string, patch: TaskPatch): Promise<Task>
-  /** Borra la tarea (y sus subtareas). Devuelve lo borrado para deshacer. */
+
   remove(id: string): Promise<RemovedTask>
-  /** Reinserta lo borrado (deshacer). */
+
   restore(removed: RemovedTask): Promise<Task>
-  /** Mueve una tarea madre (con sus subtareas) a otro día. */
+
   moveToDate(id: string, date: DayKey): Promise<Task>
-  /** Mueve las pendientes de `from` a `to` mientras haya hueco. */
+
   carryOver(from: DayKey, to: DayKey): Promise<CarryOverResult>
   history(query: HistoryQuery): Promise<HistoryPage>
+
+  board(query: TaskBoardQuery): Promise<Task[]>
+
+  forRecord(kind: TaskRecordKind, id: string): Promise<Task[]>
 }
 
-/** "#Ventas" → "ventas". Vacío si no sirve como tag. */
 export function cleanTag(raw: string): string {
-  return raw
-    .replace(/^#+/, '')
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, '-')
-    .slice(0, 24)
+  return raw.replace(/^#+/, '').trim().toLowerCase().replace(/\s+/g, '-').slice(0, 24)
 }
 
 const EFFORT_TOKENS: Record<string, Effort> = {
@@ -154,11 +192,11 @@ const EFFORT_TOKENS: Record<string, Effort> = {
   '!b': 'bajo'
 }
 
-/**
- * Lo que escribes en el campo de captura → título, tags y esfuerzo.
- * "Propuesta Acme #ventas !alto" → { title: "Propuesta Acme", tags: ["ventas"], effort: "alto" }
- */
-export function parseCapture(text: string): { title: string; tags: string[]; effort: Effort | null } {
+export function parseCapture(text: string): {
+  title: string
+  tags: string[]
+  effort: Effort | null
+} {
   const tags: string[] = []
   let effort: Effort | null = null
   const words = text.split(/\s+/).filter((word) => {
@@ -203,3 +241,47 @@ export function addDays(key: DayKey, delta: number): DayKey {
 export function todayKey(): DayKey {
   return toDayKey(new Date())
 }
+
+export type TaskPeriod = 'today' | 'week' | 'overdue' | 'upcoming' | 'open' | 'range'
+
+export const TASK_PERIODS: { id: TaskPeriod; label: string }[] = [
+  { id: 'today', label: 'Hoy' },
+  { id: 'week', label: 'Esta semana' },
+  { id: 'overdue', label: 'Atrasadas' },
+  { id: 'upcoming', label: 'Próximas' },
+  { id: 'open', label: 'Todas las abiertas' },
+  { id: 'range', label: 'Rango' }
+]
+
+export function weekStart(key: DayKey): DayKey {
+  const weekday = (fromDayKey(key).getDay() + 6) % 7
+  return addDays(key, -weekday)
+}
+
+export function periodQuery(
+  period: TaskPeriod,
+  today: DayKey,
+  range: { from: DayKey; to: DayKey }
+): Pick<TaskBoardQuery, 'from' | 'to' | 'onlyOpen'> {
+  switch (period) {
+    case 'today':
+      return { from: today, to: today }
+    case 'week': {
+      const from = weekStart(today)
+      return { from, to: addDays(from, 6) }
+    }
+    case 'overdue':
+      return { to: addDays(today, -1), onlyOpen: true }
+    case 'upcoming':
+      return { from: addDays(today, 1) }
+    case 'open':
+      return { onlyOpen: true }
+    case 'range':
+      return range.from <= range.to
+        ? { from: range.from, to: range.to }
+        : { from: range.to, to: range.from }
+  }
+}
+
+export const isOverdue = (t: Pick<Task, 'date' | 'status'>, today: DayKey): boolean =>
+  t.status !== 'done' && t.date < today

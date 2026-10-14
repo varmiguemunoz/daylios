@@ -11,6 +11,7 @@ import {
 } from '@shared/pipeline-filters'
 import { api, attempt, money, useLoad, type Go } from '../lib'
 import { Button, Drawer, ErrorNote, FilterButton, INPUT, SegmentedToggle } from '../ui'
+import { uiState, useUiState } from '../../lib/ui-state'
 import { PipelineBoard } from '../organisms/pipeline/PipelineBoard'
 import { PipelineTable } from '../organisms/pipeline/PipelineTable'
 import { PipelineFiltersPanel } from '../organisms/pipeline/PipelineFiltersPanel'
@@ -21,34 +22,24 @@ type View = 'board' | 'list'
 
 const NEW = '__new__'
 
-/** localStorage puede fallar (modo privado, cuota): nunca rompe la pantalla. */
 const stored = {
   get: (k: string): string | null => {
-    try {
-      return localStorage.getItem(k)
-    } catch {
-      return null
-    }
+    const v = uiState.get<unknown>(k, null)
+    return typeof v === 'string' ? v : null
   },
-  set: (k: string, v: string): void => {
-    try {
-      localStorage.setItem(k, v)
-    } catch {
-      // sin persistencia
-    }
-  }
+  set: (k: string, v: string): void => uiState.set(k, v)
 }
 
-/**
- * Pipelines (uno por oferta): tablero de columnas o lista, filtros en el panel derecho y
- * «Editar pipeline» para sus columnas. Ganar crea el cliente.
- */
 export function Pipeline({ go }: { go: Go }): React.JSX.Element {
   const [pipelineId, setPipelineId] = useState<string>(() => stored.get('pipeline.last') ?? '')
   const [view, setView] = useState<View>(
     () => (stored.get(`pipeline.view.${pipelineId}`) as View) || 'board'
   )
-  const [filters, setFilters] = useState<PipelineFilters>(EMPTY_PIPELINE_FILTERS)
+  const [filters, setFilters] = useUiState<PipelineFilters>(
+    'pipeline.filters',
+    EMPTY_PIPELINE_FILTERS,
+    (v) => !!v && typeof v === 'object' && !Array.isArray(v)
+  )
   const [panel, setPanel] = useState(false)
   const [editor, setEditor] = useState<'edit' | 'new' | null>(null)
   const [company, setCompany] = useState<string | null>(null)

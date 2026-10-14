@@ -4,10 +4,6 @@ import { colorValue, type BoardNode } from '../flow'
 import { useBoard } from '../context'
 import { NodeChrome } from './NodeChrome'
 
-/**
- * Grupo de Obsidian: rectángulo con tinte y rótulo encima. Lo que cabe dentro se mueve con él
- * (lo resuelve BoardCanvas al arrastrar). Doble clic en el rótulo lo edita.
- */
 export const GroupNode = memo(function GroupNode({
   id,
   data,
@@ -20,7 +16,6 @@ export const GroupNode = memo(function GroupNode({
 
   useEffect(() => {
     if (editingId !== id) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- grupo recién creado: nombrarlo
     setDraft(label)
     setEditing(null)
   }, [editingId, id, label, setEditing])

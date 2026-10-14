@@ -7,7 +7,7 @@ import { SearchField } from '../../ui'
 interface PipelineFiltersPanelProps {
   filters: PipelineFilters
   onChange: (next: PipelineFilters) => void
-  /** Tags presentes en los contactos de los prospectos de este pipeline. */
+
   tags: TagRef[]
 }
 
@@ -17,7 +17,6 @@ const KINDS: { id: StageKind; label: string }[] = [
   { id: 'lost', label: 'Perdidas' }
 ]
 
-/** Contenido del panel «Filtros» del pipeline. Aplica al instante. */
 export function PipelineFiltersPanel({
   filters,
   onChange,

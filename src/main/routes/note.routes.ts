@@ -1,7 +1,6 @@
 import { Router } from 'express'
 import type { NoteController } from '../controllers/note.controller'
 
-/** Rutas de notas. Cada una apunta a un método del controlador. */
 export function noteRoutes(c: NoteController): Router {
   return Router()
     .get('/notes', c.list)

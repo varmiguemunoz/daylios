@@ -16,14 +16,14 @@ ventana de Consultora. Plan aprobado por el dueño el 13 oct 2026.
 
 ## Módulos y orden
 
-| #   | Carpeta            | Qué resuelve                                                    | Depende de |
-| --- | ------------------ | --------------------------------------------------------------- | ---------- |
-| W1  | `workspace-files`  | Bóveda, índice, carpetas, archivos, subir, mover, papelera, UI  | nada       |
-| W2  | `workspace-notes`  | Notas en la bóveda, migración, editor, imágenes en notas        | W1         |
-| W3  | `workspace-boards` | Lienzo con nodos, conexiones, zoom, autoguardado en `.canvas`   | W1         |
-| W4  | `workspace-mcp`    | Claude lee, escribe y organiza la bóveda y los boards           | W1, W2, W3 |
-| W5  | `workspace-obsidian` | Modo limpio, explorador, atajo, título = nombre, canvas y grupos | W1 a W4 |
-| W6  | `consultora-obsidian` | Toda la ventana de Consultora con el tema y el marco de Obsidian | W5 |
+| #   | Carpeta               | Qué resuelve                                                     | Depende de |
+| --- | --------------------- | ---------------------------------------------------------------- | ---------- |
+| W1  | `workspace-files`     | Bóveda, índice, carpetas, archivos, subir, mover, papelera, UI   | nada       |
+| W2  | `workspace-notes`     | Notas en la bóveda, migración, editor, imágenes en notas         | W1         |
+| W3  | `workspace-boards`    | Lienzo con nodos, conexiones, zoom, autoguardado en `.canvas`    | W1         |
+| W4  | `workspace-mcp`       | Claude lee, escribe y organiza la bóveda y los boards            | W1, W2, W3 |
+| W5  | `workspace-obsidian`  | Modo limpio, explorador, atajo, título = nombre, canvas y grupos | W1 a W4    |
+| W6  | `consultora-obsidian` | Toda la ventana de Consultora con el tema y el marco de Obsidian | W5         |
 
 ## Patrón
 

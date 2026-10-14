@@ -15,7 +15,8 @@ import {
   type FinalConnectionState,
   type NodeChange,
   type NodeTypes,
-  type OnBeforeDelete
+  type OnBeforeDelete,
+  type Viewport
 } from '@xyflow/react'
 import '@xyflow/react/dist/base.css'
 import { Circle, Diamond, Square } from 'lucide-react'
@@ -26,6 +27,7 @@ import { NotePicker } from '../../../components/NotePicker'
 import { useContextMenu } from '../../../ui'
 import { errorMessage, notesApi } from '../../../lib/api'
 import { DRAG_TYPE, prefs, ws } from '../lib'
+import { uiState } from '../../../lib/ui-state'
 import { BoardContext } from './context'
 import {
   ARROW,
@@ -89,29 +91,28 @@ const ARROWS: Record<string, [number, number]> = {
 }
 
 interface BoardCanvasProps {
-  /** Ruta del board en la bóveda (las imágenes del texto se resuelven desde su carpeta). */
   path: string
-  /** Carpeta del board: ahí van los archivos que se suben. */
+
   folderId: string | null
   initial: { nodes: BoardNode[]; edges: BoardEdge[] }
-  /** Campos del archivo que no son nodos ni conexiones (se conservan al guardar). */
+
   base: CanvasFile
-  /** Algo cambió. El padre guarda más tarde pidiendo `snapshot`; así no se serializa en cada fotograma. */
+
   onDirty: () => void
-  /** El board escribe aquí cómo leer su estado actual como canvas. */
-  snapshot: React.RefObject<(() => CanvasFile) | null>
+
+  snapshotRef: React.RefObject<(() => CanvasFile) | null>
   onOpenPath: (path: string) => void
   onError: (message: string | null) => void
+
+  viewportKey: string
 }
 
 const clean = (nodes: BoardNode[]): BoardNode[] =>
   nodes.map((n) => ({ ...n, selected: false, dragging: false }))
 
-/** Cambios que no tocan el archivo: selección y medidas que calcula React Flow al pintar. */
 const cosmetic = (c: NodeChange<BoardNode>): boolean =>
   c.type === 'select' || (c.type === 'dimensions' && c.resizing === undefined && !c.setAttributes)
 
-/** Conexión nueva con flecha al final (como Obsidian). */
 const edgeBetween = (
   c: Pick<Connection, 'source' | 'target' | 'sourceHandle' | 'targetHandle'>
 ): BoardEdge => {
@@ -129,17 +130,24 @@ const edgeBetween = (
   }
 }
 
-/** Lienzo del board al estilo Obsidian (React Flow controlado). */
 export function BoardCanvas({
   path,
   folderId,
   initial,
   base,
   onDirty,
-  snapshot,
+  snapshotRef,
   onOpenPath,
-  onError
+  onError,
+  viewportKey
 }: BoardCanvasProps): React.JSX.Element {
+  // Se vuelve al zoom y posición de la última vez; sin recuerdo, se encuadra todo.
+  const [savedViewport] = useState(() => {
+    const v = uiState.get<Viewport | null>(viewportKey, null)
+    return v && [v.x, v.y, v.zoom].every((n) => typeof n === 'number' && Number.isFinite(n))
+      ? v
+      : null
+  })
   const [nodes, setNodes] = useState<BoardNode[]>(initial.nodes)
   const [edges, setEdges] = useState<BoardEdge[]>(initial.edges)
   const [editingId, setEditing] = useState<string | null>(null)
@@ -165,8 +173,8 @@ export function BoardCanvas({
 
   // El padre pide el canvas solo cuando va a guardar.
   useLayoutEffect(() => {
-    snapshot.current = () => fromFlow(latest.current.nodes, latest.current.edges, base)
-  }, [snapshot, base])
+    snapshotRef.current = () => fromFlow(latest.current.nodes, latest.current.edges, base)
+  }, [snapshotRef, base])
 
   const history = useHistory(
     useCallback(() => ({ nodes: clean(latest.current.nodes), edges: latest.current.edges }), []),
@@ -218,7 +226,6 @@ export function BoardCanvas({
     [checkpoint, onDirty]
   )
 
-  /** Añade nodos de canvas (quedan seleccionados). `edit`: el primero entra a escribir. */
   const addNodes = useCallback(
     (list: CanvasNode[], extraEdges: BoardEdge[] = [], edit = false) => {
       if (!list.length) return
@@ -342,7 +349,6 @@ export function BoardCanvas({
     addNodes([newGroup(groupAround(picked.map(canvasOf)))], [], true)
   }
 
-  /** `dropped`: viene de arrastrar desde la barra, así que va justo en `at`. */
   const add = (kind: AddKind, anchor: HTMLElement | null, at = center(), dropped = false): void => {
     if (kind === 'card') addNodes([newCard(at)], [], true)
     else if (kind === 'note') setPicking(at)
@@ -434,7 +440,6 @@ export function BoardCanvas({
     onDirty()
   }
 
-  /** Mueve lo seleccionado con las flechas (los grupos con su contenido). */
   const nudge = (dx: number, dy: number): void => {
     const ids = withChildren(
       latest.current.nodes,
@@ -630,7 +635,15 @@ export function BoardCanvas({
           snapGrid={[GRID, GRID]}
           minZoom={0.1}
           maxZoom={3}
-          fitView={initial.nodes.length > 0}
+          fitView={!savedViewport && initial.nodes.length > 0}
+          defaultViewport={savedViewport ?? undefined}
+          onMoveEnd={(_, viewport) =>
+            uiState.set(viewportKey, {
+              x: Math.round(viewport.x),
+              y: Math.round(viewport.y),
+              zoom: Math.round(viewport.zoom * 1000) / 1000
+            })
+          }
           fitViewOptions={{ padding: 0.15 }}
           onlyRenderVisibleElements
           proOptions={{ hideAttribution: true }}

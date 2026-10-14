@@ -1,8 +1,3 @@
-/**
- * Servidor MCP (stdio) para Claude Desktop.
- * No toca la base de datos: traduce cada herramienta a la API local de la app,
- * así las reglas del día (techo de 8, validaciones) son las mismas que en la UI.
- */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import * as tasks from './tools/tasks'

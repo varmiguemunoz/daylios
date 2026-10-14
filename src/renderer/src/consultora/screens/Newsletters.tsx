@@ -13,10 +13,6 @@ const STATUS: Record<NewsletterStatus, { tone: 'mint' | 'apricot' | 'coral'; lab
   failed: { tone: 'coral', label: 'Falló' }
 }
 
-/**
- * Newsletter diario: lo escribe y lo envía Claude (uno por día como máximo). Aquí se ve el
- * historial con su vista previa, a quién puede llegar y el interruptor de pausa.
- */
 export function Newsletters(): React.JSX.Element {
   const ctxLoad = useCallback(() => marketing.newsletterContext(), [])
   const { data: ctx } = useLoad(ctxLoad)
@@ -125,7 +121,6 @@ export function Newsletters(): React.JSX.Element {
   )
 }
 
-/** Vista previa aislada (iframe sin scripts) y el error si falló. */
 function Preview({ id }: { id: string }): React.JSX.Element {
   const load = useCallback(() => marketing.getNewsletter(id), [id])
   const { data: n, error } = useLoad(load)

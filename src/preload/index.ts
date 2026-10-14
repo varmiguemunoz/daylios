@@ -1,11 +1,19 @@
-import { contextBridge, ipcRenderer, webUtils } from 'electron'
+import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron'
 import type { TasksApi } from '../shared/tasks'
 import type { NotesApi } from '../shared/notes'
 import type { ConsultoraApi, StopInfo } from '../shared/consultora'
 import type { MarketingApi } from '../shared/marketing'
 import type { WorkspaceApi } from '../shared/workspace'
+import type { DashboardApi } from '../shared/metrics'
+import type { EditionApi } from '../shared/edition'
+import type { AccountApi, AccountState } from '../shared/account'
+import type { OrgsApi, OrgsState } from '../shared/organizations'
+import type { SyncApi, SyncStatus } from '../shared/sync-protocol'
+import type { FilesApi, FilesStatus } from '../shared/files'
+import type { ActivityApi, ActivityState } from '../shared/activity'
+import type { PresenceApi, PresenceState } from '../shared/presence'
+import type { RemoteChange } from '../shared/sync-protocol'
 
-/** Cada método llama a su canal en main (ver src/main/ipc.ts). */
 const tasks: TasksApi = {
   getDay: (date) => ipcRenderer.invoke('tasks:getDay', date),
   add: (date, title) => ipcRenderer.invoke('tasks:add', date, title),
@@ -23,7 +31,115 @@ const tasks: TasksApi = {
   completeSubtasks: (parentId) => ipcRenderer.invoke('tasks:completeSubtasks', parentId),
   tagSummaries: () => ipcRenderer.invoke('tasks:tagSummaries'),
   renameTag: (from, to) => ipcRenderer.invoke('tasks:renameTag', from, to),
-  removeTag: (tag) => ipcRenderer.invoke('tasks:removeTag', tag)
+  removeTag: (tag) => ipcRenderer.invoke('tasks:removeTag', tag),
+  board: (query) => ipcRenderer.invoke('tasks:board', query),
+  forRecord: (kind, id) => ipcRenderer.invoke('tasks:forRecord', kind, id)
+}
+
+const dashboard: DashboardApi = {
+  metrics: (query) => ipcRenderer.invoke('dashboard:metrics', query),
+  dashboard: () => ipcRenderer.invoke('dashboard:get'),
+  saveDashboard: (layout) => ipcRenderer.invoke('dashboard:save', layout),
+  resetDashboard: () => ipcRenderer.invoke('dashboard:reset')
+}
+
+const edition: EditionApi = {
+  status: () => ipcRenderer.invoke('edition:status')
+}
+
+const account: AccountApi = {
+  state: () => ipcRenderer.invoke('account:state'),
+  signInWithGoogle: () => ipcRenderer.invoke('account:google'),
+  sendEmailCode: (email) => ipcRenderer.invoke('account:sendCode', email),
+  verifyEmailCode: (code) => ipcRenderer.invoke('account:verifyCode', code),
+  cancel: () => ipcRenderer.invoke('account:cancel'),
+  signOut: () => ipcRenderer.invoke('account:signOut'),
+  signOutEverywhere: () => ipcRenderer.invoke('account:signOutEverywhere'),
+  rename: (name) => ipcRenderer.invoke('account:rename', name),
+  devices: () => ipcRenderer.invoke('account:devices'),
+  deleteAccount: (confirm) => ipcRenderer.invoke('account:delete', confirm),
+  onChanged: (cb) => {
+    const listener = (_e: IpcRendererEvent, state: AccountState): void => cb(state)
+    ipcRenderer.on('account:changed', listener)
+    return () => ipcRenderer.removeListener('account:changed', listener)
+  }
+}
+
+const orgs: OrgsApi = {
+  state: () => ipcRenderer.invoke('orgs:state'),
+  refresh: () => ipcRenderer.invoke('orgs:refresh'),
+  create: (name, bringLocal) => ipcRenderer.invoke('orgs:create', name, bringLocal),
+  switchTo: (orgId) => ipcRenderer.invoke('orgs:switch', orgId),
+  detail: () => ipcRenderer.invoke('orgs:detail'),
+  rename: (name) => ipcRenderer.invoke('orgs:rename', name),
+  remove: (confirm) => ipcRenderer.invoke('orgs:remove', confirm),
+  transfer: (userId) => ipcRenderer.invoke('orgs:transfer', userId),
+  invite: (input) => ipcRenderer.invoke('orgs:invite', input),
+  resendInvite: (id) => ipcRenderer.invoke('orgs:resend', id),
+  revokeInvite: (id) => ipcRenderer.invoke('orgs:revoke', id),
+  changeRole: (userId, role) => ipcRenderer.invoke('orgs:role', userId, role),
+  removeMember: (userId) => ipcRenderer.invoke('orgs:removeMember', userId),
+  leave: () => ipcRenderer.invoke('orgs:leave'),
+  members: () => ipcRenderer.invoke('orgs:members'),
+  authorship: (table, id) => ipcRenderer.invoke('orgs:authorship', table, id),
+  onChanged: (cb) => {
+    const listener = (_e: IpcRendererEvent, state: OrgsState): void => cb(state)
+    ipcRenderer.on('orgs:changed', listener)
+    return () => ipcRenderer.removeListener('orgs:changed', listener)
+  }
+}
+
+const sync: SyncApi = {
+  status: () => ipcRenderer.invoke('sync:status'),
+  syncNow: () => ipcRenderer.invoke('sync:now'),
+  pause: (paused) => ipcRenderer.invoke('sync:pause', paused),
+  redownload: () => ipcRenderer.invoke('sync:redownload'),
+  restore: (entity, id) => ipcRenderer.invoke('sync:restore', entity, id),
+  localSummary: () => ipcRenderer.invoke('sync:localSummary'),
+  onStatus: (cb) => {
+    const listener = (_e: IpcRendererEvent, status: SyncStatus): void => cb(status)
+    ipcRenderer.on('sync:status', listener)
+    return () => ipcRenderer.removeListener('sync:status', listener)
+  }
+}
+
+const activity: ActivityApi = {
+  state: () => ipcRenderer.invoke('activity:state'),
+  list: (filter) => ipcRenderer.invoke('activity:list', filter),
+  markSeen: () => ipcRenderer.invoke('activity:seen'),
+  filePath: (id) => ipcRenderer.invoke('activity:filePath', id),
+  notifications: () => ipcRenderer.invoke('activity:notifications'),
+  setNotifications: (settings) => ipcRenderer.invoke('activity:setNotifications', settings),
+  onChanged: (cb) => {
+    const listener = (_e: IpcRendererEvent, state: ActivityState): void => cb(state)
+    ipcRenderer.on('activity:changed', listener)
+    return () => ipcRenderer.removeListener('activity:changed', listener)
+  }
+}
+
+const presence: PresenceApi = {
+  state: () => ipcRenderer.invoke('presence:state'),
+  setView: (view) => ipcRenderer.send('presence:view', view),
+  setEditing: (editing) => ipcRenderer.send('presence:editing', editing),
+  setHidden: (hidden) => ipcRenderer.invoke('presence:hidden', hidden),
+  onChanged: (cb) => {
+    const listener = (_e: IpcRendererEvent, state: PresenceState): void => cb(state)
+    ipcRenderer.on('presence:changed', listener)
+    return () => ipcRenderer.removeListener('presence:changed', listener)
+  }
+}
+
+const files: FilesApi = {
+  status: () => ipcRenderer.invoke('files:status'),
+  usage: () => ipcRenderer.invoke('files:usage'),
+  setRecordings: (on) => ipcRenderer.invoke('files:recordings', on),
+  syncNow: () => ipcRenderer.invoke('files:now'),
+  trash: () => ipcRenderer.invoke('files:trash'),
+  onStatus: (cb) => {
+    const listener = (_e: IpcRendererEvent, status: FilesStatus): void => cb(status)
+    ipcRenderer.on('files:status', listener)
+    return () => ipcRenderer.removeListener('files:status', listener)
+  }
 }
 
 const notes: NotesApi = {
@@ -39,7 +155,6 @@ const notes: NotesApi = {
   remove: (id) => ipcRenderer.invoke('notes:remove', id)
 }
 
-/** Workspace: un canal `workspace:<método>` por método (ver src/main/ipc.workspace.ts). */
 const callWorkspace =
   (method: keyof WorkspaceApi) =>
   (...args: unknown[]) =>
@@ -69,7 +184,6 @@ const workspace: WorkspaceApi = {
   openExternal: callWorkspace('openExternal')
 }
 
-/** Ventana Consultora: un canal `consultora:<método>` por método (ver src/main/ipc.consultora.ts). */
 const call =
   (method: keyof ConsultoraApi) =>
   (...args: unknown[]) =>
@@ -139,7 +253,6 @@ const consultora: ConsultoraApi = {
   appendNote: call('appendNote')
 }
 
-/** Email marketing: un canal `marketing:<método>` por método (ver src/main/ipc.marketing.ts). */
 const callMarketing =
   (method: keyof MarketingApi) =>
   (...args: unknown[]) =>
@@ -173,14 +286,12 @@ const marketing: MarketingApi = {
   setNewsletterPaused: callMarketing('setNewsletterPaused')
 }
 
-/** Grabación de reuniones: el renderer captura, main escribe el archivo y procesa. */
 const recording = {
   start: () => ipcRenderer.invoke('recording:start'),
   chunk: (id: string, data: Uint8Array) => ipcRenderer.invoke('recording:chunk', id, data),
   stop: (id: string, info: StopInfo) => ipcRenderer.invoke('recording:stop', id, info)
 }
 
-/** Pastilla de nota de voz: main avisa start/stop; la pastilla devuelve el audio. */
 const voice = {
   onStart: (cb: () => void) => on('voice:start', cb),
   onStop: (cb: () => void) => on('voice:stop', cb),
@@ -188,14 +299,12 @@ const voice = {
   hide: () => ipcRenderer.send('voice:hide')
 }
 
-/** Main pide al popover abrir una nota (clic en la notificación «Nota creada»). */
 function onNotesOpen(cb: (note: unknown) => void): () => void {
   const listener = (_e: unknown, note: unknown): void => cb(note)
   ipcRenderer.on('notes:open', listener)
   return () => ipcRenderer.removeListener('notes:open', listener)
 }
 
-/** Permisos de macOS (pantalla, micrófono, accesibilidad) y reinicio de la app. */
 const permissions = {
   check: () => ipcRenderer.invoke('permissions:check'),
   open: (kind: 'screen' | 'microphone' | 'accessibility') =>
@@ -203,7 +312,20 @@ const permissions = {
   restartApp: () => ipcRenderer.invoke('app:restart')
 }
 
-/** Suscribe `cb` a un evento enviado por main; devuelve la función para cancelar. */
+interface ConsultoraTarget {
+  client?: string
+  workspace?: boolean
+  account?: boolean
+  open?: { entity: string; id: string }
+}
+
+const ui = {
+  load: () => ipcRenderer.invoke('ui:load'),
+  patch: (changes: Record<string, unknown>) => ipcRenderer.send('ui:patch', changes),
+  reset: () => ipcRenderer.invoke('ui:reset'),
+  setMenubarPinned: (pinned: boolean) => ipcRenderer.invoke('ui:menubarPin', pinned)
+}
+
 function on(
   channel: 'window:shown' | 'data:changed' | 'voice:start' | 'voice:stop',
   cb: () => void
@@ -214,7 +336,16 @@ function on(
 }
 
 contextBridge.exposeInMainWorld('api', {
+  ui,
   tasks,
+  dashboard,
+  edition,
+  account,
+  orgs,
+  sync,
+  files,
+  activity,
+  presence,
   notes,
   workspace,
   consultora,
@@ -227,14 +358,19 @@ contextBridge.exposeInMainWorld('api', {
   setWorkspaceActive: (on: boolean) => ipcRenderer.send('workspace:active', on),
   openConsultora: (target?: { client?: string; workspace?: boolean }) =>
     ipcRenderer.send('window:openConsultora', target),
-  onConsultoraNavigate: (cb: (target: { client?: string; workspace?: boolean }) => void) => {
-    const listener = (_e: unknown, target: { client?: string; workspace?: boolean }): void => cb(target)
+  onConsultoraNavigate: (cb: (target: ConsultoraTarget) => void) => {
+    const listener = (_e: unknown, target: ConsultoraTarget): void => cb(target)
     ipcRenderer.on('consultora:navigate', listener)
     return () => ipcRenderer.removeListener('consultora:navigate', listener)
   },
   openPath: (path: string) => ipcRenderer.invoke('shell:open', path),
-  /** Ruta en disco de un archivo soltado en la ventana (Electron ya no expone File.path). */
+
   pathForFile: (file: File) => webUtils.getPathForFile(file),
   onWindowShown: (cb: () => void) => on('window:shown', cb),
-  onDataChanged: (cb: () => void) => on('data:changed', cb)
+  onDataChanged: (cb: () => void) => on('data:changed', cb),
+  onRemoteChanges: (cb: (changes: RemoteChange[]) => void) => {
+    const listener = (_e: IpcRendererEvent, changes: RemoteChange[]): void => cb(changes)
+    ipcRenderer.on('data:remote', listener)
+    return () => ipcRenderer.removeListener('data:remote', listener)
+  }
 })

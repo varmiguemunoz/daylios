@@ -24,7 +24,6 @@ export const EMPTY_CONTACT_FILTERS: ContactFilterState = {
   pipeline: 'any'
 }
 
-/** Filtros activos (el número del botón). */
 export const activeContactFilters = (f: ContactFilterState): number =>
   (f.status !== 'all' ? 1 : 0) +
   f.tags.length +
@@ -49,7 +48,6 @@ interface ContactFiltersProps {
   clients: { id: string; name: string }[]
 }
 
-/** Contenido del panel «Filtros» de Contactos. Aplica al instante. */
 export function ContactFilters({
   value,
   onChange,

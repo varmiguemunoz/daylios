@@ -11,11 +11,14 @@ vez y se sobreescribe con los tokens de `main.css`.
 `src/shared/canvas.ts`, puro y probado:
 
 ```ts
-interface CanvasFile { nodes: CanvasNode[]; edges: CanvasEdge[] }
+interface CanvasFile {
+  nodes: CanvasNode[]
+  edges: CanvasEdge[]
+}
 // JSON Canvas 1.0: text, file, link, group. Campos extra que Obsidian ignora:
 // daylios: { kind: 'sticky' | 'text' | 'shape'; shape?: 'rect' | 'ellipse' | 'diamond' }
-function parseCanvas(json: string): CanvasFile        // tolera archivos de Obsidian
-function serializeCanvas(c: CanvasFile): string       // orden estable, sin ruido en diffs
+function parseCanvas(json: string): CanvasFile // tolera archivos de Obsidian
+function serializeCanvas(c: CanvasFile): string // orden estable, sin ruido en diffs
 function toFlow(c: CanvasFile): { nodes: Node[]; edges: Edge[] }
 function fromFlow(nodes: Node[], edges: Edge[]): CanvasFile
 ```

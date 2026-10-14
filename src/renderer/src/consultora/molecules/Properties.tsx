@@ -2,10 +2,6 @@ import { useState, type ReactNode } from 'react'
 import { ChevronDown, type LucideIcon } from 'lucide-react'
 import { prefs } from '../workspace/lib'
 
-/**
- * Bloque de propiedades de una nota de Obsidian: encabezado plegable y filas de icono, nombre y
- * valor. Las fichas (cliente, contacto, prospecto, proyecto, reunión) ponen aquí sus datos.
- */
 export function Properties({
   children,
   title = 'Propiedades',
@@ -13,7 +9,7 @@ export function Properties({
 }: {
   children: ReactNode
   title?: string
-  /** Para recordar si está plegado (una clave por tipo de ficha). */
+
   id: string
 }): React.JSX.Element {
   const key = `props.collapsed.${id}`
@@ -41,7 +37,6 @@ export function Properties({
   )
 }
 
-/** Una propiedad: icono y nombre en gris a la izquierda, el valor a la derecha. */
 export function PropertyRow({
   icon: Icon,
   label,
@@ -51,7 +46,7 @@ export function PropertyRow({
   icon?: LucideIcon
   label: string
   children: ReactNode
-  /** Botón al final de la fila (Cambiar, Abrir). */
+
   action?: ReactNode
 }): React.JSX.Element {
   return (

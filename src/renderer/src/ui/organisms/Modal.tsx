@@ -11,12 +11,11 @@ interface ModalProps {
   title: string
   onClose: () => void
   children: ReactNode
-  /** Botones al pie, alineados a la derecha. */
+
   actions?: ReactNode
   size?: keyof typeof WIDTH
 }
 
-/** Diálogo centrado (patrón de la hoja de grabación). Foco atrapado; Esc o clic fuera cierra. */
 export function Modal({
   open,
   title,

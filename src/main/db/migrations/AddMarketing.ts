@@ -1,12 +1,5 @@
 import { Table, TableColumn, type MigrationInterface, type QueryRunner } from 'typeorm'
 
-/**
- * Email marketing: los contactos pasan a ser también leads (estado de suscripción, fuente,
- * campos, consentimiento), más tags, línea de tiempo, fuentes, reglas, newsletters, la cola
- * hacia Resend y los recibos de la cola del Worker.
- *
- * Los contactos existentes quedan con estado `none` (nunca reciben marketing sin opt-in).
- */
 export class AddMarketing1728100000000 implements MigrationInterface {
   name = 'AddMarketing1728100000000'
 

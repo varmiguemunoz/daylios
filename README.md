@@ -12,6 +12,21 @@ npm run build:mac  # genera el .dmg en dist/
 
 Datos: `~/Library/Application Support/daily-os/daylios.db`
 
+## La interfaz se recuerda
+
+Como Obsidian, las ventanas vuelven como las dejaste. El estado vive en `ui-state.json`, en la carpeta
+de datos de la app, nunca en la caché del navegador interno, y no se sincroniza.
+
+- **Menubar**: cada pestaña conserva su scroll, el periodo y la página de Historial, la página de Notas
+  y lo escrito en «Añade una tarea…». Volver de una tarea o nota deja la lista donde estaba. Al
+  reiniciar se abre lo último, también una tarea o nota.
+- **Fijar** con la chincheta de arriba a la derecha: la ventana no se oculta al cambiar de app, se
+  mueve arrastrando el borde de arriba o la barra inferior y se puede hacer más alta. Recuerda su sitio.
+- **Consultora**: última pantalla con su historial de atrás y adelante, la última pantalla de cada
+  sección, filtros y páginas de las listas, scroll de cada pantalla, zoom de cada board, scroll de
+  cada nota y tamaño de la ventana.
+- **Restablecer**: Ajustes, General, «Restablecer el diseño de las ventanas».
+
 ## Instalar como servicio (macOS)
 
 ```bash
@@ -53,6 +68,71 @@ Tests: `npm test` (Vitest dentro de Electron, porque better-sqlite3 está compil
 La app es la única que abre la base de datos. La UI y Claude pasan por el mismo servicio, así que las reglas (techo de 8, validación) son idénticas. Si Claude cambia algo, la ventana se refresca sola.
 
 Al arrancar, la app escribe `connection.json` (puerto + token, permisos 600) junto a la base de datos. El MCP lo lee en cada llamada. **La app tiene que estar abierta** para que Claude pueda usarla; con `npm run service:install` queda siempre corriendo.
+
+## Ediciones y nube
+
+DayliOS arranca en la edición Local: SQLite y la bóveda en este Mac, sin cuenta y sin conexiones
+de nube. La edición Equipo, en construcción, suma cuenta, organización y sincronización. Ajustes,
+«Cuenta y equipo», muestra la activa.
+
+- Los servicios locales hablan con puertos (`src/main/ports`). En Local los atienden adaptadores
+  vacíos; el código de nube (`src/main/cloud`) solo se carga en Equipo.
+- Cada cambio en las tablas sincronizables deja una fila en `change_log` por triggers de SQLite.
+  En Local se queda en las últimas 10 000.
+- Borrar clientes, proyectos, reuniones, prospectos, pipelines, contactos, tags, fuentes, reglas o
+  tareas marca `deleted_at`. Se purgan a los 30 días.
+- Nunca salen del Mac: `settings.json`, claves de API, tokens, `ui-state.json`, secretos de las
+  fuentes, la cola de voz, grabaciones en curso y el outbox del email (`NEVER_SYNC`).
+- Microservicio en `services/cloud`, NestJS hexagonal sobre Supabase. Ver su README.
+
+### Cuenta
+
+Ajustes, «Cuenta y equipo»: «Continuar con Google» o un código por email, sin contraseñas.
+Iniciar sesión activa la edición Equipo pero no sube datos. La sesión se cifra con el Llavero de
+macOS y se renueva sola; si caduca, la app sigue en local y la franja muestra «Volver a entrar».
+Desde ahí también se cambia el nombre, se ven los dispositivos, se cierra sesión aquí o en los
+demás y se borra la cuenta. Configuración en `.env` con las variables de `.env.example`.
+
+### Organizaciones
+
+Con sesión, el botón de abajo en la cinta cambia entre Local y tus organizaciones, o crea una nueva.
+Cada organización tiene su propia base y su bóveda en `Organizaciones` dentro de tu carpeta de
+documentos; Local queda intacto. Cambiar de espacio reinicia la app. En «Cuenta y equipo» se ven
+los miembros con su rol, las invitaciones por email o por enlace, salir, transferir y borrar. Las
+tareas, prospectos, proyectos y reuniones ganan «Responsable», y Tareas e Inicio tienen «Mis
+tareas».
+
+### Sincronización
+
+Dentro de una organización, cada cambio llega a los demás miembros en segundos y todo sigue
+funcionando sin red: los cambios esperan en cola. Si dos personas cambian campos distintos se
+conservan los dos; si cambian el mismo, gana el último. El icono de nube de la franja muestra el
+estado, lo que hay en cola, permite pausar, sincronizar ahora o volver a descargar, y lista lo que
+otra persona borró con la opción de restaurarlo. En Local no hay ningún proceso de sincronización.
+
+### Equipo en tiempo real
+
+En la franja aparecen las iniciales de quien está conectado en la organización. Si otra persona
+tiene abierta la misma ficha o nota se ve junto al título, y mientras escribe aparece «Ana está
+editando». No bloquea, solo avisa. La pestaña «Actividad» de la barra lateral lista por día lo que
+hizo el equipo: crear, cambiar, mover de etapa, ganar o perder, completar, asignar, subir, renombrar
+o borrar archivos, invitar y unirse. Se filtra por persona, tipo y elemento, muestra cuántas
+novedades no has visto y un clic abre el elemento. Cada ficha muestra su propia actividad al final.
+Cuando te asignan una tarea, un prospecto o una reunión llega un aviso del sistema. En Ajustes,
+Cuenta, Equipo se apagan los avisos por tipo y se puede ocultar la propia presencia. Lo que otra
+persona acaba de cambiar se resalta un momento en tareas, prospectos, clientes y contactos.
+
+### Archivos
+
+Dentro de una organización, la carpeta de documentos de la organización se sube a la nube de
+Cloudflare R2 y llega a los demás miembros. Solo se sube el contenido que cambió: renombrar o
+mover una carpeta no vuelve a subir nada y el mismo archivo en dos lugares se guarda una vez. Los
+archivos grandes suben por partes y, si se corta la red, siguen donde quedaron. Si dos personas
+editan el mismo archivo sin conexión, queda una copia con el nombre de quien la hizo. Lo que otro
+borra va a la papelera del sistema y a la papelera de la organización por 30 días, desde donde se
+restaura en Ajustes, Cuenta. Las grabaciones de reuniones no se suben salvo que se active el
+interruptor. Un punto junto a cada archivo del explorador muestra si está en la nube, subiendo,
+bajando o en conflicto.
 
 ## Workspace (notas, boards y archivos)
 
@@ -147,6 +227,14 @@ Las tareas programadas y la app corren con el Mac despierto. Las secuencias y la
 
 Escribe `Propuesta Acme #ventas !alto` y se guarda la tarea «Propuesta Acme» con el tag `ventas` y esfuerzo alto (`!a`, `!m`, `!b` también valen). En el detalle se editan ambos. Arrastra las filas de Hoy para ordenarlas.
 
+## Inicio
+
+Primera sección de Consultora. Un dashboard con componentes elegibles: tareas abiertas y cerradas, tareas por estado, pipeline abierto, negocios ganados y perdidos, valor por etapa, tasa de cierre, atrasadas, reuniones, action items y contactos nuevos. Cada número se compara con el periodo anterior y un clic en el título abre su origen filtrado. «Editar dashboard» permite añadir, quitar, mover y dar a cada componente su propio tamaño, periodo o pipeline. El diseño se guarda en la base, no en el estado de la ventana. Claude lee los mismos números con `get_metrics`.
+
+## Tablero de tareas
+
+En Consultora, sección Tareas. Las mismas tareas del menubar con tres estados: Pendiente, En curso y Hecha. Se ven como tablero o como lista ordenable, con filtros por periodo, texto, tags, esfuerzo y relación. Arrastrar una tarjeta cambia su estado; Hecha equivale a marcarla en el menubar. Cada tarea puede relacionarse con un cliente, un proyecto o un prospecto y aparece en su ficha. El límite de ocho por día se mantiene.
+
 ## Nota de voz
 
 Mantén pulsado **⌥ Espacio** en cualquier app, habla y suelta. Aparece una pastilla arriba («● Escuchando»); al soltar, DayliOS transcribe (Whisper), escribe la nota en markdown (título, listas, casillas para tareas) y la guarda en **Notas**. La notificación «Nota creada» abre la nota.
@@ -198,20 +286,20 @@ Las herramientas que borran piden `confirm: true`: sin él devuelven el impacto 
 clientes, proyectos, prospectos, pipelines y etapas aceptan id o nombre. Excepciones a propósito: claves y secretos,
 permisos de macOS y empezar o detener una grabación en vivo.
 
-| Dominio      | Herramientas                                                                                                                                                                           |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Día          | `get_day` · `get_history` · `create_task` (con `parent` crea una subtarea) · `get_task` · `update_task` · `delete_task` · `move_task` · `carry_over_pending` · `reorder_tasks` · `reorder_subtasks` · `complete_subtasks` |
-| Notas        | `list_notes` · `get_note` (con relaciones) · `create_note` · `update_note` · `delete_note` · `search_notes` · `link_notes` · `unlink_notes` · `link_note_client` · `unlink_note_client` |
-| Clientes     | `get_overview` · `list_clients` · `get_client` · `save_client` · `get_client_impact` · `delete_client` · `get_project` · `save_project` · `delete_project` · `search` · `append_note` |
-| Documentos   | `list_documents` · `read_document` · `write_document` · `rename_document` · `delete_document` (a la Papelera)                                                                         |
-| Reuniones    | `list_meetings` · `get_meeting` · `create_meeting` · `update_meeting` · `process_meeting` · `delete_meeting` · `list_action_items` · `update_action_item` · `import_recording`         |
-| Pipelines    | `list_pipelines` · `get_pipeline` · `save_pipeline` · `delete_pipeline` · `get_prospect` · `save_prospect` · `move_prospect` · `delete_prospect`                                     |
-| Contactos    | `list_contacts` · `get_contact` · `save_contact` · `delete_contact` · `tag_contact` · `set_contact_subscription` · `convert_contact` (alias `promote_contact`) · `detach_contact_prospect` |
-| Tags         | `list_tags` (`kind`: contact o task) · `rename_tag` · `set_tag_audience` · `delete_tag` · `rename_task_tag` · `delete_task_tag`                                                     |
-| Workspace    | `workspace_tree` · `workspace_list` · `workspace_search` · `workspace_read` · `workspace_write_note` · `workspace_create_folder` · `workspace_move` · `workspace_delete` (a la Papelera) · `workspace_create_board` · `board_read` · `board_edit` |
-| Email        | `list_sources` · `save_source` · `rotate_source_secret` · `delete_source` · `list_rules` · `save_rule` · `delete_rule` · `list_sequences` · `get_sequence` · `save_sequence` · `set_sequence_status` · `get_newsletter_context` · `send_newsletter` · `list_newsletters` · `get_newsletter` · `get_marketing_status` · `sync_marketing_now` |
+| Dominio    | Herramientas                                                                                                                                                                                                                                                                                                                                |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Día        | `get_day` · `get_history` · `create_task` (con `parent` crea una subtarea) · `get_task` · `update_task` · `delete_task` · `move_task` · `list_tasks` (tablero con estado y filtros) · `carry_over_pending` · `reorder_tasks` · `reorder_subtasks` · `complete_subtasks`                                                                     |
+| Notas      | `list_notes` · `get_note` (con relaciones) · `create_note` · `update_note` · `delete_note` · `search_notes` · `link_notes` · `unlink_notes` · `link_note_client` · `unlink_note_client`                                                                                                                                                     |
+| Clientes   | `get_overview` · `list_clients` · `get_client` · `save_client` · `get_client_impact` · `delete_client` · `get_project` · `save_project` · `delete_project` · `search` · `append_note`                                                                                                                                                       |
+| Documentos | `list_documents` · `read_document` · `write_document` · `rename_document` · `delete_document` (a la Papelera)                                                                                                                                                                                                                               |
+| Reuniones  | `list_meetings` · `get_meeting` · `create_meeting` · `update_meeting` · `process_meeting` · `delete_meeting` · `list_action_items` · `update_action_item` · `import_recording`                                                                                                                                                              |
+| Pipelines  | `list_pipelines` · `get_pipeline` · `get_metrics` (los números de Inicio) · `save_pipeline` · `delete_pipeline` · `get_prospect` · `save_prospect` · `move_prospect` · `delete_prospect`                                                                                                                                                    |
+| Contactos  | `list_contacts` · `get_contact` · `save_contact` · `delete_contact` · `tag_contact` · `set_contact_subscription` · `convert_contact` (alias `promote_contact`) · `detach_contact_prospect`                                                                                                                                                  |
+| Tags       | `list_tags` (`kind`: contact o task) · `rename_tag` · `set_tag_audience` · `delete_tag` · `rename_task_tag` · `delete_task_tag`                                                                                                                                                                                                             |
+| Workspace  | `workspace_tree` · `workspace_list` · `workspace_search` · `workspace_read` · `workspace_write_note` · `workspace_create_folder` · `workspace_move` · `workspace_delete` (a la Papelera) · `workspace_create_board` · `board_read` · `board_edit`                                                                                           |
+| Email      | `list_sources` · `save_source` · `rotate_source_secret` · `delete_source` · `list_rules` · `save_rule` · `delete_rule` · `list_sequences` · `get_sequence` · `save_sequence` · `set_sequence_status` · `get_newsletter_context` · `send_newsletter` · `list_newsletters` · `get_newsletter` · `get_marketing_status` · `sync_marketing_now` |
 
-`create_task` y `update_task` aceptan `description` (markdown), `tags` y `effort` (alto/medio/bajo). En el título también funcionan `#tag` y `!alto` / `!medio` / `!bajo`.
+`create_task` y `update_task` aceptan `description` (markdown), `tags` y `effort` (alto/medio/bajo). En el título también funcionan `#tag` y `!alto` / `!medio` / `!bajo`. `update_task` además acepta `status` (todo, doing, done) y `client`, `project` o `prospect` por id; cadena vacía quita la relación.
 
 Tags audiencia: solo los tags marcados como audiencia (pantalla Tags o `set_tag_audience`) tienen Segment en Resend y
 pueden recibir newsletters. Los eventos `tag.<slug>` de las secuencias funcionan con cualquier tag. Tras actualizar,

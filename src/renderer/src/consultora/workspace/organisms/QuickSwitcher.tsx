@@ -11,7 +11,6 @@ interface Result {
   hint: string
 }
 
-/** Selector rápido (⌘O), como el de Obsidian: escribir, flechas y Enter. Si no existe, crea la nota. */
 export function QuickSwitcher({ onClose }: { onClose: () => void }): React.JSX.Element {
   const { go, folderId, setError } = useWorkspace()
   const [all, setAll] = useState<WorkspaceItem[]>([])

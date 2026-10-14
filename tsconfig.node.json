@@ -5,7 +5,8 @@
     "src/main/**/*",
     "src/preload/**/*",
     "src/mcp/**/*",
-    "src/shared/**/*"
+    "src/shared/**/*",
+    "src/test/**/*"
   ],
   "compilerOptions": {
     "composite": true,

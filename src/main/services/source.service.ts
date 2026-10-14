@@ -6,13 +6,8 @@ import { transactionGuard } from '../guards/transaction.guard'
 import { AppError } from './app.error'
 import { now, requiredText } from './fields'
 
-/** Slugs que no puede usar una fuente (`manual` = alta a mano). */
 const RESERVED = ['manual']
 
-/**
- * Fuentes de leads (webhooks de entrada). Cada una tiene su URL `/in/<slug>` en el Worker y su
- * secreto. Cambiar algo avisa (`onChange`) para empujar la config al Worker.
- */
 export class SourceService {
   constructor(
     private readonly db: DataSource,
@@ -52,7 +47,6 @@ export class SourceService {
     return source
   }
 
-  /** Cambia nombre y tags por defecto. El slug (la URL) no cambia. */
   async update(slug: unknown, patch: LeadSourceInput): Promise<LeadSource> {
     const source = await transactionGuard(this.db, async (manager) => {
       const repo = manager.getRepository(LeadSourceModel)
@@ -66,7 +60,6 @@ export class SourceService {
     return source
   }
 
-  /** Genera un secreto nuevo: el anterior deja de funcionar al empujar la config. */
   async rotateSecret(slug: unknown): Promise<LeadSource> {
     const source = await transactionGuard(this.db, async (manager) => {
       const repo = manager.getRepository(LeadSourceModel)
@@ -79,11 +72,10 @@ export class SourceService {
     return source
   }
 
-  /** Borra la fuente (sus contactos se quedan; su URL deja de aceptar leads). */
   async remove(slug: unknown): Promise<void> {
     await transactionGuard(this.db, async (manager) => {
       const repo = manager.getRepository(LeadSourceModel)
-      await repo.delete({ id: (await find(repo, slug)).id })
+      await repo.softDelete({ id: (await find(repo, slug)).id })
     })
     this.onChange()
   }

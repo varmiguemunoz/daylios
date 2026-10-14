@@ -6,7 +6,18 @@ import eslintPluginReactHooks from 'eslint-plugin-react-hooks'
 import eslintPluginReactRefresh from 'eslint-plugin-react-refresh'
 
 export default defineConfig(
-  { ignores: ['**/node_modules', '**/dist', '**/out'] },
+  {
+    ignores: [
+      '**/node_modules',
+      '**/dist',
+      '**/out',
+      '.agent',
+      '.agents',
+      '.claude',
+      '.github/skills',
+      '.kiro/skills'
+    ]
+  },
   tseslint.configs.recommended,
   eslintPluginReact.configs.flat.recommended,
   eslintPluginReact.configs.flat['jsx-runtime'],
@@ -18,15 +29,20 @@ export default defineConfig(
     }
   },
   {
-    files: ['**/*.{ts,tsx}'],
+    files: ['src/renderer/**/*.{ts,tsx}'],
     plugins: {
       'react-hooks': eslintPluginReactHooks,
       'react-refresh': eslintPluginReactRefresh
     },
     rules: {
       ...eslintPluginReactHooks.configs.recommended.rules,
-      ...eslintPluginReactRefresh.configs.vite.rules
+      ...eslintPluginReactRefresh.configs.vite.rules,
+      'react-refresh/only-export-components': 'off'
     }
+  },
+  {
+    files: ['**/*.{ts,tsx}'],
+    rules: { 'react/prop-types': 'off' }
   },
   eslintConfigPrettier
 )

@@ -9,11 +9,10 @@ interface DrawerProps {
   title: string
   onClose: () => void
   children: ReactNode
-  /** Pie fijo (p. ej. «Limpiar filtros»). */
+
   footer?: ReactNode
 }
 
-/** Panel lateral derecho sobre el contenido. Esc, clic fuera o la X lo cierran. */
 export function Drawer({
   open,
   title,

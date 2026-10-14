@@ -1,17 +1,20 @@
-import { useCallback, useState } from 'react'
-import { Cog, FolderOpen, Keyboard, Mail, Mic, Waypoints } from 'lucide-react'
+import { useCallback, useRef, useState } from 'react'
+import { Cog, FolderOpen, Keyboard, Mail, Mic, UsersRound, Waypoints } from 'lucide-react'
 import type { SettingsInput } from '@shared/consultora'
 import { api, attempt, openPath, useLoad } from '../lib'
 import { Button, ErrorNote, Field, Section, Select } from '../ui'
 import { prefs } from '../workspace/lib'
+import { useScrollMemory } from '../../lib/ui-state'
 import { SettingRow, Toggle } from '../molecules/SettingRow'
 import { EmailSettings } from './SettingsEmail'
 import { HubSettings } from './SettingsHub'
+import { AccountSettings } from './SettingsAccount'
 
-type Category = 'general' | 'email' | 'hub' | 'voice' | 'shortcuts'
+export type Category = 'general' | 'account' | 'email' | 'hub' | 'voice' | 'shortcuts'
 
 const CATEGORIES: { id: Category; label: string; Icon: typeof Cog }[] = [
   { id: 'general', label: 'General', Icon: Cog },
+  { id: 'account', label: 'Cuenta y equipo', Icon: UsersRound },
   { id: 'email', label: 'Email', Icon: Mail },
   { id: 'hub', label: 'Hub de leads', Icon: Waypoints },
   { id: 'voice', label: 'Nota de voz', Icon: Mic },
@@ -19,15 +22,15 @@ const CATEGORIES: { id: Category; label: string; Icon: typeof Cog }[] = [
 ]
 const TAB_KEY = 'settings.tab'
 
-/**
- * Ajustes como los de Obsidian: categorías a la izquierda y sus opciones a la derecha.
- * Todo se guarda al momento.
- */
+export const rememberSettingsTab = (id: Category): void => prefs.set(TAB_KEY, id)
+
 export function Settings(): React.JSX.Element {
   const [tab, setTab] = useState<Category>(() => {
     const saved = prefs.get(TAB_KEY)
     return CATEGORIES.some((c) => c.id === saved) ? (saved as Category) : 'general'
   })
+  const scroller = useRef<HTMLDivElement>(null)
+  useScrollMemory(scroller, `scroll.settings:${tab}`)
   const choose = (id: Category): void => {
     setTab(id)
     prefs.set(TAB_KEY, id)
@@ -55,7 +58,7 @@ export function Settings(): React.JSX.Element {
           </button>
         ))}
       </nav>
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
         <div className="@container mx-auto max-w-[808px] px-6 pt-6 pb-16">
           <h1 className="text-[20px] font-semibold text-ob-text">
             {CATEGORIES.find((c) => c.id === tab)?.label}
@@ -63,11 +66,24 @@ export function Settings(): React.JSX.Element {
           {tab === 'general' && (
             <>
               <Connection />
+              <Section title="Interfaz">
+                <SettingRow
+                  name="Restablecer el diseño de las ventanas"
+                  description="Vuelve a abrir en Inicio, suelta el popover del menubar y olvida filtros, scroll y tamaños. No toca tus datos."
+                >
+                  <Button
+                    onClick={() => void window.api.ui.reset().then(() => window.location.reload())}
+                  >
+                    Restablecer
+                  </Button>
+                </SettingRow>
+              </Section>
               <p className="mt-8 text-[13px] text-ob-faint">
                 Las columnas del pipeline se editan en Pipeline, con «Editar pipeline».
               </p>
             </>
           )}
+          {tab === 'account' && <AccountSettings />}
           {tab === 'email' && <EmailSettings />}
           {tab === 'hub' && <HubSettings />}
           {tab === 'voice' && <Voice />}
@@ -83,10 +99,6 @@ const LANGUAGES = [
   { value: 'en', label: 'English' }
 ]
 
-/**
- * OpenAI y carpeta de clientes. La API key se escribe aquí y se guarda solo en main
- * (settings.json, permisos 600); la ventana nunca la vuelve a ver completa.
- */
 function Connection(): React.JSX.Element {
   const load = useCallback(() => api.settings(), [])
   const { data: settings } = useLoad(load)
@@ -281,7 +293,6 @@ const WORKSPACE_SHORTCUTS = [
   { value: '', label: 'Desactivado' }
 ]
 
-/** Atajo global del workspace. ⌥⌘W en muchas apps es «Cerrar todas las ventanas»: se avisa. */
 function WorkspaceKey(): React.JSX.Element {
   const load = useCallback(() => api.workspaceShortcutStatus(), [])
   const { data } = useLoad(load)
@@ -323,10 +334,6 @@ function WorkspaceKey(): React.JSX.Element {
   )
 }
 
-/**
- * Nota de voz: atajo global (mantener pulsado, hablar, soltar) → nota en markdown en Notas.
- * «Mantener pulsado» necesita el permiso de Accesibilidad; sin él funciona como interruptor.
- */
 function Voice(): React.JSX.Element {
   const load = useCallback(() => api.voiceStatus(), [])
   const { data: voice } = useLoad(load)

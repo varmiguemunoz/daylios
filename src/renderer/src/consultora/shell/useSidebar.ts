@@ -1,8 +1,8 @@
 import { useCallback, useState } from 'react'
 import { prefs } from '../workspace/lib'
 
-export type SidebarTab = 'sections' | 'files'
-/** El workspace y el resto recuerdan su pestaña por separado. */
+export type SidebarTab = 'sections' | 'files' | 'activity'
+
 export type SidebarContext = 'workspace' | 'consultora'
 
 const VISIBLE_KEY = 'shell.sidebar.visible'
@@ -18,20 +18,19 @@ export const SIDEBAR_MAX = 480
 
 const readTab = (c: SidebarContext): SidebarTab => {
   const v = prefs.get(TAB_KEY(c))
-  return v === 'sections' || v === 'files' ? v : DEFAULT_TAB[c]
+  return v === 'sections' || v === 'files' || v === 'activity' ? v : DEFAULT_TAB[c]
 }
 
 export interface Sidebar {
   visible: boolean
   toggle: () => void
   tab: SidebarTab
-  /** Elige pestaña y muestra la barra si estaba oculta. */
+
   show: (tab: SidebarTab) => void
   width: number
   setWidth: (width: number, persist?: boolean) => void
 }
 
-/** Estado de la barra lateral izquierda: visible, ancho y pestaña por contexto. Todo se recuerda. */
 export function useSidebar(context: SidebarContext): Sidebar {
   const [visible, setVisible] = useState(() => prefs.get(VISIBLE_KEY) !== '0')
   const [tabs, setTabs] = useState<Record<SidebarContext, SidebarTab>>(() => ({

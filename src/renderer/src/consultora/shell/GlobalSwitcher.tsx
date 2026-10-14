@@ -17,10 +17,6 @@ const TYPE: Record<SearchHit['type'], { label: string; Icon: typeof User }> = {
 type Choice =
   { kind: 'hit'; hit: SearchHit } | { kind: 'item'; item: WorkspaceItem } | { kind: 'all' }
 
-/**
- * Buscador global (⌘K), como el selector rápido de Obsidian: clientes, proyectos, reuniones,
- * prospectos y contactos, más los archivos de la bóveda por nombre. «Ver todos» abre los resultados.
- */
 export function GlobalSwitcher({
   go,
   onClose

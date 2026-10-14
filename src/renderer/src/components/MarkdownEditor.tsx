@@ -2,18 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { toggleTaskLine } from '@shared/consultora'
 import type { SaveStatus } from '../lib/useAutosave'
 import { useIdleExit } from '../lib/useIdleExit'
+import { useScrollMemory } from '../lib/ui-state'
 import { Markdown } from './Markdown'
 
-/** Sin escribir durante este tiempo, el editor vuelve solo a lectura. */
 export const IDLE_MS = 10000
 
-/** Marca del campo en edición (ver `fromMarkdownEditor`). */
 const EDITOR_SELECTOR = '[data-md-editor]'
 
-/**
- * true si la tecla viene del editor en modo edición: las pantallas no deben tratar ese Esc
- * (el editor lo usa para volver a lectura).
- */
 export const fromMarkdownEditor = (e: KeyboardEvent): boolean =>
   e.target instanceof HTMLElement && e.target.closest(EDITOR_SELECTOR) !== null
 
@@ -22,26 +17,23 @@ interface MarkdownEditorProps {
   onChange: (value: string) => void
   status: SaveStatus
   placeholder: string
-  /** Texto en lectura cuando no hay nada escrito. */
+
   emptyHint: string
-  /** Guarda ya lo pendiente. Se llama al volver a lectura. */
+
   onCommit?: () => Promise<void>
-  /** Empezar editando (p. ej. una nota recién creada y vacía). */
+
   autoEdit?: boolean
-  /** Carpeta de la nota en la bóveda (imágenes relativas). */
+
   imageBase?: string
-  /** Pegar o soltar imágenes: las guarda y devuelve el markdown a insertar en el cursor. */
+
   onPasteFiles?: (files: File[]) => Promise<string[]>
+
+  scrollKey?: string
 }
 
 const imagesOf = (list: FileList | null | undefined): File[] =>
   [...(list ?? [])].filter((f) => f.type.startsWith('image/'))
 
-/**
- * Markdown sin modos visibles: siempre se lee. Doble clic, ⌘E o Enter entra a editar
- * (un clic basta si está vacío). Vuelve a lectura al salir del campo, con Esc o tras
- * `IDLE_MS` sin escribir. El cursor vuelve a donde estaba.
- */
 export function MarkdownEditor({
   value,
   onChange,
@@ -51,9 +43,13 @@ export function MarkdownEditor({
   onCommit,
   autoEdit = false,
   imageBase,
-  onPasteFiles
+  onPasteFiles,
+  scrollKey
 }: MarkdownEditorProps): React.JSX.Element {
   const [editing, setEditing] = useState(autoEdit)
+  const reader = useRef<HTMLDivElement>(null)
+  // Solo en lectura: al volver de escribir, se restaura donde estaba.
+  useScrollMemory(reader, editing ? null : (scrollKey ?? null))
   const editingRef = useRef(autoEdit)
   const caret = useRef<number | null>(null)
   const area = useRef<HTMLTextAreaElement>(null)
@@ -101,7 +97,6 @@ export function MarkdownEditor({
     el.setSelectionRange(at, at)
   }, [editing])
 
-  /** Inserta en el cursor el markdown de las imágenes guardadas. */
   const insertFiles = async (files: File[], el: HTMLTextAreaElement): Promise<void> => {
     if (!onPasteFiles || !files.length) return
     const start = el.selectionStart
@@ -168,6 +163,7 @@ export function MarkdownEditor({
         />
       ) : (
         <div
+          ref={reader}
           role="textbox"
           aria-readonly="true"
           aria-label="Texto en markdown. Doble clic o Enter para editar"
@@ -201,7 +197,6 @@ export function MarkdownEditor({
   )
 }
 
-/** Solo habla cuando hay algo que decir: guardando o error. Flota abajo a la derecha. */
 function SaveLabel({ status }: { status: SaveStatus }): React.JSX.Element {
   return (
     <p

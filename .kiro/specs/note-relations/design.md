@@ -23,7 +23,11 @@ Leer las relacionadas de X = filas `note` donde `note_id = X` o `target_id = X`.
 
 ```ts
 export type NoteBrief = Pick<Note, 'id' | 'date' | 'updatedAt'> & { title: string; excerpt: string }
-export interface NoteView { note: Note; related: NoteBrief[]; clients: { id: string; name: string }[] }
+export interface NoteView {
+  note: Note
+  related: NoteBrief[]
+  clients: { id: string; name: string }[]
+}
 export interface NotesApi {
   // existentes…
   view(id: string): Promise<NoteView>

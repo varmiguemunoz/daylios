@@ -7,7 +7,6 @@ interface UndoToastProps {
   onDone: () => void
 }
 
-/** Borrar sin confirmar; deshacer durante 6 s (o ⌘Z). */
 export function UndoToast({ undo, onUndo, onDone }: UndoToastProps): React.JSX.Element | null {
   useEffect(() => {
     if (!undo) return

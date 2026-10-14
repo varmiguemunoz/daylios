@@ -14,13 +14,27 @@ Sin FK en SQLite (el borrado en cascada lo hace el servicio, dentro de la transa
 `src/shared/tasks.ts`:
 
 ```ts
-export interface Task { /* … */ parentId: string | null }
-export interface SubtaskProgress { total: number; done: number }
+export interface Task {
+  /* … */ parentId: string | null
+}
+export interface SubtaskProgress {
+  total: number
+  done: number
+}
 /** Tarea madre en listas (Hoy, Historial). */
-export interface DayTask extends Task { subtasks: SubtaskProgress }
-export interface TaskView { task: Task; parent: Pick<Task, 'id' | 'title'> | null; subtasks: Task[] }
+export interface DayTask extends Task {
+  subtasks: SubtaskProgress
+}
+export interface TaskView {
+  task: Task
+  parent: Pick<Task, 'id' | 'title'> | null
+  subtasks: Task[]
+}
 /** Lo que se borró (para deshacer). */
-export interface RemovedTask { task: Task; subtasks: Task[] }
+export interface RemovedTask {
+  task: Task
+  subtasks: Task[]
+}
 
 export interface TasksApi {
   getDay(date): Promise<DayTask[]>

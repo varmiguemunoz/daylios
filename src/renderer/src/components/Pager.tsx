@@ -6,7 +6,6 @@ interface PagerProps {
   onPage: (page: number) => void
 }
 
-/** Paginación «‹ Página n de m ›». No se muestra si hay una sola página. */
 export function Pager({ page, totalPages, onPage }: PagerProps): React.JSX.Element | null {
   if (totalPages <= 1) return null
 

@@ -11,7 +11,6 @@ const optional = (name: string, type = 'text'): TableColumnOptions => ({
 const markdown = (name: string): TableColumnOptions => ({ name, type: 'text', default: "''" })
 const stamps = [text('created_at'), text('updated_at')]
 
-/** Etapas por defecto del pipeline (se pueden cambiar en Ajustes). */
 const DEFAULT_STAGES: [name: string, kind: string][] = [
   ['Contacto inicial', 'open'],
   ['Discovery', 'open'],
@@ -21,7 +20,6 @@ const DEFAULT_STAGES: [name: string, kind: string][] = [
   ['Perdido', 'lost']
 ]
 
-/** Tablas de la Consultora: clientes, proyectos, etapas, prospectos y reuniones. */
 export class CreateConsultora1727900000000 implements MigrationInterface {
   name = 'CreateConsultora1727900000000'
 

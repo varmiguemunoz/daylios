@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "strict": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "rootDir": "../..",
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": { "@shared/*": ["../../src/shared/*"] }
+  },
+  "include": [
+    "src/**/*.ts",
+    "spikes/**/*.ts",
+    "../../src/shared/account.ts",
+    "../../src/shared/activity.ts",
+    "../../src/shared/organizations.ts",
+    "../../src/shared/edition.ts",
+    "../../src/shared/files.ts",
+    "../../src/shared/hlc.ts",
+    "../../src/shared/sync-merge.ts",
+    "../../src/shared/sync-protocol.ts"
+  ],
+  "exclude": ["src/**/*.test.ts"]
+}

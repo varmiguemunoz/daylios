@@ -21,17 +21,12 @@ import type { TagService } from './tag.service'
 
 const MAX_HTML = 500_000
 
-/**
- * Newsletter diario. Lo escribe y lo envía Claude (MCP `send_newsletter`), sin revisión, así que
- * las salvaguardas viven aquí: pausa global, uno por día local, tag con suscritos, pie de baja,
- * copia previa al dueño e historial. Lo envía Resend como Broadcast al Segment del tag.
- */
 export class NewsletterService {
   constructor(
     private readonly db: DataSource,
     private readonly gateway: GatewayProvider,
     private readonly tags: TagService,
-    /** Vacía la cola hacia Resend (el segment debe tener a todos los suscritos del tag). */
+
     private readonly flush: () => Promise<void> = async () => {}
   ) {}
 
@@ -54,7 +49,6 @@ export class NewsletterService {
     return row
   }
 
-  /** Lo que Claude necesita para escribir el de hoy sin repetirse. */
   async context(): Promise<NewsletterContext> {
     const recent = await this.db
       .getRepository(NewsletterModel)

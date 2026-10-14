@@ -5,11 +5,6 @@ import { is } from '@electron-toolkit/utils'
 const WIDTH = 280
 const HEIGHT = 64
 
-/**
- * Pastilla flotante de la nota de voz: transparente, siempre encima, sin robar el foco,
- * visible en todos los escritorios y sobre apps a pantalla completa.
- * También es la que graba el micrófono (una ventana oculta no puede mostrar nada, pero sí grabar).
- */
 export function createVoiceWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: WIDTH,
@@ -41,7 +36,6 @@ export function createVoiceWindow(): BrowserWindow {
   return win
 }
 
-/** Muestra la pastilla arriba al centro de la pantalla donde está el ratón, sin darle el foco. */
 export function showVoiceWindow(win: BrowserWindow): void {
   const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea
   win.setBounds({

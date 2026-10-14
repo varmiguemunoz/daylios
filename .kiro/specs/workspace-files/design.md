@@ -12,7 +12,7 @@ interface WorkspaceItem {
   kind: ItemKind
   /** Relativa a la bóveda, con `/`. La raíz es ''. */
   path: string
-  name: string            // sin extensión para note y board
+  name: string // sin extensión para note y board
   parentId: string | null
   size: number
   createdAt: string
@@ -20,12 +20,18 @@ interface WorkspaceItem {
 }
 
 interface FolderListing {
-  folder: WorkspaceItem | null       // null = raíz
+  folder: WorkspaceItem | null // null = raíz
   crumbs: { id: string | null; name: string }[]
   items: WorkspaceItem[]
 }
 
-interface DeleteImpact { notes: number; boards: number; files: number; folders: number; referencedBy: number }
+interface DeleteImpact {
+  notes: number
+  boards: number
+  files: number
+  folders: number
+  referencedBy: number
+}
 ```
 
 Tabla `workspace_items`: `id, kind, path unique, name, parent_id, inode, size, text, created_at,

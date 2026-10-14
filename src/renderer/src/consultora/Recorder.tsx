@@ -12,16 +12,12 @@ type State =
   | { name: 'recording'; meeting: Meeting; capture: Capture; startedAt: number }
   | { name: 'stopping'; meeting: Meeting; seconds: number }
 
-/**
- * Botón «Grabar» de la franja superior. Grabando: REC con cronómetro y «Detener».
- * Al detener pide título, participantes y asociación (sugerida por el título) y lanza el procesado.
- */
 export function Recorder({
   go,
   onStateChange
 }: {
   go: Go
-  /** Avisa del estado (el workspace muestra «REC» y la ventana sabe cuándo mostrar la hoja de guardado). */
+
   onStateChange?: (state: State['name']) => void
 }): React.JSX.Element {
   const [state, setState] = useState<State>({ name: 'idle' })
@@ -42,10 +38,6 @@ export function Recorder({
     return () => window.clearInterval(timer)
   }, [state.name])
 
-  /**
-   * 1. Micrófono  2. Pantalla + micro  3. Crear la reunión  4. Grabar.
-   * Si falla 2 no se crea nada (no quedan reuniones rotas) y se muestra cómo dar el permiso.
-   */
   const start = async (): Promise<void> => {
     setError(null)
     setWarning(null)
@@ -158,10 +150,6 @@ export function Recorder({
   )
 }
 
-/**
- * Falta un permiso de macOS. Pasos: activar el interruptor en Ajustes del Sistema y reiniciar
- * (macOS solo aplica la Grabación de pantalla después de reiniciar la app).
- */
 function PermissionHelp({
   kind,
   onClose
@@ -207,7 +195,6 @@ function PermissionHelp({
   )
 }
 
-/** Hoja al detener: título, participantes, asociación e idioma. Guardar lanza transcripción + resumen. */
 function StopSheet({
   meeting,
   seconds,
@@ -230,7 +217,6 @@ function StopSheet({
   )
 }
 
-/** 754 → "12:34" */
 const clock = (seconds: number): string => {
   const h = Math.floor(seconds / 3600)
   const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0')

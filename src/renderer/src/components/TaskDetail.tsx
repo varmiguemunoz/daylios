@@ -15,24 +15,19 @@ import { TaskDetailsDrawer } from './TaskDetailsDrawer'
 interface TaskDetailProps {
   task: Task
   today: DayKey
-  /** Nombre de la vista a la que vuelve ("Hoy", "Historial"). */
+
   backLabel: string
   onBack: () => void
   onRemove: (task: Task) => void
-  /** Madre, si esta tarea es una subtarea. */
+
   parent?: Pick<Task, 'id' | 'title'>
-  /** Sube cuando el día se recarga (p. ej. tras deshacer): refresca las subtareas. */
+
   revision: number
-  /** Abre una subtarea. `self` = esta tarea al día (para volver sin perder cambios). */
+
   onOpenSubtask: (task: Task, self: Task) => void
   onRemoveSubtask: (task: Task) => void
 }
 
-/**
- * Detalle de una tarea, sin ruido: título, fecha, una línea de resumen y la descripción.
- * Esfuerzo, tags y subtareas viven en el panel «Detalles» (clic en el resumen o ⌘I).
- * El título se guarda al salir del campo; la descripción, sola mientras escribes.
- */
 export function TaskDetail({
   task: initial,
   today,
@@ -95,7 +90,6 @@ export function TaskDetail({
     }
   }
 
-  /** Guarda la descripción y cierra el panel antes de ir a la subtarea. */
   const openSubtask = async (sub: Task): Promise<void> => {
     await flush()
     setPanel(false)

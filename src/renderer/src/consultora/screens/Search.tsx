@@ -13,7 +13,6 @@ const TYPE: Record<SearchHit['type'], string> = {
 
 const target = (hit: SearchHit): Screen => ({ name: hit.type, id: hit.id }) as Screen
 
-/** Resultados de búsqueda en clientes, proyectos, reuniones (con transcripción) y prospectos. */
 export function Search({ query, go }: { query: string; go: Go }): React.JSX.Element {
   const load = useCallback(() => api.search(query), [query])
   const { data, error } = useLoad(load)

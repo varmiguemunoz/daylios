@@ -9,7 +9,6 @@ import { HubSync } from './services/hub-sync'
 import type { GatewayProvider } from './services/resend.provider'
 import type { HubProvider } from './services/hub.client'
 
-/** Servicios del email marketing, creados una sola vez. Los usan IPC (ventana) y Express (Claude). */
 export function createMarketing(
   db: DataSource,
   gateway: GatewayProvider,
@@ -23,7 +22,6 @@ export function createMarketing(
   }
   sync.hubConfigured = () => hubSync.configured()
 
-  /** Fuentes o reglas cambiaron: empujar la config al Worker pronto. */
   const configChanged = (): void => {
     hubSync.invalidate()
     sync.kick()
@@ -65,7 +63,7 @@ export interface Marketing {
   sync: MarketingSync
   hubSync: HubSync
   gateway: GatewayProvider
-  /** Llamar cuando cambian fuentes o reglas. */
+
   configChanged: () => void
   testResend(): Promise<{ ok: boolean; message: string }>
 }

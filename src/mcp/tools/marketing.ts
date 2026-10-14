@@ -2,7 +2,6 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import { api, tool, query, enc } from '../client'
 
-/** Herramientas MCP: marketing. */
 export function register(server: McpServer): void {
   const ruleAction = z.discriminatedUnion('type', [
     z.object({ type: z.literal('add_tag'), tag: z.string().min(1) }),
@@ -106,7 +105,9 @@ export function register(server: McpServer): void {
               wait: z
                 .string()
                 .optional()
-                .describe('Espera antes de este email: "1 day", "3 hours", "30 minutes", "2 weeks"'),
+                .describe(
+                  'Espera antes de este email: "1 day", "3 hours", "30 minutes", "2 weeks"'
+                ),
               subject: z.string().min(1).max(200),
               html: z.string().min(1).describe('HTML del email')
             })
@@ -247,7 +248,10 @@ export function register(server: McpServer): void {
       inputSchema: {
         slug: z.string().optional().describe('Para editar'),
         name: z.string().min(1).max(80).optional(),
-        new_slug: z.string().optional().describe('Solo al crear: slug de la URL (por defecto, del nombre)'),
+        new_slug: z
+          .string()
+          .optional()
+          .describe('Solo al crear: slug de la URL (por defecto, del nombre)'),
         defaultTags: z.array(z.string()).max(20).optional()
       }
     },
@@ -262,7 +266,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     'rotate_source_secret',
     {
-      description: 'Genera un secreto nuevo para una fuente: el anterior deja de funcionar. El nuevo se copia desde la app.',
+      description:
+        'Genera un secreto nuevo para una fuente: el anterior deja de funcionar. El nuevo se copia desde la app.',
       inputSchema: { slug: z.string() }
     },
     ({ slug }) => tool(() => api('POST', `/marketing/sources/${enc(slug)}/rotate`))
@@ -271,11 +276,17 @@ export function register(server: McpServer): void {
   server.registerTool(
     'delete_source',
     {
-      description: 'Borra una fuente de leads (su URL deja de aceptar leads). Sin confirm no borra.',
+      description:
+        'Borra una fuente de leads (su URL deja de aceptar leads). Sin confirm no borra.',
       inputSchema: { slug: z.string(), confirm: z.literal(true).optional() }
     },
     ({ slug, confirm }) =>
-      tool(() => api('DELETE', `/marketing/sources/${enc(slug)}${query({ confirm: confirm ? 1 : undefined })}`))
+      tool(() =>
+        api(
+          'DELETE',
+          `/marketing/sources/${enc(slug)}${query({ confirm: confirm ? 1 : undefined })}`
+        )
+      )
   )
 
   server.registerTool(
@@ -299,7 +310,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     'get_marketing_status',
     {
-      description: 'Estado de la sincronización: Resend y hub configurados, trabajos pendientes y con error, última descarga.',
+      description:
+        'Estado de la sincronización: Resend y hub configurados, trabajos pendientes y con error, última descarga.',
       inputSchema: {}
     },
     () => tool(() => api('GET', '/marketing/status'))
@@ -308,7 +320,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     'sync_marketing_now',
     {
-      description: 'Descarga ya los leads del hub y vacía la cola hacia Resend. Devuelve el estado.',
+      description:
+        'Descarga ya los leads del hub y vacía la cola hacia Resend. Devuelve el estado.',
       inputSchema: {}
     },
     () => tool(() => api('POST', '/marketing/sync'))

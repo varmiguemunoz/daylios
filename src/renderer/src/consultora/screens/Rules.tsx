@@ -15,10 +15,6 @@ const ACTION_LABEL: Record<RuleAction['type'], string> = {
   promote: 'Pasar a pipeline'
 }
 
-/**
- * Reglas por tag: «cuando entra el tag X → acciones». Corren en el hub al recibir un lead y en
- * la app al etiquetar a mano o desde Claude. Se leen como frases; editar abre la regla en su sitio.
- */
 export function Rules(): React.JSX.Element {
   const load = useCallback(() => marketing.listRules(), [])
   const { data: rules, error: loadError } = useLoad(load)
@@ -190,7 +186,6 @@ function RuleCard({
   )
 }
 
-/** Editor en el sitio: nombre, tag disparador y lista de acciones. */
 function RuleEditor({
   rule,
   tags,

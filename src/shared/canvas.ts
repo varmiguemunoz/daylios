@@ -1,16 +1,9 @@
-/**
- * Boards en formato JSON Canvas 1.0 (el de Obsidian, https://jsoncanvas.org).
- * Se conservan los campos que no conocemos, así un archivo editado en Obsidian no pierde nada.
- * Extensión propia que Obsidian ignora: `daylios` en los nodos de texto.
- */
-
 export type CanvasColor = '1' | '2' | '3' | '4' | '5' | '6' | string
 export type NodeType = 'text' | 'file' | 'link' | 'group'
 export type ShapeKind = 'rect' | 'ellipse' | 'diamond'
 export type Side = 'top' | 'right' | 'bottom' | 'left'
 
 export interface DayliosNodeMeta {
-  /** sticky = nota adhesiva; text = bloque sin fondo; shape = forma con texto. */
   kind: 'sticky' | 'text' | 'shape'
   shape?: ShapeKind
 }
@@ -37,7 +30,7 @@ export interface CanvasEdge {
   toNode: string
   fromSide?: Side
   toSide?: Side
-  /** Por defecto `none` en el origen y `arrow` en el destino. */
+
   fromEnd?: 'none' | 'arrow'
   toEnd?: 'none' | 'arrow'
   color?: CanvasColor
@@ -56,7 +49,6 @@ export const EMPTY_CANVAS: CanvasFile = { nodes: [], edges: [] }
 const NODE_TYPES: NodeType[] = ['text', 'file', 'link', 'group']
 const num = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
 
-/** Lee y valida. Lanza Error con un mensaje claro si no es un canvas válido. Vacío = canvas vacío. */
 export function parseCanvas(json: string): CanvasFile {
   if (!json.trim()) return { nodes: [], edges: [] }
   let data: unknown
@@ -85,19 +77,16 @@ export function parseCanvas(json: string): CanvasFile {
   return { ...raw, nodes: outNodes, edges: outEdges }
 }
 
-/** JSON con tabuladores, como lo escribe Obsidian: diffs limpios. */
 export function serializeCanvas(canvas: CanvasFile): string {
   return JSON.stringify(canvas, null, '\t')
 }
 
-/** Rutas de la bóveda que el board usa (nodos `file`). */
 export function canvasFileRefs(canvas: CanvasFile): string[] {
   return [
     ...new Set(canvas.nodes.filter((n) => n.type === 'file' && n.file).map((n) => n.file as string))
   ]
 }
 
-/** Actualiza las rutas de los nodos `file` tras mover elementos (ruta vieja → nueva). */
 export function rewriteCanvasFiles(canvas: CanvasFile, moved: Map<string, string>): CanvasFile {
   let changed = false
   const nodes = canvas.nodes.map((n) => {
@@ -112,7 +101,7 @@ export function rewriteCanvasFiles(canvas: CanvasFile, moved: Map<string, string
 // ---- edición por operaciones (Claude edita un board sin reescribirlo entero) ----
 
 let seq = 0
-/** Id corto como los de Obsidian (16 hex). */
+
 export const canvasId = (): string =>
   (Date.now().toString(16) + (seq++).toString(16) + Math.random().toString(16).slice(2)).slice(
     0,
@@ -169,7 +158,6 @@ const SIZE: Record<NodeKind, [number, number]> = {
   group: [600, 400]
 }
 
-/** Aplica operaciones sobre una copia. Lanza Error con mensaje claro si una no es válida. */
 export function applyBoardOps(
   canvas: CanvasFile,
   ops: BoardOp[]
@@ -279,7 +267,6 @@ export function applyBoardOps(
   return { canvas: { ...canvas, nodes, edges }, created }
 }
 
-/** Vista compacta para leer un board (Claude). */
 export function summarizeCanvas(canvas: CanvasFile): {
   nodes: {
     id: string

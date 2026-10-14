@@ -5,15 +5,14 @@ import { vaultUrl } from '@shared/workspace'
 
 interface MarkdownProps {
   text: string
-  /** Solo marcas en línea (negrita, cursiva, tachado, código, enlaces). Para títulos de tarea. */
+
   inline?: boolean
-  /** Si se pasa, las casillas `- [ ]` se pueden marcar: recibe la línea (1-based) de la casilla. */
+
   onToggleTask?: (line: number) => void
-  /** Carpeta de la nota en la bóveda: las imágenes relativas se cargan desde ahí (`vault://`). */
+
   imageBase?: string
 }
 
-/** Enlaces: se abren en el navegador del sistema (ver window.ts) y no disparan el clic de la fila. */
 const link: Components['a'] = ({ href, children }) => (
   <a href={href} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
     {children}
@@ -22,7 +21,6 @@ const link: Components['a'] = ({ href, children }) => (
 
 const BLOCK: Components = { a: link }
 
-/** `![](../Adjuntos/a.png)` → `vault://path/Adjuntos/a.png`. Externas y `data:` quedan igual. */
 function vaultImage(base: string): Components['img'] {
   return function VaultImage({ src, alt }) {
     const raw = typeof src === 'string' ? src : ''
@@ -33,7 +31,6 @@ function vaultImage(base: string): Components['img'] {
   }
 }
 
-/** Casillas marcables: el clic en la casilla avisa con la línea del markdown donde está. */
 function taskComponents(onToggleTask: (line: number) => void): Components {
   return {
     a: link,
@@ -59,15 +56,9 @@ function taskComponents(onToggleTask: (line: number) => void): Components {
   }
 }
 
-/** En modo inline el párrafo no crea un bloque: el texto queda dentro de la línea. */
 const INLINE: Components = { a: link, p: ({ children }) => <>{children}</> }
 const INLINE_TAGS = ['p', 'strong', 'em', 'del', 'code', 'a']
 
-/**
- * Markdown (GFM: tablas, listas de tareas, tachado, autoenlaces) a React.
- * No interpreta HTML crudo: lo que escribas se muestra, no se ejecuta.
- * Los estilos viven en main.css (`.md` y `.md-inline`).
- */
 export function Markdown({
   text,
   inline = false,

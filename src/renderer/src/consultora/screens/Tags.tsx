@@ -20,10 +20,6 @@ import { TagPill } from '../marketing-ui'
 const marketing = window.api.marketing
 const tasks = window.api.tasks
 
-/**
- * Todos los tags: de contactos (con audiencia = Segment de Resend) y de tareas.
- * Renombrar en el sitio; borrar en dos pasos con su consecuencia escrita.
- */
 export function Tags(): React.JSX.Element {
   const [query, setQuery] = useState('')
   const [error, setError] = useState<string | null>(null)

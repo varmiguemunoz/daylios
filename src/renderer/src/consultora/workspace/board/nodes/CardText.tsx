@@ -3,13 +3,10 @@ import { useStore } from '@xyflow/react'
 import { Markdown } from '../../../../components/Markdown'
 import { useBoard } from '../context'
 
-/** Por debajo de este zoom el texto no se lee: se pintan barras grises, como Obsidian. */
 export const DETAIL_ZOOM = 0.45
 
-/** true si el zoom está por debajo del umbral (solo vuelve a pintar al cruzarlo). */
 export const useZoomedOut = (): boolean => useStore((s) => s.transform[2] < DETAIL_ZOOM)
 
-/** Barras en lugar de texto: tantas como líneas, a lo ancho que tenían. */
 export const TextPlaceholder = memo(function TextPlaceholder({
   text
 }: {
@@ -32,10 +29,6 @@ export const TextPlaceholder = memo(function TextPlaceholder({
   )
 })
 
-/**
- * Texto de un nodo: se lee como markdown; doble clic edita en el sitio. Salir del campo o Esc guarda.
- * `nodrag nowheel`: dentro del campo se selecciona texto y se hace scroll sin mover el lienzo.
- */
 export const CardText = memo(function CardText({
   id,
   text,

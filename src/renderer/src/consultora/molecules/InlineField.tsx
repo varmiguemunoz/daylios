@@ -7,12 +7,11 @@ interface InlineFieldProps {
   value: string | null
   placeholder: string
   onSave: (value: string) => void
-  /** Tipo del campo al editar (teclado y validación nativa). */
+
   type?: 'text' | 'email' | 'tel' | 'url'
   icon?: LucideIcon
 }
 
-/** Propiedad editable en el sitio: clic edita, Enter o salir guarda, Esc cancela. */
 export function InlineField({
   label,
   value,

@@ -1,9 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
 
-/**
- * Temporizador de inactividad: mientras `active`, cada `poke()` reinicia la cuenta y, si pasan `ms`
- * sin otro `poke()`, llama `onIdle`. Sin `poke()` no corre (entrar a editar sin escribir no expulsa).
- */
 export function useIdleExit(active: boolean, ms: number, onIdle: () => void): { poke: () => void } {
   const timer = useRef<number | null>(null)
   const latest = useRef(onIdle)

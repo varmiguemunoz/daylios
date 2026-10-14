@@ -7,13 +7,12 @@ import { Chips } from '../marketing-ui'
 interface ConvertToProspectModalProps {
   open: boolean
   contactId: string
-  /** Nombre propuesto para el prospecto (cliente, empresa del formulario o el contacto). */
+
   defaultCompany: string
   onClose: () => void
   onDone: (prospectId: string) => void
 }
 
-/** «Convertir en prospecto»: pipeline, etapa abierta, nombre y valor. */
 export function ConvertToProspectModal({
   open,
   contactId,

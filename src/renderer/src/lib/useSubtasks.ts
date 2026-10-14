@@ -4,24 +4,18 @@ import { errorMessage, tasksApi } from './api'
 
 export interface SubtasksState {
   subtasks: Task[]
-  /** Ya se leyeron al menos una vez (para no pintar «vacío» mientras carga). */
+
   loaded: boolean
   error: string | null
   add: (title: string) => Promise<boolean>
   toggle: (sub: Task) => void
-  /** Mueve `id` a la posición `index`. */
+
   reorder: (id: string, index: number) => void
   completeAll: () => void
-  /** La quita de la lista local; el borrado con Deshacer lo hace `useDay`. */
+
   drop: (sub: Task) => void
 }
 
-/**
- * Subtareas de una madre, con cambios optimistas: se pinta primero y, si main falla, se recargan.
- * `parentId` null = no carga nada (una subtarea no tiene subtareas).
- * `revision` sube cuando el día se recarga (deshacer, Claude): vuelve a leer.
- * `onChange` avisa al leer y tras cada cambio con la lista (la madre recalcula su «2/5»).
- */
 export function useSubtasks(
   parentId: string | null,
   revision: number,
@@ -54,7 +48,6 @@ export function useSubtasks(
     void load()
   }, [load, revision])
 
-  /** Aplica en local, avisa y llama a main; si falla, recarga. */
   const apply = (next: Task[], call: () => Promise<unknown>): void => {
     setSubtasks(next)
     changed.current?.(next)

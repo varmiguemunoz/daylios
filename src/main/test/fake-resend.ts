@@ -8,7 +8,6 @@ import {
   type ResendGateway
 } from '@shared/resend-gateway'
 
-/** Resend en memoria para tests. `failNext` hace fallar la próxima llamada con ese código. */
 export class FakeResend implements ResendGateway {
   contacts = new Map<
     string,

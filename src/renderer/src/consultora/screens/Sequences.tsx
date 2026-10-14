@@ -5,10 +5,6 @@ import { Button, Empty, ErrorNote, List, Page, Pill, Row } from '../ui'
 
 const marketing = window.api.marketing
 
-/**
- * Secuencias = Automations de Resend. Corren en Resend aunque el Mac esté apagado.
- * Aquí se ven y se activan o pausan; se crean en el dashboard de Resend o pidiéndoselo a Claude.
- */
 export function Sequences({ go }: { go: Go }): React.JSX.Element {
   const load = useCallback(() => marketing.listSequences(), [])
   const { data, error: loadError, reload } = useLoad(load)

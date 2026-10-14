@@ -4,7 +4,6 @@ import type { RecordingService } from '../services/recording.service'
 import { meetingView } from '../views/consultora.view'
 import { flag, int, text } from './params'
 
-/** Reuniones y action items. */
 export class MeetingController {
   constructor(
     private readonly service: MeetingService,
@@ -25,7 +24,6 @@ export class MeetingController {
     )
   }
 
-  /** `?transcript=1` incluye la transcripción completa. */
   get = async (req: Request, res: Response): Promise<void> => {
     res.json(meetingView(await this.service.get(String(req.params.id)), flag(req.query.transcript)))
   }
@@ -45,7 +43,6 @@ export class MeetingController {
     )
   }
 
-  /** Sin `?confirm=1` devuelve la reunión y no borra. La grabación se queda en la carpeta. */
   remove = async (req: Request, res: Response): Promise<void> => {
     const id = String(req.params.id)
     if (req.query.confirm !== '1') {
@@ -56,12 +53,10 @@ export class MeetingController {
     res.json({ ok: true })
   }
 
-  /** Transcribe (si falta) y resume en segundo plano. Devuelve la reunión al momento. */
   process = async (req: Request, res: Response): Promise<void> => {
     res.json(meetingView(await this.recordings.process(String(req.params.id))))
   }
 
-  /** `{ path, language: 'es'|'en', title?, participants?, clientId?, projectId?, prospectId? }` */
   importRecording = async (req: Request, res: Response): Promise<void> => {
     const body = req.body ?? {}
     const meeting = await this.recordings.import(String(body.path ?? ''), {

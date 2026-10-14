@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react'
 import type { ContactsPage } from '@shared/consultora'
 import { contactLabel } from '@shared/marketing'
 import { api, attempt, useLoad, type Go } from '../lib'
+import { useUiState } from '../../lib/ui-state'
 import { Button, Drawer, Empty, ErrorNote, FilterButton, INPUT, Page, SearchField } from '../ui'
 import { Pager } from '../../components/Pager'
 import { ContactStatusPill, TagList } from '../marketing-ui'
@@ -13,6 +14,7 @@ import {
   activeContactFilters,
   type ContactFilterState
 } from '../organisms/ContactFilters'
+import { freshClass, useFresh } from '../organisms/live/RemoteChanges'
 
 type ContactRow = ContactsPage['contacts'][number]
 
@@ -42,15 +44,21 @@ const COLUMNS: Column<ContactRow>[] = [
   }
 ]
 
-/**
- * Base de contactos: personas de clientes y prospectos, y leads de email.
- * En pantalla solo el buscador y la lista; los filtros viven en el panel derecho.
- */
 export function Contacts({ go }: { go: Go }): React.JSX.Element {
-  const [query, setQuery] = useState('')
-  const [filters, setFilters] = useState<ContactFilterState>(EMPTY_CONTACT_FILTERS)
+  const fresh = useFresh('contacts')
+  // Búsqueda, filtros y página se recuerdan (ui-state.json).
+  const [query, setQuery] = useUiState('contacts.query', '', (v) => typeof v === 'string')
+  const [filters, setFilters] = useUiState<ContactFilterState>(
+    'contacts.filters',
+    EMPTY_CONTACT_FILTERS,
+    (v) => !!v && typeof v === 'object' && Array.isArray((v as ContactFilterState).tags)
+  )
   const [panel, setPanel] = useState(false)
-  const [page, setPage] = useState(1)
+  const [page, setPage] = useUiState(
+    'contacts.page',
+    1,
+    (v) => Number.isInteger(v) && (v as number) > 0
+  )
   const [draft, setDraft] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -80,7 +88,6 @@ export function Contacts({ go }: { go: Go }): React.JSX.Element {
     setPage(1)
   }
 
-  /** Una sola caja: si parece un email, crea con email; si no, con nombre. */
   const create = async (): Promise<void> => {
     const value = draft?.trim()
     if (!value) return setDraft(null)
@@ -167,6 +174,7 @@ export function Contacts({ go }: { go: Go }): React.JSX.Element {
               rows={data.contacts}
               rowKey={(c) => c.id}
               onOpen={(c) => go({ name: 'contact', id: c.id })}
+              rowClass={(c) => freshClass(fresh(c.id))}
             />
             <div className="mt-2">
               <Pager page={data.page} totalPages={data.totalPages} onPage={setPage} />

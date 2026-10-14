@@ -6,7 +6,6 @@ import { RibbonButton } from '../../shell/RibbonButton'
 
 const STEPS = [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4]
 
-/** Imagen de la bóveda: ajustada al panel; ⌘ + rueda o los controles acercan. */
 export function ImagePane({ id, onGone }: { id: string; onGone: () => void }): React.JSX.Element {
   const load = useCallback(() => ws.get(id), [id])
   const { data: item, error } = useLoad(load)

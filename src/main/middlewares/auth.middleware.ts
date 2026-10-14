@@ -2,7 +2,6 @@ import { timingSafeEqual } from 'crypto'
 import type { RequestHandler } from 'express'
 import { errorView } from '../views/task.view'
 
-/** Exige `Authorization: Bearer <token>`. Comparación en tiempo constante. */
 export function requireToken(token: string): RequestHandler {
   const expected = Buffer.from(`Bearer ${token}`)
   return (req, res, next) => {

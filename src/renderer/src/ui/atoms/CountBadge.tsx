@@ -1,4 +1,3 @@
-/** Número pequeño en pill (filtros activos, conteo de columna). */
 export function CountBadge({
   count,
   tone = 'neutral'

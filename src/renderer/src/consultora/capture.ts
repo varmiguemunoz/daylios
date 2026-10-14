@@ -1,27 +1,14 @@
-/**
- * Captura de reunión en el renderer, en dos pasos:
- *
- * 1. acquire(): pide pantalla + audio del sistema (lo da main con 'loopback') y micrófono.
- *    Con tiempo máximo: si macOS no responde, falla con un mensaje claro en vez de colgarse.
- * 2. record(): mezcla sistema + micro en una pista y graba. MediaRecorder entrega un trozo
- *    WebM cada 5 s y `onChunk` lo manda a main, que lo escribe en disco.
- *
- * La reunión se crea entre los dos pasos: solo cuando ya hay algo que grabar.
- */
-
 export interface Streams {
   display: MediaStream
   mic: MediaStream | null
 }
 
 export interface Capture {
-  /** Para la grabación y espera a que el último trozo llegue a main. */
   stop: () => Promise<void>
   hasSystemAudio: boolean
   hasMic: boolean
 }
 
-/** Error de permisos: la ventana muestra cómo darlos. */
 export class PermissionError extends Error {}
 
 const TIMEOUT_MS = 15_000
@@ -74,7 +61,6 @@ export async function acquire(): Promise<Streams> {
   return { display, mic }
 }
 
-/** Corta las pistas (apaga el indicador de grabación de macOS). */
 export function release(streams: Streams): void {
   streams.display.getTracks().forEach((t) => t.stop())
   streams.mic?.getTracks().forEach((t) => t.stop())
@@ -83,7 +69,7 @@ export function release(streams: Streams): void {
 export function record(
   streams: Streams,
   onChunk: (data: Uint8Array) => Promise<void>,
-  /** El usuario dejó de compartir pantalla desde macOS. */
+
   onEnded: () => void
 ): Capture {
   const systemAudio = streams.display.getAudioTracks()

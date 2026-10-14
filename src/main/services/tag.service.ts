@@ -8,15 +8,12 @@ import { transactionGuard } from '../guards/transaction.guard'
 import { AppError } from './app.error'
 import { now, requiredText } from './fields'
 
-/** Tags de contactos. El slug es la clave; el nombre es lo que se ve. */
 export class TagService {
-  /** `configChanged`: avisa al hub (los tags audiencia y las fuentes van en su config). */
   constructor(
     private readonly db: DataSource,
     private readonly configChanged: () => void = () => {}
   ) {}
 
-  /** Todos los tags con cuántos contactos y suscritos tienen. */
   async list(): Promise<TagSummary[]> {
     const tags = await this.db.getRepository(TagModel).find({ order: { name: 'ASC' } })
     const counts: { tagId: string; contacts: number; subscribed: number }[] = await this.db
@@ -34,7 +31,6 @@ export class TagService {
     })
   }
 
-  /** Cambia el nombre visible (el slug no cambia: secuencias y segments dependen de él). */
   rename(slug: unknown, name: unknown): Promise<Tag> {
     return transactionGuard(this.db, async (manager) => {
       const repo = manager.getRepository(TagModel)
@@ -45,15 +41,10 @@ export class TagService {
     })
   }
 
-  /** Dónde se usa: contactos, reglas (disparador o acción) y fuentes (tags por defecto). */
   async usage(slug: unknown): Promise<TagUsage> {
     return usageOf(this.db.manager, await findTag(this.db.manager, slug))
   }
 
-  /**
-   * Audiencia = tiene Segment en Resend. Al marcarla se sincronizan sus suscritos (crea el Segment);
-   * al quitarla se borra el Segment.
-   */
   async setAudience(slug: unknown, audience: unknown): Promise<Tag> {
     const on = audience === true
     const tag = await transactionGuard(this.db, async (manager) => {
@@ -61,7 +52,8 @@ export class TagService {
       if (tag.audience === on) return tag
       tag.audience = on
       if (on) {
-        for (const id of await subscribedWith(manager, tag.id)) await enqueueContactSync(manager, id)
+        for (const id of await subscribedWith(manager, tag.id))
+          await enqueueContactSync(manager, id)
       } else if (tag.segmentId) {
         await enqueueSegmentDelete(manager, tag.slug, tag.segmentId)
         tag.segmentId = null
@@ -72,10 +64,6 @@ export class TagService {
     return tag
   }
 
-  /**
-   * Quita el tag de todos los contactos y de las fuentes, borra su Segment y el tag.
-   * Es limpieza: no dispara reglas. Falla si lo usa una regla activa.
-   */
   async remove(slug: unknown): Promise<void> {
     await transactionGuard(this.db, async (manager) => {
       const tag = await findTag(manager, slug)
@@ -96,14 +84,15 @@ export class TagService {
       }
       await manager.getRepository(ContactTagModel).delete({ tagId: tag.id })
       if (tag.segmentId) await enqueueSegmentDelete(manager, tag.slug, tag.segmentId)
-      await manager.getRepository(TagModel).delete({ id: tag.id })
+      await manager.getRepository(TagModel).softDelete({ id: tag.id })
     })
     this.configChanged()
   }
 }
 
 async function findTag(manager: EntityManager, slug: unknown): Promise<Tag> {
-  const tag = typeof slug === 'string' ? await manager.getRepository(TagModel).findOneBy({ slug }) : null
+  const tag =
+    typeof slug === 'string' ? await manager.getRepository(TagModel).findOneBy({ slug }) : null
   if (!tag) throw new AppError('not_found', 'No existe ese tag.')
   return tag
 }
@@ -125,7 +114,6 @@ async function usageOf(manager: EntityManager, tag: Tag): Promise<TagUsage> {
   }
 }
 
-/** Contactos suscritos con ese tag. */
 async function subscribedWith(manager: EntityManager, tagId: string): Promise<string[]> {
   const links = await manager.getRepository(ContactTagModel).findBy({ tagId })
   if (!links.length) return []
@@ -135,10 +123,6 @@ async function subscribedWith(manager: EntityManager, tagId: string): Promise<st
   return contacts.map((c) => c.id)
 }
 
-/**
- * Devuelve los tags pedidos (por nombre o slug), creando los que falten.
- * Nombre de un tag nuevo = el texto tal cual lo escribieron.
- */
 export async function ensureTags(manager: EntityManager, values: string[]): Promise<Tag[]> {
   const wanted = new Map<string, string>()
   for (const value of values) {
@@ -153,13 +137,19 @@ export async function ensureTags(manager: EntityManager, values: string[]): Prom
   const created: Tag[] = []
   for (const [slug, name] of wanted) {
     if (existing.some((t) => t.slug === slug)) continue
-    created.push({ id: randomUUID(), slug, name, segmentId: null, audience: false, createdAt: now() })
+    created.push({
+      id: randomUUID(),
+      slug,
+      name,
+      segmentId: null,
+      audience: false,
+      createdAt: now()
+    })
   }
   if (created.length) await repo.insert(created)
   return [...existing, ...created]
 }
 
-/** Tags de varios contactos: contactId → tags (ordenados por nombre). */
 export async function tagsByContact(
   manager: EntityManager,
   contactIds: string[]

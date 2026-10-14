@@ -7,10 +7,6 @@ import { Button, ErrorNote, Field, Section } from '../ui'
 const marketing = window.api.marketing
 const input = 'bg-transparent text-[14px] text-ob-text outline-none placeholder:text-ob-faint'
 
-/**
- * Ajustes del email marketing: Resend (API key y remitente) y estado de la cola.
- * Los secretos se guardan solo en main (settings.json, permisos 600) y aquí solo se ve su pista.
- */
 export function EmailSettings(): React.JSX.Element {
   const load = useCallback(() => api.settings(), [])
   const { data: settings } = useLoad(load)

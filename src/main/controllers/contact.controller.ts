@@ -3,10 +3,6 @@ import type { ContactStatus } from '@shared/marketing'
 import type { ContactService } from '../services/contact.service'
 import { flag, int, text } from './params'
 
-/**
- * Contactos. Filtros de lista: `client`, `prospect`, `q`, `tag`, `tags` (coma), `inPipeline` (1/0),
- * `status`, `source`, `page`, `pageSize`.
- */
 export class ContactController {
   constructor(private readonly service: ContactService) {}
 
@@ -39,7 +35,6 @@ export class ContactController {
     res.json(await this.service.update(String(req.params.id), req.body ?? {}))
   }
 
-  /** Sin `?confirm=1` devuelve el contacto y no borra. */
   remove = async (req: Request, res: Response): Promise<void> => {
     const id = String(req.params.id)
     if (req.query.confirm !== '1') {
@@ -50,7 +45,6 @@ export class ContactController {
     res.json({ ok: true })
   }
 
-  /** Body: `{ pipeline?, stage?, company?, valueUsd? }`. */
   convert = async (req: Request, res: Response): Promise<void> => {
     res.json(await this.service.convert(String(req.params.id), req.body ?? {}))
   }
@@ -67,18 +61,15 @@ export class ContactController {
     res.json(await this.service.unsubscribe(String(req.params.id)))
   }
 
-  /** Body: `{ add?: string[], remove?: string[] }`. */
   tag = async (req: Request, res: Response): Promise<void> => {
     res.json(await this.service.tag(String(req.params.id), req.body ?? {}))
   }
 
-  /** Body: `{ stage?: string }`. */
   promote = async (req: Request, res: Response): Promise<void> => {
     res.json(await this.service.promote(String(req.params.id), req.body?.stage))
   }
 }
 
-/** `a,b` o `?tags=a&tags=b` → lista. */
 const list = (v: unknown): string[] | undefined => {
   const raw = Array.isArray(v) ? v : typeof v === 'string' ? v.split(',') : []
   const out = raw.map((x) => String(x).trim()).filter(Boolean)

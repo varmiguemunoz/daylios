@@ -1,21 +1,12 @@
-import { useState, type ReactNode } from 'react'
+import { useContext, useRef, useState, type ReactNode } from 'react'
 import { Pencil } from 'lucide-react'
 import { toggleTaskLine, type MeetingStatus, type ProjectStatus } from '@shared/consultora'
 import { Markdown } from '../components/Markdown'
-
-/**
- * Piezas pequeñas de la ventana Consultora, con el aspecto de Obsidian: grises neutros, fuente del
- * sistema, radios de 4 a 8 px, bordes de 1 px y sin sombras. Solo viven en Consultora, así que usan
- * los tokens `ob-*` directamente.
- */
+import { useScrollMemory } from '../lib/ui-state'
+import { ScrollKeyContext } from './chrome'
 
 export type PageVariant = 'table' | 'document' | 'board'
 
-/**
- * Página. `table`: listas a todo el ancho. `document`: ficha como una nota de Obsidian, columna de
- * 760 px con el título en línea. `board`: el contenido ocupa todo el panel (pipeline).
- * Atrás vive en la franja superior, no en la página.
- */
 export function Page({
   variant = 'table',
   title,
@@ -30,6 +21,9 @@ export function Page({
   children: ReactNode
 }): React.JSX.Element {
   const isDoc = variant === 'document'
+  // El scroll de cada pantalla se recuerda: volver atrás la deja donde estaba.
+  const scroller = useRef<HTMLDivElement>(null)
+  useScrollMemory(scroller, useContext(ScrollKeyContext))
   const header = (
     <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-2">
       <div className="min-w-[220px] flex-1">
@@ -62,7 +56,7 @@ export function Page({
   }
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
         <div
           className={`@container mx-auto ${
             isDoc ? 'max-w-[808px] px-6 pt-10 pb-24' : 'max-w-[1200px] px-6 pt-5 pb-16'
@@ -76,7 +70,6 @@ export function Page({
   )
 }
 
-/** Sección de una página: encabezado de 16 px con línea fina debajo, como un H2 de nota. */
 export function Section({
   title,
   aside,
@@ -103,7 +96,6 @@ const BUTTON = {
   danger: 'bg-ob-active text-ob-red hover:bg-ob-red/15'
 }
 
-/** Botón de Obsidian: `primary` = acento (la acción de la pantalla), `quiet` = gris, `danger` = rojo. */
 export function Button({
   children,
   onClick,
@@ -130,7 +122,6 @@ export function Button({
   )
 }
 
-/** Texto de una línea que se edita en el sitio. Guarda al salir o con Enter; Esc deshace. */
 export function EditableText({
   value,
   onSave,
@@ -171,10 +162,6 @@ export function EditableText({
   )
 }
 
-/**
- * Campo markdown: se lee renderizado, como una nota; «Editar», doble clic o clic si está vacío abre un textarea.
- * Guarda al salir o con ⌘Enter; Esc cancela. Las casillas `- [ ]` se marcan sin editar.
- */
 export function MarkdownField({
   value,
   onSave,
@@ -250,11 +237,9 @@ export function MarkdownField({
   )
 }
 
-/** Campo de texto de Obsidian: borde fino, fondo del documento, acento al enfocar. */
 export const INPUT =
   'h-8 w-full rounded-[4px] border border-ob-border bg-ob-bg px-2.5 text-[14px] text-ob-text outline-none transition-colors placeholder:text-ob-faint focus:border-ob-accent'
 
-/** Desplegable de Obsidian: gris, 30 px, radio 4. */
 export function Select({
   value,
   options,
@@ -282,7 +267,6 @@ export function Select({
   )
 }
 
-/** Tonos de etiqueta: los colores de Obsidian como tinte al 15 % con texto del color. */
 export type Tone = 'mint' | 'apricot' | 'rose' | 'coral' | 'butter' | 'cyan' | 'orange' | 'neutral'
 
 export const TONES: Record<Tone, string> = {
@@ -296,7 +280,6 @@ export const TONES: Record<Tone, string> = {
   neutral: 'bg-ob-active text-ob-muted'
 }
 
-/** Etiqueta de Obsidian: redondeada, 20 px, texto de 12. */
 export function Pill({
   tone = 'neutral',
   children
@@ -313,7 +296,6 @@ export function Pill({
   )
 }
 
-/** Cerrado = hecho (verde); activo = en marcha (violeta); en pausa = neutro. */
 export function ProjectStatusPill({ status }: { status: ProjectStatus }): React.JSX.Element {
   const map: Record<ProjectStatus, [Tone, string]> = {
     activo: ['apricot', 'Activo'],
@@ -324,7 +306,6 @@ export function ProjectStatusPill({ status }: { status: ProjectStatus }): React.
   return <Pill tone={tone}>{label}</Pill>
 }
 
-/** Grabando = rojo (en vivo); procesando = amarillo; lista = nada; error = rojo. */
 export function MeetingStatusPill({ status }: { status: MeetingStatus }): React.JSX.Element | null {
   const map: Record<MeetingStatus, [Tone, string] | null> = {
     recording: ['rose', '● Grabando'],
@@ -349,7 +330,6 @@ export function ErrorNote({ message }: { message: string | null }): React.JSX.El
   )
 }
 
-/** Vacío: texto tenue, sin tarjeta, como los estados vacíos de Obsidian. */
 export function Empty({ title, hint }: { title: string; hint?: string }): React.JSX.Element {
   return (
     <div className="px-2 py-8 text-center">
@@ -359,7 +339,6 @@ export function Empty({ title, hint }: { title: string; hint?: string }): React.
   )
 }
 
-/** Lista como una tabla de Obsidian: filas con separador fino, sin tarjeta. */
 export function List({ children }: { children: ReactNode }): React.JSX.Element {
   return (
     <ul className="border-t border-ob-border [&>li]:border-b [&>li]:border-ob-border">
@@ -368,7 +347,6 @@ export function List({ children }: { children: ReactNode }): React.JSX.Element {
   )
 }
 
-/** Fila de una List: 32 px mínimo, resaltada al pasar el ratón. */
 export function Row({
   onClick,
   children
@@ -394,7 +372,6 @@ export function Row({
   )
 }
 
-/** Campo con etiqueta: caja con borde fino; el foco la marca con el acento. */
 export function Field({
   label,
   children

@@ -12,11 +12,6 @@ interface LegacyNote {
   updatedAt: string
 }
 
-/**
- * Una sola vez: las notas que vivían en la tabla `notes` pasan a archivos de «Notas rápidas»,
- * con el mismo id (las relaciones siguen valiendo) y sus fechas. Luego la tabla queda como
- * `notes_legacy`, de respaldo. Si se corta a medias, al siguiente arranque sigue sin duplicar.
- */
 export async function moveNotesToVault(
   db: DataSource,
   workspace: WorkspaceService

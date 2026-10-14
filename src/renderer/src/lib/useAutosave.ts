@@ -2,11 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 
 export type SaveStatus = 'saved' | 'saving' | 'error'
 
-/**
- * Guarda `value` 500 ms después de la última tecla.
- * `flush()` guarda ya lo pendiente (llámalo antes de salir de la pantalla).
- * `save` debe ser estable (useCallback) para no reiniciar la espera en cada render.
- */
 export function useAutosave(
   value: string,
   save: (value: string) => Promise<unknown>

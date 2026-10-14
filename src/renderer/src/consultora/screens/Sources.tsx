@@ -7,10 +7,6 @@ import { TagEditor } from '../marketing-ui'
 
 const marketing = window.api.marketing
 
-/**
- * Fuentes de leads: cada una es una URL del hub que acepta el formato único
- * `{ email, name, tags, fields }`. Todo lead que entra lleva el tag `origen-<fuente>`.
- */
 export function Sources({ go }: { go: Go }): React.JSX.Element {
   const load = useCallback(() => marketing.listSources(), [])
   const { data: sources, error: loadError } = useLoad(load)

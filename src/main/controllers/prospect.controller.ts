@@ -2,11 +2,9 @@ import type { Request, Response } from 'express'
 import type { ProspectService } from '../services/prospect.service'
 import { text } from './params'
 
-/** Pipeline y prospectos. `:ref` = id o nombre de la empresa. */
 export class ProspectController {
   constructor(private readonly service: ProspectService) {}
 
-  /** `?pipeline=` id o nombre; sin él, el primero. */
   pipeline = async (req: Request, res: Response): Promise<void> => {
     res.json(await this.service.pipeline(text(req.query.pipeline)))
   }
@@ -15,17 +13,21 @@ export class ProspectController {
     res.json(await this.service.listPipelines())
   }
 
-  /** Body: `{ name, stages?, moves? }`. */
   createPipeline = async (req: Request, res: Response): Promise<void> => {
     res.status(201).json(await this.service.savePipeline({ ...(req.body ?? {}), id: undefined }))
   }
 
   updatePipeline = async (req: Request, res: Response): Promise<void> => {
     const pipeline = await this.service.pipeline(String(req.params.ref))
-    res.json(await this.service.savePipeline({ name: pipeline.pipeline.name, ...(req.body ?? {}), id: pipeline.pipeline.id }))
+    res.json(
+      await this.service.savePipeline({
+        name: pipeline.pipeline.name,
+        ...(req.body ?? {}),
+        id: pipeline.pipeline.id
+      })
+    )
   }
 
-  /** `?confirm=1`; con prospectos: `?moveToPipeline=&moveToStage=`. */
   removePipeline = async (req: Request, res: Response): Promise<void> => {
     const ref = String(req.params.ref)
     if (req.query.confirm !== '1') {
@@ -33,11 +35,13 @@ export class ProspectController {
       return
     }
     const to = text(req.query.moveToPipeline)
-    await this.service.removePipeline(ref, to ? { pipeline: to, stage: text(req.query.moveToStage) } : undefined)
+    await this.service.removePipeline(
+      ref,
+      to ? { pipeline: to, stage: text(req.query.moveToStage) } : undefined
+    )
     res.json({ ok: true })
   }
 
-  /** `?pipeline=` opcional. */
   stages = async (req: Request, res: Response): Promise<void> => {
     res.json(await this.service.listStages(text(req.query.pipeline)))
   }
@@ -64,9 +68,10 @@ export class ProspectController {
     res.json(await this.service.update(String(req.params.ref), req.body ?? {}))
   }
 
-  /** `{ stage, pipeline?, index? }`: etapa por id o nombre (en `pipeline` si viene). Ganar crea el cliente. */
   move = async (req: Request, res: Response): Promise<void> => {
     const index = typeof req.body?.index === 'number' ? req.body.index : undefined
-    res.json(await this.service.move(String(req.params.ref), req.body?.stage, index, req.body?.pipeline))
+    res.json(
+      await this.service.move(String(req.params.ref), req.body?.stage, index, req.body?.pipeline)
+    )
   }
 }

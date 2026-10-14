@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useScrollMemory, useUiState } from '../lib/ui-state'
 import { AlignLeft, Check } from 'lucide-react'
 import { addDays, DAILY_LIMIT, type DayKey, type HistoryPage, type Task } from '@shared/tasks'
 import { tasksApi } from '../lib/api'
@@ -49,9 +50,22 @@ interface HistoryViewProps {
 }
 
 export function HistoryView({ today, onOpenTask }: HistoryViewProps): React.JSX.Element {
-  const [period, setPeriod] = useState<Period>('30')
-  const [range, setRange] = useState({ from: addDays(today, -13), to: today })
-  const [page, setPage] = useState(1)
+  // Periodo, rango y página se recuerdan (ui-state.json): volver a Historial no lo reinicia.
+  const [period, setPeriod] = useUiState<Period>('history.period', '30', (v) =>
+    PERIODS.some((p) => p.id === v)
+  )
+  const [range, setRange] = useUiState(
+    'history.range',
+    { from: addDays(today, -13), to: today },
+    (v) => !!v && typeof (v as { from?: unknown }).from === 'string'
+  )
+  const [page, setPage] = useUiState(
+    'history.page',
+    1,
+    (v) => Number.isInteger(v) && (v as number) > 0
+  )
+  const scroller = useRef<HTMLElement>(null)
+  useScrollMemory(scroller, 'scroll.menubar.history')
   const [data, setData] = useState<HistoryPage | null>(null)
   const [error, setError] = useState(false)
 
@@ -63,6 +77,7 @@ export function HistoryView({ today, onOpenTask }: HistoryViewProps): React.JSX.
       .history({ ...q, page, pageSize: PAGE_SIZE })
       .then((res) => {
         if (!alive) return
+        if (res.totalPages > 0 && page > res.totalPages) return setPage(res.totalPages)
         setData(res)
         setError(false)
       })
@@ -70,7 +85,7 @@ export function HistoryView({ today, onOpenTask }: HistoryViewProps): React.JSX.
     return () => {
       alive = false
     }
-  }, [q, page])
+  }, [q, page, setPage])
 
   const choose = (p: Period): void => {
     setPeriod(p)
@@ -137,7 +152,10 @@ export function HistoryView({ today, onOpenTask }: HistoryViewProps): React.JSX.
         )}
       </header>
 
-      <main className="scroll-area fade-bottom mt-4 min-h-0 flex-1 overflow-y-auto pb-6 pl-6">
+      <main
+        ref={scroller}
+        className="scroll-area fade-bottom mt-4 min-h-0 flex-1 overflow-y-auto pb-6 pl-6"
+      >
         {error && (
           <p role="alert" className="rounded-md bg-coral/12 px-4 py-3 text-caption text-coral">
             No pude cargar el historial. Cambia de periodo para reintentar.

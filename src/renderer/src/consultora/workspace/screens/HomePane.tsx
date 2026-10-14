@@ -3,7 +3,6 @@ import { KIND_ICON, flattenExplorer, openItem, ws } from '../lib'
 import { useLoad } from '../../lib'
 import { useWorkspace } from '../context'
 
-/** Sin archivo abierto, como Obsidian: unas pocas acciones y lo último que tocaste. */
 export function HomePane({ onSearch }: { onSearch: () => void }): React.JSX.Element {
   const { go, actions, folderId } = useWorkspace()
   const load = useCallback(() => ws.explorer(), [])

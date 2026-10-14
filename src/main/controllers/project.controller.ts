@@ -1,7 +1,6 @@
 import type { Request, Response } from 'express'
 import type { ProjectService } from '../services/project.service'
 
-/** Proyectos. `:ref` = id o nombre. Crear exige `client` (id o nombre). */
 export class ProjectController {
   constructor(private readonly service: ProjectService) {}
 
@@ -17,7 +16,6 @@ export class ProjectController {
     res.json(await this.service.update(String(req.params.ref), req.body ?? {}))
   }
 
-  /** Sin `?confirm=1` devuelve el proyecto y no borra. */
   remove = async (req: Request, res: Response): Promise<void> => {
     const ref = String(req.params.ref)
     if (req.query.confirm !== '1') {

@@ -1,7 +1,6 @@
 import { SlidersHorizontal } from 'lucide-react'
 import { CountBadge } from '../atoms/CountBadge'
 
-/** Pill «Filtros» con el número de filtros activos. */
 export function FilterButton({
   count,
   onClick

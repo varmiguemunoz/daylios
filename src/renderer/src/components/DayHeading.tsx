@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 
-/** Título de un día en listas por fecha (Historial, Notas), con un hueco a la derecha. */
 export function DayHeading({
   children,
   aside

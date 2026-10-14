@@ -3,10 +3,6 @@ import type { Task } from '@shared/tasks'
 import { EffortBars, TagChips } from './TaskMeta'
 import { SubtaskProgress } from './SubtaskProgress'
 
-/**
- * Línea de resumen del detalle: esfuerzo, tags y avance de subtareas con las mismas piezas que la
- * fila de Hoy. Es un botón: abre el panel de detalles.
- */
 export function TaskSummary({
   task,
   onOpen

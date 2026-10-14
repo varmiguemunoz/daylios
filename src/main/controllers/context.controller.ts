@@ -3,7 +3,6 @@ import type { NoteEntity } from '@shared/consultora'
 import type { ContextService } from '../services/context.service'
 import { text } from './params'
 
-/** Panorama, búsqueda, documentos y notas rápidas. */
 export class ContextController {
   constructor(private readonly service: ContextService) {}
 
@@ -23,7 +22,6 @@ export class ContextController {
     res.json(await this.service.readDocument(String(req.params.ref), text(req.query.path) ?? ''))
   }
 
-  /** Body: `{ path, content, expectedModifiedAt? }` (solo documentos de texto). */
   writeDocument = async (req: Request, res: Response): Promise<void> => {
     const body = req.body ?? {}
     res.json(
@@ -36,13 +34,17 @@ export class ContextController {
     )
   }
 
-  /** Body: `{ path, name }`. */
   renameDocument = async (req: Request, res: Response): Promise<void> => {
     const body = req.body ?? {}
-    res.json(await this.service.renameDocument(String(req.params.ref), String(body.path ?? ''), String(body.name ?? '')))
+    res.json(
+      await this.service.renameDocument(
+        String(req.params.ref),
+        String(body.path ?? ''),
+        String(body.name ?? '')
+      )
+    )
   }
 
-  /** `?path=` y `?confirm=1`. */
   trashDocument = async (req: Request, res: Response): Promise<void> => {
     const path = text(req.query.path) ?? ''
     if (req.query.confirm !== '1') {
@@ -53,7 +55,6 @@ export class ContextController {
     res.json({ ok: true })
   }
 
-  /** `{ entity: 'client'|'project'|'prospect'|'meeting', ref, text }` */
   appendNote = async (req: Request, res: Response): Promise<void> => {
     const body = req.body ?? {}
     await this.service.appendNote(

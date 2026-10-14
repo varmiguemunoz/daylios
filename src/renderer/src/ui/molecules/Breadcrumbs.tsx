@@ -8,11 +8,10 @@ export interface BreadcrumbItem {
 interface BreadcrumbsProps {
   items: BreadcrumbItem[]
   onSelect: (id: string | null) => void
-  /** Soltar algo sobre un tramo (mover a esa carpeta). */
+
   onDropOn?: (id: string | null, e: React.DragEvent) => void
 }
 
-/** Ruta de navegación: cada tramo lleva a su carpeta; el último es donde estás. */
 export function Breadcrumbs({ items, onSelect, onDropOn }: BreadcrumbsProps): React.JSX.Element {
   return (
     <nav aria-label="Ruta" className="flex min-w-0 items-center gap-0.5 overflow-hidden">

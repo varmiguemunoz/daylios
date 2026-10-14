@@ -24,14 +24,14 @@ El tema ya redefine colores, tamaños de texto y radios bajo `body.theme-obsidia
 formas que hoy están escritas a mano en las clases. Se añaden tokens semánticos en `@theme` con el
 valor actual del menubar, y el tema los redefine:
 
-| Token                        | Menubar               | Obsidian       | Utilidad           |
-| ---------------------------- | --------------------- | -------------- | ------------------ |
-| `--radius-control`           | 9999px                | 4px            | `rounded-control`  |
-| `--radius-card`              | el actual de tarjeta  | 8px            | `rounded-card`     |
-| `--spacing-control`          | 2.5rem                | 30px           | `h-control`        |
-| `--shadow-float`             | la sombra actual      | 0 6px 20px -8px rgb(0 0 0 / 0.6) | `shadow-float` |
-| `--font-weight-extrabold`    | 800                   | 600            | `font-extrabold`   |
-| `--font-weight-bold`         | 700                   | 600            | `font-bold`        |
+| Token                     | Menubar              | Obsidian                         | Utilidad          |
+| ------------------------- | -------------------- | -------------------------------- | ----------------- |
+| `--radius-control`        | 9999px               | 4px                              | `rounded-control` |
+| `--radius-card`           | el actual de tarjeta | 8px                              | `rounded-card`    |
+| `--spacing-control`       | 2.5rem               | 30px                             | `h-control`       |
+| `--shadow-float`          | la sombra actual     | 0 6px 20px -8px rgb(0 0 0 / 0.6) | `shadow-float`    |
+| `--font-weight-extrabold` | 800                  | 600                              | `font-extrabold`  |
+| `--font-weight-bold`      | 700                  | 600                              | `font-bold`       |
 
 Tailwind 4 genera las utilidades leyendo estas variables, así que redefinirlas en el ámbito del tema
 basta. Regla: el código compartido con el menubar usa tokens de la app y estos tokens semánticos; el
@@ -83,24 +83,24 @@ todos». La pantalla de resultados se conserva con estilo de tabla.
 
 ## 5 · Piezas
 
-| Pieza                    | Obsidian                                                                    |
-| ------------------------ | --------------------------------------------------------------------------- |
-| `Button` principal       | acento sólido, texto blanco, 30 px, radio 4, peso 500                       |
-| `Button` normal          | fondo `#363636`, al pasar `#3f3f3f`                                         |
-| `Button` peligro         | texto rojo, tinte rojo al pasar                                             |
-| `IconButton`             | 28 px, radio 4, icono gris, al pasar fondo `ob-hover`                       |
-| Campos y `Select`        | fondo `ob-bg`, borde 1 px `ob-border`, radio 4, 30 px, foco con borde acento |
-| `Pill`, estados, tags    | etiqueta de Obsidian: 20 px, texto 12, tinte del color al 15 %              |
-| `List` y `Row`           | filas de tabla de 32 px, separador 1 px, sin tarjeta                        |
-| `Section`                | encabezado 16 px peso 600 con línea fina debajo                             |
-| `Page`                   | sin cabecera grande: la ruta vive en la franja; título y acciones en una fila |
-| `Empty`, `ErrorNote`     | texto tenue centrado; error en rojo con tinte                               |
-| `Modal`                  | fondo `ob-alt`, borde 1 px, radio 8, título 16 peso 600, velo negro al 50 % |
-| `Drawer`                 | como la barra lateral derecha de Obsidian: `ob-alt`, borde izquierdo, sin sombra |
-| `ContextMenu`            | `ob-alt`, borde, radio 6, filas de 28 px, texto 13                          |
-| `SegmentedToggle`        | grupo de botones de 26 px con el activo en `ob-active`                      |
-| `SearchField`            | campo de Obsidian con lupa                                                  |
-| `Kbd`                    | tecla de Obsidian: fondo `ob-active`, texto 11                              |
+| Pieza                 | Obsidian                                                                         |
+| --------------------- | -------------------------------------------------------------------------------- |
+| `Button` principal    | acento sólido, texto blanco, 30 px, radio 4, peso 500                            |
+| `Button` normal       | fondo `#363636`, al pasar `#3f3f3f`                                              |
+| `Button` peligro      | texto rojo, tinte rojo al pasar                                                  |
+| `IconButton`          | 28 px, radio 4, icono gris, al pasar fondo `ob-hover`                            |
+| Campos y `Select`     | fondo `ob-bg`, borde 1 px `ob-border`, radio 4, 30 px, foco con borde acento     |
+| `Pill`, estados, tags | etiqueta de Obsidian: 20 px, texto 12, tinte del color al 15 %                   |
+| `List` y `Row`        | filas de tabla de 32 px, separador 1 px, sin tarjeta                             |
+| `Section`             | encabezado 16 px peso 600 con línea fina debajo                                  |
+| `Page`                | sin cabecera grande: la ruta vive en la franja; título y acciones en una fila    |
+| `Empty`, `ErrorNote`  | texto tenue centrado; error en rojo con tinte                                    |
+| `Modal`               | fondo `ob-alt`, borde 1 px, radio 8, título 16 peso 600, velo negro al 50 %      |
+| `Drawer`              | como la barra lateral derecha de Obsidian: `ob-alt`, borde izquierdo, sin sombra |
+| `ContextMenu`         | `ob-alt`, borde, radio 6, filas de 28 px, texto 13                               |
+| `SegmentedToggle`     | grupo de botones de 26 px con el activo en `ob-active`                           |
+| `SearchField`         | campo de Obsidian con lupa                                                       |
+| `Kbd`                 | tecla de Obsidian: fondo `ob-active`, texto 11                                   |
 
 Piezas nuevas en `consultora/molecules`:
 

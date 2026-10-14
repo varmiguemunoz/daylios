@@ -3,12 +3,11 @@ import type { SubtaskProgress as Progress } from '@shared/tasks'
 
 interface SubtaskProgressProps {
   progress?: Progress
-  /** Con `onToggle` es el botón que despliega las subtareas en Hoy. */
+
   onToggle?: () => void
   expanded?: boolean
 }
 
-/** Avance de subtareas en la fila de la madre: «2/5». Mint cuando están todas hechas. */
 export function SubtaskProgress({
   progress,
   onToggle,

@@ -5,7 +5,6 @@ import { NoteEditor } from '../../../components/NoteEditor'
 import { errorMessage, notesApi } from '../../../lib/api'
 import { useWorkspace } from '../context'
 
-/** Una nota del workspace, como en Obsidian: columna de lectura y relaciones al final. */
 export function NotePane({ id }: { id: string }): React.JSX.Element {
   const { go } = useWorkspace()
   const [note, setNote] = useState<Note | null>(null)
@@ -32,6 +31,7 @@ export function NotePane({ id }: { id: string }): React.JSX.Element {
         note={note}
         today={todayKey()}
         variant="document"
+        scrollKey={`scroll.note:${note.id}`}
         onBack={() => go({ name: 'workspace', folder: null })}
         onOpenNote={(noteId) => go({ name: 'ws-note', id: noteId })}
         onOpenClient={(clientId) => go({ name: 'client', id: clientId })}

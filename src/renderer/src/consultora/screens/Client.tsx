@@ -30,21 +30,18 @@ import {
   Select
 } from '../ui'
 import { ContactsSection } from '../ContactsSection'
-import { useScreenTitle } from '../chrome'
+import { TasksSection } from '../organisms/tasks/TasksSection'
+import { useGoneRedirect, useScreenTitle } from '../chrome'
 import { InlineField } from '../molecules/InlineField'
 import { Properties, PropertyRow } from '../molecules/Properties'
 import { DeleteClientModal } from '../organisms/DeleteClientModal'
 import { NotePicker } from '../../components/NotePicker'
 import { notesApi } from '../../lib/api'
+import { Authorship } from '../organisms/orgs/Authorship'
+import { EntityActivity } from '../organisms/activity/EntityActivity'
 
-/** Documentos que se pueden editar dentro de la app. */
 const EDITABLE = /\.(md|txt|csv|json)$/i
 
-/**
- * Ficha de cliente como una nota de Obsidian: propiedades arriba y después proyectos, reuniones,
- * action items abiertos, contactos, notas y documentos.
- * Desde aquí se borran el cliente y sus proyectos y se renombran, editan o borran documentos.
- */
 export function Client({
   id,
   go,
@@ -57,6 +54,7 @@ export function Client({
   const load = useCallback(() => api.getClient(id), [id])
   const { data: c, error: loadError } = useLoad(load)
   useScreenTitle(c?.name)
+  useGoneRedirect(loadError)
   const [error, setError] = useState<string | null>(null)
   const [newProject, setNewProject] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -65,7 +63,6 @@ export function Client({
 
   const run = async (fn: () => Promise<unknown>): Promise<void> => setError(await attempt(fn))
 
-  /** «Nueva nota»: nace relacionada con el cliente y se abre. */
   const newNote = async (): Promise<void> => {
     let noteId = ''
     const failed = await attempt(async () => {
@@ -158,6 +155,7 @@ export function Client({
           </button>
         </PropertyRow>
       </Properties>
+      <Authorship table="clients" id={c.id} />
 
       <DeleteClientModal
         open={deleting}
@@ -273,6 +271,8 @@ export function Client({
           </List>
         )}
       </Section>
+
+      <TasksSection kind="client" id={c.id} />
 
       <ContactsSection contacts={c.contacts} client={c.id} go={go} />
 
@@ -438,6 +438,7 @@ export function Client({
           </List>
         )}
       </Section>
+      <EntityActivity entity="clients" id={id} />
     </Page>
   )
 }

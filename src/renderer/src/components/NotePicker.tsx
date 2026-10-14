@@ -6,19 +6,18 @@ import { Modal, SearchField, SegmentedToggle } from '../ui'
 
 interface NotePickerProps {
   open: boolean
-  /** La nota que se está relacionando (no aparece en la lista). */
+
   noteId: string
-  /** Ya relacionadas (no se ofrecen otra vez). */
+
   exclude: string[]
   onPick: (target: NoteTarget) => void
   onClose: () => void
-  /** Solo notas (p. ej. relacionar una nota desde la ficha de un cliente). */
+
   notesOnly?: boolean
 }
 
 type Kind = 'note' | 'client'
 
-/** Elegir con qué relacionar una nota: otra nota (buscador) o un cliente. */
 export function NotePicker({
   open,
   noteId,

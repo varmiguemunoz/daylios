@@ -1,6 +1,5 @@
 import { Table, type MigrationInterface, type QueryRunner } from 'typeorm'
 
-/** Relaciones de notas con otras notas y con clientes. */
 export class AddNoteRelations1728400000000 implements MigrationInterface {
   name = 'AddNoteRelations1728400000000'
 
@@ -16,7 +15,11 @@ export class AddNoteRelations1728400000000 implements MigrationInterface {
           { name: 'created_at', type: 'text' }
         ],
         indices: [
-          { name: 'uq_note_relations', columnNames: ['note_id', 'target_type', 'target_id'], isUnique: true },
+          {
+            name: 'uq_note_relations',
+            columnNames: ['note_id', 'target_type', 'target_id'],
+            isUnique: true
+          },
           { name: 'idx_note_relations_target', columnNames: ['target_type', 'target_id'] }
         ]
       }),

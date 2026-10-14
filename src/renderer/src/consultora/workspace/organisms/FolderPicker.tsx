@@ -6,7 +6,6 @@ import { Modal, SearchField } from '../../../ui'
 import { ws } from '../lib'
 
 interface FolderPickerProps {
-  /** Lo que se mueve: una carpeta no se ofrece a sí misma ni a sus subcarpetas. */
   item: WorkspaceItem
   onPick: (folderId: string | null) => void
   onClose: () => void
@@ -27,7 +26,6 @@ function flatten(nodes: FolderNode[], depth = 0, out: Flat[] = []): Flat[] {
   return out
 }
 
-/** «Mover a…»: todas las carpetas con buscador. La actual se marca y no se puede elegir. */
 export function FolderPicker({ item, onPick, onClose }: FolderPickerProps): React.JSX.Element {
   const [tree, setTree] = useState<FolderNode[]>([])
   const [query, setQuery] = useState('')

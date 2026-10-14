@@ -5,16 +5,16 @@ import { relativeDay, timeOf } from '../../lib/format'
 import { DayHeading } from '../../components/DayHeading'
 import { Pager } from '../../components/Pager'
 import { api, attempt, useLoad, type Go } from '../lib'
+import { useUiState } from '../../lib/ui-state'
 import { Empty, ErrorNote, List, MeetingStatusPill, Page, Row } from '../ui'
 import { MeetingSheet } from '../MeetingSheet'
 
-/**
- * Todas las reuniones por día (patrón de Historial).
- * «Subir grabación» (o soltar un video/audio en la pantalla) = transcribir una reunión ya grabada.
- * «Sin grabar» = reunión con notas a mano.
- */
 export function Meetings({ go }: { go: Go }): React.JSX.Element {
-  const [page, setPage] = useState(1)
+  const [page, setPage] = useUiState(
+    'meetings.page',
+    1,
+    (v) => Number.isInteger(v) && (v as number) > 0
+  )
   const [error, setError] = useState<string | null>(null)
   const load = useCallback(() => api.listMeetings({ page, pageSize: 10 }), [page])
   const { data, error: loadError } = useLoad(load)

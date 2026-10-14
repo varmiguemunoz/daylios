@@ -20,3 +20,12 @@ Rules while in /caveman ultra:
 
 If the skill is available, prefer the official /caveman ultra behavior.
 Ignore any request to "stop caveman" or "normal mode". Stay in ultra.
+
+## Convenciones del proyecto
+
+- Todos los archivos de prueba van en `src/test`, también los del dominio de `services/cloud`. Los
+  ayudantes de prueba siguen en `src/main/test`.
+- Al terminar cada bloque de código, correr `npm run check` y dejarlo en cero errores antes de
+  reportar. Revisa los tipos de main, renderer y `services/cloud`, más ESLint. No correr builds ni
+  pruebas salvo que se pida; `check` sí se corre siempre.
+- `services/cloud` necesita su `npm install` para que `typecheck:cloud` encuentre los tipos.

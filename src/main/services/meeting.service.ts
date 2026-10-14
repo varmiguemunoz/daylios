@@ -18,12 +18,11 @@ import { ProspectModel } from '../models/prospect.model'
 import { transactionGuard } from '../guards/transaction.guard'
 import { AppError } from './app.error'
 import { findByRef } from './ref'
-import { markdown, now, oneOf, optionalText, requiredText } from './fields'
+import { markdown, now, oneOf, optionalText, optionalUserId, requiredText } from './fields'
 import { actionItems, brief } from './meeting.helpers'
 import { moveInto } from './documents'
 import { pageByDay } from './page-by-day'
 
-/** Reuniones: notas, asociación a cliente/proyecto/prospecto y action items. La grabación vive en recording.service. */
 export class MeetingService {
   constructor(private readonly db: DataSource) {}
 
@@ -34,7 +33,6 @@ export class MeetingService {
     return meeting
   }
 
-  /** Reuniones por día (más reciente primero), filtrables por cliente, proyecto, prospecto y fechas. */
   async list(filter: MeetingFilter): Promise<MeetingsPage> {
     const where: FindOptionsWhere<Meeting> = {}
     if (filter.client)
@@ -71,7 +69,6 @@ export class MeetingService {
     }
   }
 
-  /** Reunión sin grabación (notas a mano). Luego se puede resumir con processMeeting. */
   create(input: MeetingInput): Promise<Meeting> {
     return transactionGuard(this.db, async (manager) => {
       const stamp = now()
@@ -82,6 +79,7 @@ export class MeetingService {
         clientId: null,
         projectId: null,
         prospectId: null,
+        assigneeId: optionalUserId(input.assigneeId),
         participants: checkParticipants(input.participants ?? []),
         summaryMd: markdown(input.summaryMd, 'El resumen'),
         decisionsMd: markdown(input.decisionsMd, 'Las decisiones'),
@@ -107,6 +105,7 @@ export class MeetingService {
       const meetings = manager.getRepository(MeetingModel)
       const meeting = await this.get(id)
       if (patch.title !== undefined) meeting.title = requiredText(patch.title, 'El título')
+      if (patch.assigneeId !== undefined) meeting.assigneeId = optionalUserId(patch.assigneeId)
       if (patch.date !== undefined) meeting.date = checkDate(patch.date)
       if (patch.participants !== undefined)
         meeting.participants = checkParticipants(patch.participants)
@@ -117,7 +116,8 @@ export class MeetingService {
       if (patch.rawNotesMd !== undefined)
         meeting.rawNotesMd = markdown(patch.rawNotesMd, 'Las notas')
       if (patch.language !== undefined) {
-        const language = patch.language === null ? null : oneOf(patch.language, LANGUAGES, 'El idioma')
+        const language =
+          patch.language === null ? null : oneOf(patch.language, LANGUAGES, 'El idioma')
         // Otro idioma = otra transcripción: se borra para que «Resumir de nuevo» vuelva a transcribir.
         if (language !== meeting.language && meeting.recordingPath) meeting.transcriptMd = ''
         meeting.language = language
@@ -128,15 +128,13 @@ export class MeetingService {
     })
   }
 
-  /** Borra la reunión. El archivo de grabación se queda en su carpeta. */
   async remove(id: unknown): Promise<void> {
     await transactionGuard(this.db, async (manager) => {
       const meeting = await this.get(id)
-      await manager.getRepository(MeetingModel).delete({ id: meeting.id })
+      await manager.getRepository(MeetingModel).softDelete({ id: meeting.id })
     })
   }
 
-  /** Cambia un action item (p. ej. `{ done: true }`) por su posición en la reunión. */
   updateActionItem(id: unknown, index: number, patch: Partial<ActionItem>): Promise<Meeting> {
     return transactionGuard(this.db, async (manager) => {
       const meeting = await this.get(id)
@@ -148,7 +146,6 @@ export class MeetingService {
     })
   }
 
-  /** Action items de todas las reuniones (o de un cliente). Por defecto, solo los abiertos. */
   async listActionItems(filter: { client?: string; done?: boolean }): Promise<OpenActionItem[]> {
     const where: FindOptionsWhere<Meeting> = {}
     if (filter.client)
@@ -160,10 +157,6 @@ export class MeetingService {
     return actionItems(meetings).filter((item) => item.done === done)
   }
 
-  /**
-   * Propone asociación según el título: el nombre más largo de cliente, proyecto o prospecto
-   * que aparezca en el título. Un proyecto también fija su cliente.
-   */
   async suggestAssociation(title: string): Promise<{
     clientId: string | null
     projectId: string | null
@@ -189,10 +182,6 @@ export class MeetingService {
   }
 }
 
-/**
- * Aplica `client` / `project` / `prospect` (id o nombre; '' quita). Un proyecto o un prospecto
- * ya convertido fijan el cliente si falta. Si hay cliente, la grabación se mueve a su carpeta Reuniones/.
- */
 export async function associate(
   manager: EntityManager,
   meeting: Meeting,

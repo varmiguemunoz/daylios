@@ -10,7 +10,6 @@ interface DeleteClientModalProps {
   onDeleted: () => void
 }
 
-/** Borrar un cliente: impacto escrito, carpeta opcional a la Papelera y nombre para confirmar. */
 export function DeleteClientModal({
   open,
   client,

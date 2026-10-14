@@ -1,6 +1,5 @@
 import { ChevronLeft } from 'lucide-react'
 
-/** Botón «‹ Volver» de las pantallas de detalle. `Esc` hace lo mismo. */
 export function BackButton({
   label,
   onClick

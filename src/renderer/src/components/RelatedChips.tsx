@@ -8,7 +8,6 @@ interface RelatedChipsProps {
   onOpenClient?: (id: string) => void
 }
 
-/** Índice superior de una nota: «Relacionadas:» y un chip por nota o cliente. Nada si no hay. */
 export function RelatedChips({
   notes,
   clients,

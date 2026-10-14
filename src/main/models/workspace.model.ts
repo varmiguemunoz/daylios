@@ -1,10 +1,6 @@
 import { EntitySchema } from 'typeorm'
 import type { ItemKind } from '@shared/workspace'
 
-/**
- * Índice de la bóveda: una fila por carpeta o archivo. El disco manda; esto se reconstruye con `sync()`.
- * `inode` permite reconocer un renombre hecho en Finder (mismo inode, otra ruta) y conservar el id.
- */
 export interface WorkspaceRow {
   id: string
   kind: ItemKind
@@ -14,7 +10,7 @@ export interface WorkspaceRow {
   inode: string
   size: number
   mtimeMs: number
-  /** Texto de las notas (para buscar y servir sin leer el disco). Null en lo demás. */
+
   text: string | null
   createdAt: string
   updatedAt: string
@@ -42,7 +38,6 @@ export const WorkspaceItemModel = new EntitySchema<WorkspaceRow>({
   ]
 })
 
-/** Una nota o un board que enlaza a otro elemento (imagen, nota incrustada). */
 export interface WorkspaceRef {
   fromId: string
   toId: string

@@ -6,23 +6,19 @@ import { finalIndex, useReorder } from '../lib/useReorder'
 
 interface SubtaskListProps {
   subtasks: Task[]
-  /** La madre está hecha: si quedan pendientes se ofrece completarlas. */
+
   parentDone: boolean
   onAdd: (title: string) => Promise<boolean>
   onToggle: (task: Task) => void
   onOpen: (task: Task) => void
   onRemove: (task: Task) => void
-  /** Mueve la subtarea `id` a la posición `index`. */
+
   onReorder: (id: string, index: number) => void
   onCompleteAll: () => void
 }
 
 export const SUBTASK_CAPTURE = 'subtask-capture'
 
-/**
- * Subtareas de una tarea: captura pequeña (#tags, !esfuerzo) y la lista de siempre a menor escala.
- * Arrastrar o ⌥↑/⌥↓ para ordenar; clic o Enter abre la subtarea.
- */
 export function SubtaskList({
   subtasks,
   parentDone,

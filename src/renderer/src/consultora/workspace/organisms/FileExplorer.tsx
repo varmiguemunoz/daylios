@@ -24,6 +24,8 @@ import {
 } from '../lib'
 import { useWorkspace } from '../context'
 import { RibbonButton } from '../../shell/RibbonButton'
+import { FileStateDot } from '../../organisms/files/FileStateDot'
+import { VAULT_PREFIX, useFilesStatus } from '../../organisms/files/useFiles'
 
 const OPEN_KEY = 'ws.explorer.open-folders'
 const SORT_KEY = 'ws.explorer.sort'
@@ -36,18 +38,15 @@ function readOpen(): Set<string> {
   }
 }
 
-/** Etiqueta pequeña para lo que no es nota (como Obsidian: «CANVAS», «PNG»). */
 const badge = (item: WorkspaceItem): string | null =>
   item.kind === 'note' ? null : item.kind === 'board' ? 'canvas' : extOf(item.path).slice(1) || null
 
-/** Nombre sin la extensión que ya dice la etiqueta. */
 const label = (item: WorkspaceItem): string => {
   if (item.kind === 'note' || item.kind === 'board') return item.name
   const ext = extOf(item.name)
   return ext ? item.name.slice(0, -ext.length) : item.name
 }
 
-/** Explorador de archivos estilo Obsidian: carpetas y archivos en un árbol compacto. */
 export function FileExplorer({ activePath }: { activePath: string }): React.JSX.Element {
   const { go, actions, activeId, folderId } = useWorkspace()
   const load = useCallback(() => ws.explorer(), [])
@@ -56,6 +55,7 @@ export function FileExplorer({ activePath }: { activePath: string }): React.JSX.
   const [sort, setSort] = useState<SortMode>(() => (prefs.get(SORT_KEY) as SortMode) || 'name')
   const [over, setOver] = useState<string | null>(null)
   const menu = useContextMenu()
+  const fileStates = useFilesStatus().files
 
   const persist = (next: Set<string>): void => {
     setOpen(next)
@@ -143,6 +143,7 @@ export function FileExplorer({ activePath }: { activePath: string }): React.JSX.
           className={rowClass(item.id === activeId, item.id)}
         >
           <span className="min-w-0 flex-1 truncate">{label(item)}</span>
+          <FileStateDot state={fileStates[`${VAULT_PREFIX}${item.path}`]} />
           {tag && (
             <span className="shrink-0 rounded-[3px] bg-ob-hover px-1 text-[10px] leading-4 font-semibold tracking-wide text-ob-faint uppercase">
               {tag}

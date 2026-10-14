@@ -1,9 +1,7 @@
 import { Diamond, FileText, Group, Image as ImageIcon, StickyNote } from 'lucide-react'
 
-/** Lo que se puede añadir desde la barra inferior. */
 export type AddKind = 'card' | 'note' | 'media' | 'shape' | 'group'
 
-/** Tipo de dato del arrastre desde la barra al lienzo. */
 export const CARD_DRAG = 'application/x-daylios-card'
 
 const ITEMS: { kind: AddKind; label: string; Icon: typeof StickyNote }[] = [
@@ -14,10 +12,6 @@ const ITEMS: { kind: AddKind; label: string; Icon: typeof StickyNote }[] = [
   { kind: 'group', label: 'Grupo', Icon: Group }
 ]
 
-/**
- * Barra inferior centrada de Obsidian. Clic añade en el centro de la vista; la tarjeta y el grupo
- * también se arrastran al punto exacto del lienzo.
- */
 export function CardToolbar({
   onAdd
 }: {

@@ -1,38 +1,45 @@
+import { randomUUID } from 'crypto'
 import { chmodSync, existsSync, readFileSync, writeFileSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
 import type { Settings, SettingsInput } from '@shared/consultora'
+import { EDITIONS, type Edition } from '@shared/edition'
+import { NOTIFY_DEFAULTS, NOTIFY_KINDS, type NotifySettings } from '@shared/activity'
 import { AppError } from './services/app.error'
 
-/**
- * Ajustes de la Consultora, editables desde la ventana (Ajustes). Se guardan en
- * `<userData>/settings.json` con permisos 600 (solo tu usuario puede leerlo).
- * Los cambios aplican al momento: no hace falta reiniciar.
- */
 interface StoredSettings {
   openaiApiKey: string
   docsPath: string
-  /** Bóveda del workspace. Vacío = `<docsPath>/Workspace`. */
+
   workspacePath: string
   transcribeModel: string
   summaryModel: string
   summaryLanguage: string
   voiceShortcut: string
-  /** Atajo global que abre el workspace. Vacío = desactivado. */
+
   workspaceShortcut: string
   voiceEnabled: boolean
   // ---- Email marketing ----
   resendApiKey: string
-  /** Remitente verificado en Resend, p. ej. hola@tudominio.com */
+
   fromEmail: string
   fromName: string
   replyTo: string
-  /** Recibe la copia previa de cada newsletter. */
+
   ownerEmail: string
-  /** URL del Worker `leads-hub` (https://…workers.dev). */
+
   hubUrl: string
   hubAdminToken: string
   newsletterPaused: boolean
+
+  edition: Edition
+  /** Id de este Mac en la lista de dispositivos de la cuenta. Se crea una vez. */
+  deviceId: string
+  activeOrg: { id: string; name: string } | null
+  orgFolders: Record<string, string>
+  syncRecordings: boolean
+  notify: NotifySettings
+  presenceHidden: boolean
 }
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -54,13 +61,19 @@ const DEFAULTS: StoredSettings = {
   ownerEmail: '',
   hubUrl: '',
   hubAdminToken: '',
-  newsletterPaused: false
+  newsletterPaused: false,
+  edition: 'local',
+  deviceId: '',
+  activeOrg: null,
+  orgFolders: {},
+  syncRecordings: false,
+  notify: { ...NOTIFY_DEFAULTS },
+  presenceHidden: false
 }
 
 let file = ''
 let current: StoredSettings = { ...DEFAULTS }
 
-/** Lee settings.json al arrancar. Si no existe, empieza con los valores por defecto. */
 export function loadConfig(dataDir: string): void {
   file = join(dataDir, 'settings.json')
   if (!existsSync(file)) return
@@ -71,16 +84,32 @@ export function loadConfig(dataDir: string): void {
   }
 }
 
-/** `~/x` → `/Users/<tú>/x` */
 const expandHome = (path: string): string =>
   path.startsWith('~') ? join(homedir(), path.slice(1)) : path
 
+const orgDocs = (): string | null => {
+  const org = current.activeOrg
+  if (!org) return null
+  const folder = current.orgFolders[org.id] ?? org.id.slice(0, 8)
+  return join(expandHome(current.docsPath), 'Organizaciones', folder)
+}
+
 export const config = {
-  docsPath: (): string => expandHome(current.docsPath),
-  workspacePath: (): string =>
-    current.workspacePath
+  docsPath: (): string => orgDocs() ?? expandHome(current.docsPath),
+  workspacePath: (): string => {
+    const org = orgDocs()
+    if (org) return join(org, 'Workspace')
+    return current.workspacePath
       ? expandHome(current.workspacePath)
-      : join(expandHome(current.docsPath), 'Workspace'),
+      : join(expandHome(current.docsPath), 'Workspace')
+  },
+  activeOrg: (): { id: string; name: string } | null => current.activeOrg,
+  syncRecordings: (): boolean => current.syncRecordings === true,
+  notify: (): NotifySettings =>
+    Object.fromEntries(
+      NOTIFY_KINDS.map((k) => [k, current.notify?.[k] !== false])
+    ) as NotifySettings,
+  presenceHidden: (): boolean => current.presenceHidden === true,
   openaiKey: (): string => current.openaiApiKey,
   transcribeModel: (): string => current.transcribeModel,
   summaryModel: (): string => current.summaryModel,
@@ -89,7 +118,7 @@ export const config = {
   workspaceShortcut: (): string => current.workspaceShortcut,
   voiceEnabled: (): boolean => current.voiceEnabled,
   resendKey: (): string => current.resendApiKey,
-  /** "Nombre <email>" o solo el email. Vacío si falta el email. */
+
   from: (): string =>
     current.fromEmail
       ? current.fromName
@@ -100,13 +129,13 @@ export const config = {
   ownerEmail: (): string => current.ownerEmail,
   hubUrl: (): string => current.hubUrl.replace(/\/+$/, ''),
   hubToken: (): string => current.hubAdminToken,
-  newsletterPaused: (): boolean => current.newsletterPaused
+  newsletterPaused: (): boolean => current.newsletterPaused,
+
+  edition: (): Edition => (EDITIONS.includes(current.edition) ? current.edition : 'local')
 }
 
-/** Últimos 4 caracteres de un secreto, para reconocerlo sin mostrarlo. */
 const hint = (secret: string): string => (secret ? `…${secret.slice(-4)}` : '')
 
-/** Lo que la ventana puede ver: nunca la API key completa. */
 export function publicSettings(): Settings {
   const key = current.openaiApiKey
   return {
@@ -133,7 +162,6 @@ export function publicSettings(): Settings {
   }
 }
 
-/** Valida y guarda. Solo cambia los campos que vienen. */
 export function saveSettings(input: SettingsInput): Settings {
   const next = { ...current }
   const clean = (value: unknown, label: string, max = 200): string => {
@@ -203,8 +231,66 @@ export function saveSettings(input: SettingsInput): Settings {
   }
   if (input.newsletterPaused !== undefined) next.newsletterPaused = input.newsletterPaused === true
 
+  persist(next)
+  return publicSettings()
+}
+
+function persist(next: StoredSettings): void {
   writeFileSync(file, JSON.stringify(next, null, 2), { mode: 0o600 })
   chmodSync(file, 0o600)
   current = next
-  return publicSettings()
+}
+
+/** La edición la cambia la cuenta: Equipo al iniciar sesión, Local al cerrarla. */
+export function saveEdition(edition: Edition): void {
+  if (current.edition !== edition) persist({ ...current, edition })
+}
+
+/** Id estable de este dispositivo, creado la primera vez que se pide. */
+export function deviceId(): string {
+  if (!current.deviceId) persist({ ...current, deviceId: randomUUID() })
+  return current.deviceId
+}
+
+const folderFor = (name: string, id: string): string =>
+  `${
+    name
+      .replace(/[/:\\*?"<>|.]/g, '-')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 60) || 'Organización'
+  } ${id.slice(0, 8)}`
+
+export function saveActiveOrg(org: { id: string; name: string } | null): void {
+  const orgFolders = { ...current.orgFolders }
+  if (org && !orgFolders[org.id]) orgFolders[org.id] = folderFor(org.name, org.id)
+  persist({ ...current, activeOrg: org, orgFolders })
+}
+
+export function dataRoot(userData: string): string {
+  return current.activeOrg ? join(userData, 'orgs', current.activeOrg.id) : userData
+}
+
+export function orgPaths(userData: string, orgId: string): { data: string; docs: string } | null {
+  const folder = current.orgFolders[orgId]
+  if (!folder) return null
+  return {
+    data: join(userData, 'orgs', orgId),
+    docs: join(expandHome(current.docsPath), 'Organizaciones', folder)
+  }
+}
+
+export function saveSyncRecordings(on: boolean): void {
+  persist({ ...current, syncRecordings: on })
+}
+
+export function saveNotify(settings: NotifySettings): void {
+  const notify = Object.fromEntries(
+    NOTIFY_KINDS.map((k) => [k, settings[k] !== false])
+  ) as NotifySettings
+  persist({ ...current, notify })
+}
+
+export function savePresenceHidden(hidden: boolean): void {
+  persist({ ...current, presenceHidden: hidden })
 }

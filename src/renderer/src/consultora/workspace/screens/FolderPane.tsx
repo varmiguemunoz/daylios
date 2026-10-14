@@ -26,10 +26,6 @@ import {
 import { useWorkspace } from '../context'
 import { ItemGrid, ItemList } from '../organisms/ItemViews'
 
-/**
- * Vista de carpeta (secundaria, «Ver contenido»): ruta, filtrar, lista o cuadrícula, crear, subir y
- * soltar archivos de Finder. Clic abre; clic derecho o «…» abre el menú del elemento.
- */
 export function FolderPane({ folderId }: { folderId: string | null }): React.JSX.Element {
   const { go, actions } = useWorkspace()
   const load = useCallback(() => ws.list(folderId), [folderId])
@@ -70,7 +66,6 @@ export function FolderPane({ folderId }: { folderId: string | null }): React.JSX
     prefs.set('ws.sort', next)
   }
 
-  /** Soltar en la carpeta actual (o en una carpeta concreta): elementos se mueven, archivos se suben. */
   const dropInto = (target: string | null, e: React.DragEvent): void => {
     e.preventDefault()
     setDropping(false)
@@ -249,7 +244,6 @@ function SearchResults({
   )
 }
 
-/** Mientras carga: tres filas quietas (sin saltos al llegar los datos). */
 function Skeleton(): React.JSX.Element {
   return (
     <ul aria-busy="true" aria-label="Cargando" className="flex flex-col gap-1">

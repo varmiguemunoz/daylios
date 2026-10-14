@@ -9,18 +9,10 @@ import { onEnqueue } from './outbox'
 import { setStatus } from './contact.service'
 import type { GatewayProvider } from './resend.provider'
 
-/** Reintentos: 1 min, 5 min, 30 min, 2 h, y luego cada 6 h. */
 const BACKOFF_MIN = [1, 5, 30, 120, 360]
 const TICK_MS = 60_000
 const BATCH = 50
 
-/**
- * Sincronización con el exterior. Cada tick:
- * 1. `pull` (si se configuró): descarga la cola del Worker y la aplica.
- * 2. Vacía la outbox hacia Resend con reintentos.
- * Corre al arrancar, cada minuto, al despertar el Mac y poco después de cada escritura.
- * Nunca hay dos ticks a la vez; un fallo nunca rompe la app.
- */
 export class MarketingSync {
   private running: Promise<void> | null = null
   private again = false
@@ -28,7 +20,7 @@ export class MarketingSync {
   private soon: NodeJS.Timeout | null = null
   private lastError: string | null = null
   private lastPullAt: string | null = null
-  /** Lo pone hub-sync (tarea 6). */
+
   pull: (() => Promise<void>) | null = null
   hubConfigured: () => boolean = () => false
 
@@ -49,13 +41,11 @@ export class MarketingSync {
     if (this.soon) clearTimeout(this.soon)
   }
 
-  /** Pide un tick pronto (agrupa varias escrituras seguidas). */
   kick(): void {
     if (this.soon) clearTimeout(this.soon)
     this.soon = setTimeout(() => void this.tick(), 1500)
   }
 
-  /** Un tick completo. Si ya hay uno en marcha, se repite al terminar. */
   tick(): Promise<void> {
     if (this.running) {
       this.again = true
@@ -109,7 +99,6 @@ export class MarketingSync {
     if (changed) this.onChange()
   }
 
-  /** Procesa los jobs vencidos en orden. Devuelve si algo cambió en la base. */
   private async drain(gateway: ResendGateway): Promise<boolean> {
     const repo = this.db.getRepository(OutboxModel)
     const jobs = await repo.find({
@@ -122,7 +111,8 @@ export class MarketingSync {
     for (const job of jobs) {
       try {
         if (job.kind === 'contact') await this.syncContact(gateway, job)
-        else if (job.kind === 'segment_delete') await gateway.deleteSegment(String(job.payload.segmentId))
+        else if (job.kind === 'segment_delete')
+          await gateway.deleteSegment(String(job.payload.segmentId))
         else await this.sendEvent(gateway, job)
         await transactionGuard(this.db, (m) => m.getRepository(OutboxModel).delete({ id: job.id }))
         changed = true
@@ -148,24 +138,18 @@ export class MarketingSync {
     this.lastError = `Resend: ${text}`
     const delay = BACKOFF_MIN[Math.min(job.attempts, BACKOFF_MIN.length - 1)] * 60_000
     await transactionGuard(this.db, async (m) => {
-      await m
-        .getRepository(OutboxModel)
-        .update(
-          { id: job.id },
-          {
-            attempts: job.attempts + 1,
-            lastError: text,
-            nextAt: new Date(Date.now() + delay).toISOString()
-          }
-        )
+      await m.getRepository(OutboxModel).update(
+        { id: job.id },
+        {
+          attempts: job.attempts + 1,
+          lastError: text,
+          nextAt: new Date(Date.now() + delay).toISOString()
+        }
+      )
       await m.getRepository(ContactModel).update({ id: job.ref }, { syncError: text })
     })
   }
 
-  /**
-   * Deja el contacto de Resend igual que el local: datos, suscripción y segments `tag:*`.
-   * Los emails anteriores (cambio o borrado) quedan dados de baja en Resend.
-   */
   private async syncContact(gateway: ResendGateway, job: OutboxJob): Promise<void> {
     const contact = await this.db.getRepository(ContactModel).findOneBy({ id: job.ref })
     const previous = ((job.payload.previousEmails as string[]) ?? []).filter(
@@ -207,7 +191,6 @@ export class MarketingSync {
     )
   }
 
-  /** Ids de los segments de los tags audiencia del contacto (crea en Resend los que falten). */
   private async segmentsFor(gateway: ResendGateway, contactId: string): Promise<string[]> {
     const links = await this.db.getRepository(ContactTagModel).findBy({ contactId })
     if (!links.length) return []
@@ -227,7 +210,6 @@ export class MarketingSync {
     return ids
   }
 
-  /** Dispara un evento. Espera a que el contacto esté sincronizado; se descarta si ya no está suscrito. */
   private async sendEvent(gateway: ResendGateway, job: OutboxJob): Promise<void> {
     const contact = await this.db.getRepository(ContactModel).findOneBy({ id: job.ref })
     if (!contact || contact.status !== 'subscribed' || !contact.email) return
@@ -243,7 +225,6 @@ export class MarketingSync {
   }
 }
 
-/** El job aún no puede correr (no es un fallo). */
 class Postpone extends Error {
   constructor(readonly until: string) {
     super('postpone')

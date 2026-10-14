@@ -2,12 +2,6 @@ import type { CanvasEdge, CanvasNode } from '@shared/canvas'
 import { childrenOf, groupZ } from '@shared/canvas-groups'
 import { canvasOf, edgeFromCanvas, newId, toFlowNode, type BoardEdge, type BoardNode } from './flow'
 
-/**
- * Operaciones puras del lienzo (sin React): grupos que arrastran su contenido, copiar y pegar,
- * y el orden vertical de los grupos.
- */
-
-/** Ids de los grupos de `ids` más todo lo que contienen (grupos anidados incluidos). */
 export function withChildren(nodes: BoardNode[], ids: Set<string>): Set<string> {
   const all = nodes.map(canvasOf)
   const out = new Set(ids)
@@ -18,7 +12,6 @@ export function withChildren(nodes: BoardNode[], ids: Set<string>): Set<string> 
   return out
 }
 
-/** Al empezar a arrastrar: posición inicial de lo que va dentro de los grupos arrastrados (y no está ya en el arrastre). */
 export function passengers(
   nodes: BoardNode[],
   dragged: Set<string>
@@ -32,7 +25,6 @@ export function passengers(
   return out
 }
 
-/** Mueve los pasajeros lo mismo que el nodo arrastrado. */
 export function carry(
   nodes: BoardNode[],
   riders: Map<string, { x: number; y: number }>,
@@ -45,7 +37,6 @@ export function carry(
   })
 }
 
-/** zIndex de los grupos según su tamaño actual (tras cambiar el tamaño de uno). */
 export function restack(nodes: BoardNode[]): BoardNode[] {
   return nodes.map((n) => {
     if (n.type !== 'group') return n
@@ -59,7 +50,6 @@ export interface Clip {
   edges: CanvasEdge[]
 }
 
-/** Copia lo seleccionado (los grupos con su contenido) y las conexiones entre esas piezas. */
 export function copySelection(nodes: BoardNode[], edges: BoardEdge[]): Clip | null {
   const ids = withChildren(nodes, new Set(nodes.filter((n) => n.selected).map((n) => n.id)))
   if (!ids.size) return null
@@ -71,7 +61,6 @@ export function copySelection(nodes: BoardNode[], edges: BoardEdge[]): Clip | nu
   }
 }
 
-/** Piezas nuevas (ids nuevos) a partir de lo copiado, desplazadas. Quedan seleccionadas. */
 export function pasteClip(
   clip: Clip,
   offset: { x: number; y: number }

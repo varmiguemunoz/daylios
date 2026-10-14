@@ -2,7 +2,6 @@ import { EFFORTS, type Effort } from '@shared/tasks'
 
 const EFFORT_LABEL: Record<Effort, string> = { bajo: 'Bajo', medio: 'Medio', alto: 'Alto' }
 
-/** Esfuerzo de una tarea: clic elige, clic otra vez quita. */
 export function EffortPicker({
   effort,
   onChange

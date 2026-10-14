@@ -16,18 +16,13 @@ import { requiredText } from './fields'
 import type { GatewayProvider } from './resend.provider'
 
 const EVENT = /^[a-zA-Z0-9._-]{1,100}$/
-/** Formato de espera de Resend ("1 day", "3 hours", "30 minutes", "2 weeks"). */
+
 const WAIT = /^\d{1,3} (minute|hour|day|week)s?$/
 
 export interface SequenceDetail extends SequenceSummary {
   steps: { key: string; type: string; wait: string | null }[]
 }
 
-/**
- * Secuencias = Automations de Resend. Corren en Resend (aunque el Mac esté apagado); aquí se
- * listan y Claude puede crear o reescribir una secuencia lineal: evento → [espera] → email → …
- * Resend no deja editar los pasos de una automation activa: hay que pausarla antes.
- */
 export class SequenceService {
   constructor(private readonly gateway: GatewayProvider) {}
 
@@ -51,10 +46,6 @@ export class SequenceService {
     }
   }
 
-  /**
-   * Crea (sin `id`) o reescribe una secuencia. Cada email es un template nuevo publicado con el
-   * pie de baja. Queda pausada salvo `enabled: true`.
-   */
   async save(input: SequenceInput & { id?: string }): Promise<SequenceSummary> {
     const g = this.resend()
     const from = config.from()
@@ -135,7 +126,6 @@ function validEmails(value: unknown): Required<SequenceEmailInput>[] {
   })
 }
 
-/** trigger → [delay] → send_email → [delay] → send_email … (conexiones por defecto). */
 export function buildDraft(
   name: string,
   event: string,

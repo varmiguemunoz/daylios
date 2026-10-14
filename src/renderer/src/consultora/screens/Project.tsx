@@ -15,10 +15,13 @@ import {
   Section,
   Select
 } from '../ui'
-import { useScreenTitle } from '../chrome'
+import { useGoneRedirect, useScreenTitle } from '../chrome'
+import { TasksSection } from '../organisms/tasks/TasksSection'
 import { Properties, PropertyRow } from '../molecules/Properties'
+import { Authorship } from '../organisms/orgs/Authorship'
+import { AssigneeRow } from '../organisms/orgs/AssigneeRow'
+import { EntityActivity } from '../organisms/activity/EntityActivity'
 
-/** Proyecto: estado, objetivo, entregables (casillas marcables), notas y reuniones. */
 export function Project({
   id,
   go,
@@ -31,6 +34,7 @@ export function Project({
   const load = useCallback(() => api.getProject(id), [id])
   const { data: p, error: loadError } = useLoad(load)
   useScreenTitle(p?.name)
+  useGoneRedirect(loadError)
   const [error, setError] = useState<string | null>(null)
 
   const save = async (patch: ProjectInput): Promise<void> =>
@@ -97,7 +101,11 @@ export function Project({
             {pending ? `${pending} pendientes` : 'Sin pendientes'}
           </span>
         </PropertyRow>
+        <AssigneeRow value={p.assigneeId} onChange={(assigneeId) => void save({ assigneeId })} />
       </Properties>
+      <Authorship table="projects" id={p.id} />
+
+      <TasksSection kind="project" id={p.id} />
 
       <Section title="Objetivo">
         <MarkdownField
@@ -141,6 +149,7 @@ export function Project({
           </List>
         )}
       </Section>
+      <EntityActivity entity="projects" id={id} />
     </Page>
   )
 }

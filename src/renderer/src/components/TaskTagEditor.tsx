@@ -3,7 +3,6 @@ import { X } from 'lucide-react'
 import { MAX_TAGS, cleanTag } from '@shared/tasks'
 import { tasksApi } from '../lib/api'
 
-/** Tags de una tarea: escribe y Enter (o elige una sugerencia); × quita; ⌫ con el campo vacío quita el último. */
 export function TaskTagEditor({
   tags,
   onChange

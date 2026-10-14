@@ -1,6 +1,5 @@
 import { EMAIL_SECTIONS, SECTIONS, type Section, type SectionLink } from '../sections'
 
-/** Navegación de Consultora en la barra lateral: filas de 30 px como el explorador de Obsidian. */
 export function SectionNav({
   current,
   onOpen

@@ -48,7 +48,6 @@ const boardOp = z.discriminatedUnion('op', [
   z.object({ op: z.literal('remove_edge'), id: z.string() })
 ])
 
-/** Herramientas MCP: el workspace (bóveda de notas, boards y archivos). */
 export function register(server: McpServer): void {
   server.registerTool(
     'workspace_tree',

@@ -1,7 +1,8 @@
 import { EntitySchema } from 'typeorm'
+import { DELETED_AT, type SoftDeletable } from './soft-delete'
 import type { Client } from '@shared/consultora'
 
-export const ClientModel = new EntitySchema<Client>({
+export const ClientModel = new EntitySchema<Client & SoftDeletable>({
   name: 'Client',
   tableName: 'clients',
   columns: {
@@ -14,6 +15,7 @@ export const ClientModel = new EntitySchema<Client>({
     signedAt: { name: 'signed_at', type: 'text', nullable: true },
     folderPath: { name: 'folder_path', type: 'text' },
     createdAt: { name: 'created_at', type: 'text' },
-    updatedAt: { name: 'updated_at', type: 'text' }
+    updatedAt: { name: 'updated_at', type: 'text' },
+    deletedAt: DELETED_AT
   }
 })

@@ -3,11 +3,32 @@ import type { Note, NotesApi, VoiceResult } from '../shared/notes'
 import type { ConsultoraApi, Meeting, StopInfo } from '../shared/consultora'
 import type { MarketingApi } from '../shared/marketing'
 import type { WorkspaceApi } from '../shared/workspace'
+import type { UiStateApi } from '../shared/ui-state'
+import type { DashboardApi } from '../shared/metrics'
+import type { EditionApi } from '../shared/edition'
+import type { AccountApi } from '../shared/account'
+import type { OrgsApi } from '../shared/organizations'
+import type { SyncApi } from '../shared/sync-protocol'
+import type { FilesApi } from '../shared/files'
+import type { ActivityApi } from '../shared/activity'
+import type { PresenceApi } from '../shared/presence'
+import type { RemoteChange } from '../shared/sync-protocol'
 
 declare global {
   interface Window {
     api: {
+      ui: UiStateApi
       tasks: TasksApi
+
+      dashboard: DashboardApi
+
+      edition: EditionApi
+      account: AccountApi
+      orgs: OrgsApi
+      sync: SyncApi
+      files: FilesApi
+      activity: ActivityApi
+      presence: PresenceApi
       notes: NotesApi
       workspace: WorkspaceApi
       consultora: ConsultoraApi
@@ -28,23 +49,32 @@ declare global {
         finish: (data: Uint8Array, seconds: number) => Promise<VoiceResult>
         hide: () => void
       }
-      /** Clic en «Nota creada»: el popover abre esa nota. */
+
       onNotesOpen: (cb: (note: Note) => void) => () => void
       hideWindow: () => void
-      /** Consultora avisa si el workspace está delante (el atajo global lo usa para ocultar). */
+
       setWorkspaceActive: (on: boolean) => void
-      /** Abre la ventana Consultora (y oculta el popover). Con `client`, en la ficha de ese cliente. */
+
       openConsultora: (target?: { client?: string; workspace?: boolean }) => void
-      /** Consultora: main pide abrir una pantalla (p. ej. un cliente desde una nota del menubar). */
-      onConsultoraNavigate: (cb: (target: { client?: string; workspace?: boolean }) => void) => () => void
-      /** Abre un archivo o carpeta en Finder (solo dentro de tu carpeta personal). */
+
+      onConsultoraNavigate: (
+        cb: (target: {
+          client?: string
+          workspace?: boolean
+          account?: boolean
+          open?: { entity: string; id: string }
+        }) => void
+      ) => () => void
+
       openPath: (path: string) => Promise<void>
-      /** Ruta en disco de un archivo soltado en la ventana. */
+
       pathForFile: (file: File) => string
-      /** La ventana del menubar se acaba de mostrar. */
+
       onWindowShown: (cb: () => void) => () => void
-      /** Claude, una grabación u otra ventana cambiaron datos. */
+
       onDataChanged: (cb: () => void) => () => void
+
+      onRemoteChanges: (cb: (changes: RemoteChange[]) => void) => () => void
     }
   }
 }

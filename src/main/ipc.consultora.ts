@@ -7,10 +7,6 @@ import { checkPermissions, openPrivacy, restartApp, type Privacy } from './permi
 import type { VoiceController } from './voice/voice'
 import type { WorkspaceShortcut } from './workspace-shortcut'
 
-/**
- * Canales de la ventana Consultora (ver src/preload). Uno por método.
- * Las escrituras avisan a todas las ventanas (`data:changed`) para que recarguen.
- */
 export function registerConsultoraIpc(
   c: Consultora,
   notify: () => void,
@@ -67,18 +63,27 @@ export function registerConsultoraIpc(
   write('consultora:updateProject', (ref: string, patch) => c.projects.update(ref, patch))
   write('consultora:removeProject', (ref: string) => c.projects.remove(ref))
 
+  read('dashboard:metrics', (query) => c.metrics.query(query))
+  read('dashboard:get', () => c.dashboards.get())
+  write('dashboard:save', (layout) => c.dashboards.save(layout))
+  write('dashboard:reset', () => c.dashboards.reset())
+
   read('consultora:listPipelines', () => c.prospects.listPipelines())
   read('consultora:pipeline', (ref?: string) => c.prospects.pipeline(ref))
   write('consultora:savePipeline', (input) => c.prospects.savePipeline(input))
-  write('consultora:removePipeline', (ref: string, moveTo) => c.prospects.removePipeline(ref, moveTo))
+  write('consultora:removePipeline', (ref: string, moveTo) =>
+    c.prospects.removePipeline(ref, moveTo)
+  )
   write('consultora:removeProspect', (ref: string) => c.prospects.remove(ref))
   read('consultora:listStages', (pipeline?: string) => c.prospects.listStages(pipeline))
   write('consultora:saveStages', (stages) => c.prospects.saveStages(stages))
   read('consultora:getProspect', (ref: string) => c.prospects.get(ref))
   write('consultora:createProspect', (input) => c.prospects.create(input))
   write('consultora:updateProspect', (ref: string, patch) => c.prospects.update(ref, patch))
-  write('consultora:moveProspect', (ref: string, stage: string, index?: number, pipeline?: string) =>
-    c.prospects.move(ref, stage, index, pipeline)
+  write(
+    'consultora:moveProspect',
+    (ref: string, stage: string, index?: number, pipeline?: string) =>
+      c.prospects.move(ref, stage, index, pipeline)
   )
 
   read('consultora:listContacts', (filter) => c.contacts.list(filter ?? {}))
@@ -97,10 +102,17 @@ export function registerConsultoraIpc(
     const options: Electron.OpenDialogOptions = {
       title: 'Subir grabación',
       properties: ['openFile'],
-      filters: [{ name: 'Video o audio', extensions: ['mp4', 'mov', 'm4v', 'mkv', 'webm', 'mp3', 'm4a', 'wav'] }]
+      filters: [
+        {
+          name: 'Video o audio',
+          extensions: ['mp4', 'mov', 'm4v', 'mkv', 'webm', 'mp3', 'm4a', 'wav']
+        }
+      ]
     }
     const win = BrowserWindow.fromWebContents(event.sender)
-    const result = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options)
+    const result = win
+      ? await dialog.showOpenDialog(win, options)
+      : await dialog.showOpenDialog(options)
     return result.canceled ? null : (result.filePaths[0] ?? null)
   })
   write('consultora:importRecording', (path: string, info) => c.recordings.import(path, info))
@@ -118,14 +130,20 @@ export function registerConsultoraIpc(
   read('consultora:listActionItems', (filter) => c.meetings.listActionItems(filter))
 
   read('consultora:listDocuments', (client: string) => c.context.listDocuments(client))
-  read('consultora:openDocument', (client: string, path: string) => c.context.openDocument(client, path))
-  write('consultora:writeDocument', (client: string, path: string, content: string, expected?: string) =>
-    c.context.writeDocument(client, path, content, expected)
+  read('consultora:openDocument', (client: string, path: string) =>
+    c.context.openDocument(client, path)
+  )
+  write(
+    'consultora:writeDocument',
+    (client: string, path: string, content: string, expected?: string) =>
+      c.context.writeDocument(client, path, content, expected)
   )
   write('consultora:renameDocument', (client: string, path: string, name: string) =>
     c.context.renameDocument(client, path, name)
   )
-  write('consultora:trashDocument', (client: string, path: string) => c.context.trashDocument(client, path))
+  write('consultora:trashDocument', (client: string, path: string) =>
+    c.context.trashDocument(client, path)
+  )
   read('consultora:readDocument', (client: string, path: string) =>
     c.context.readDocument(client, path)
   )

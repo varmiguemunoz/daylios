@@ -1,20 +1,13 @@
 import { useState, type DragEvent } from 'react'
 
-/**
- * Arrastrar para reordenar, con el drag and drop nativo del navegador (sin librería).
- *
- * - `item(id, index, group)` va en cada elemento arrastrable.
- * - `zone(group, count)` va en la lista que lo contiene (recibe el «soltar»).
- * - `target` dice dónde caería: la lista pinta una línea en ese índice.
- * - Al soltar llama `onMove(id, index, group)`; `index` cuenta el elemento arrastrado
- *   en su sitio original: usa `finalIndex()` si se mueve dentro de la misma lista.
- *
- * `group` permite varias listas (columnas del pipeline). Con una sola lista, usa cualquier texto fijo.
- */
 export function useReorder(onMove: (id: string, index: number, group: string) => void): {
   dragging: string | null
   target: { group: string; index: number } | null
-  item: (id: string, index: number, group: string) => React.HTMLAttributes<HTMLElement> & { draggable: boolean }
+  item: (
+    id: string,
+    index: number,
+    group: string
+  ) => React.HTMLAttributes<HTMLElement> & { draggable: boolean }
   zone: (group: string, count: number) => React.HTMLAttributes<HTMLElement>
 } {
   const [dragging, setDragging] = useState<string | null>(null)
@@ -62,5 +55,5 @@ export function useReorder(onMove: (id: string, index: number, group: string) =>
   }
 }
 
-/** Índice final dentro de la misma lista: al quitar el elemento, lo que hay detrás sube uno. */
-export const finalIndex = (index: number, from: number): number => (index > from ? index - 1 : index)
+export const finalIndex = (index: number, from: number): number =>
+  index > from ? index - 1 : index

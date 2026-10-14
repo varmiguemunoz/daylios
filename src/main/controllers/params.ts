@@ -1,5 +1,3 @@
-/** Lectores pequeños de query/body compartidos por los controladores de la Consultora. */
-
 export const text = (v: unknown): string | undefined =>
   typeof v === 'string' && v !== '' ? v : undefined
 

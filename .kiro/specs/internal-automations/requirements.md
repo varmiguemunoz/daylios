@@ -21,21 +21,21 @@ email de marketing solo a suscritos (opt-in).
 
 ## R2 · Disparadores (13)
 
-| Clave                     | Cuándo                                         | Parámetros                    |
-| ------------------------- | ---------------------------------------------- | ----------------------------- |
-| `contact.created`         | Entra un contacto (a mano, fuente o Claude)    | fuente (opcional)             |
-| `contact.tag_added`       | A un contacto se le añade un tag               | tag                           |
-| `contact.tag_removed`     | A un contacto se le quita un tag               | tag                           |
-| `contact.subscribed`      | Pasa a suscrito                                | —                             |
-| `contact.unsubscribed`    | Se da de baja                                  | —                             |
-| `contact.bounced`         | Rebota o marca spam                            | —                             |
-| `prospect.created`        | Se crea un prospecto                           | pipeline (opcional)           |
-| `prospect.stage_changed`  | Un prospecto cambia de etapa                   | pipeline, de etapa, a etapa   |
-| `prospect.won`            | Llega a una etapa ganada                       | pipeline (opcional)           |
-| `prospect.lost`           | Llega a una etapa perdida                      | pipeline (opcional)           |
-| `client.created`          | Se crea un cliente                             | —                             |
-| `meeting.ready`           | Una reunión termina de transcribirse y resumirse | —                           |
-| `manual`                  | Se ejecuta a mano (ficha del contacto o Claude) | —                            |
+| Clave                    | Cuándo                                           | Parámetros                  |
+| ------------------------ | ------------------------------------------------ | --------------------------- |
+| `contact.created`        | Entra un contacto (a mano, fuente o Claude)      | fuente (opcional)           |
+| `contact.tag_added`      | A un contacto se le añade un tag                 | tag                         |
+| `contact.tag_removed`    | A un contacto se le quita un tag                 | tag                         |
+| `contact.subscribed`     | Pasa a suscrito                                  | —                           |
+| `contact.unsubscribed`   | Se da de baja                                    | —                           |
+| `contact.bounced`        | Rebota o marca spam                              | —                           |
+| `prospect.created`       | Se crea un prospecto                             | pipeline (opcional)         |
+| `prospect.stage_changed` | Un prospecto cambia de etapa                     | pipeline, de etapa, a etapa |
+| `prospect.won`           | Llega a una etapa ganada                         | pipeline (opcional)         |
+| `prospect.lost`          | Llega a una etapa perdida                        | pipeline (opcional)         |
+| `client.created`         | Se crea un cliente                               | —                           |
+| `meeting.ready`          | Una reunión termina de transcribirse y resumirse | —                           |
+| `manual`                 | Se ejecuta a mano (ficha del contacto o Claude)  | —                           |
 
 (+ `task.completed` con tag opcional, sujeto tarea, solo acciones de productividad.)
 
@@ -48,6 +48,7 @@ prospecto está en etapa abierta.
 ## R4 · Acciones (23 + 2 de control)
 
 Contacto
+
 1. Añadir tag
 2. Quitar tag
 3. Actualizar dato (nombre, rol, teléfono, LinkedIn)
@@ -59,33 +60,18 @@ Contacto
 9. Dar de baja de marketing
 10. Borrar contacto (destructiva)
 
-Pipeline
-11. Convertir en prospecto (pipeline, etapa, valor)
-12. Mover prospecto (pipeline, etapa)
-13. Actualizar prospecto (valor, próximo paso, en N días)
-14. Borrar prospecto (destructiva)
+Pipeline 11. Convertir en prospecto (pipeline, etapa, valor) 12. Mover prospecto (pipeline, etapa) 13. Actualizar prospecto (valor, próximo paso, en N días) 14. Borrar prospecto (destructiva)
 
-Clientes
-15. Crear cliente desde el prospecto o el contacto
-16. Crear proyecto en su cliente (nombre con variables)
+Clientes 15. Crear cliente desde el prospecto o el contacto 16. Crear proyecto en su cliente (nombre con variables)
 
-Email (Resend)
-17. Enviar email (asunto y cuerpo markdown con variables; solo suscritos; pie de baja)
-18. Iniciar secuencia de Resend (dispara su evento)
-19. Avisarme por email (a `ownerEmail`)
+Email (Resend) 17. Enviar email (asunto y cuerpo markdown con variables; solo suscritos; pie de baja) 18. Iniciar secuencia de Resend (dispara su evento) 19. Avisarme por email (a `ownerEmail`)
 
-Productividad
-20. Crear tarea para mí (título, en N días, tags, esfuerzo, descripción; si el día está lleno, el
-    siguiente con hueco)
-21. Crear nota (con variables; relacionada con su cliente)
-22. Notificación en el Mac
+Productividad 20. Crear tarea para mí (título, en N días, tags, esfuerzo, descripción; si el día está lleno, el
+siguiente con hueco) 21. Crear nota (con variables; relacionada con su cliente) 22. Notificación en el Mac
 
-Integraciones
-23. Webhook (POST JSON a una URL)
+Integraciones 23. Webhook (POST JSON a una URL)
 
-Control
-24. Esperar N minutos / horas / días
-25. Continuar solo si (condiciones)
+Control 24. Esperar N minutos / horas / días 25. Continuar solo si (condiciones)
 
 ## R5 · Variables
 

@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 
-/** Fila de ajustes de Obsidian: nombre y descripción a la izquierda, el control a la derecha. */
 export function SettingRow({
   name,
   description,
@@ -21,7 +20,6 @@ export function SettingRow({
   )
 }
 
-/** Interruptor de Obsidian: pista redonda, violeta al activarse. */
 export function Toggle({
   checked,
   onChange,

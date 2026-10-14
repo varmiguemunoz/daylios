@@ -1,8 +1,8 @@
 import { EntitySchema } from 'typeorm'
+import { ALIVE, DELETED_AT, type SoftDeletable } from './soft-delete'
 import type { Contact } from '@shared/consultora'
 
-/** Personas: de clientes y prospectos, y leads de email marketing (misma tabla). */
-export const ContactModel = new EntitySchema<Contact>({
+export const ContactModel = new EntitySchema<Contact & SoftDeletable>({
   name: 'Contact',
   tableName: 'contacts',
   columns: {
@@ -23,13 +23,14 @@ export const ContactModel = new EntitySchema<Contact>({
     syncError: { name: 'sync_error', type: 'text', nullable: true },
     syncedAt: { name: 'synced_at', type: 'text', nullable: true },
     createdAt: { name: 'created_at', type: 'text' },
-    updatedAt: { name: 'updated_at', type: 'text' }
+    updatedAt: { name: 'updated_at', type: 'text' },
+    deletedAt: DELETED_AT
   },
   indices: [
     { name: 'idx_contacts_client', columns: ['clientId'] },
     { name: 'idx_contacts_prospect', columns: ['prospectId'] },
     { name: 'idx_contacts_project', columns: ['projectId'] },
-    { name: 'idx_contacts_email', columns: ['email'], unique: true },
+    { name: 'idx_contacts_email', columns: ['email'], unique: true, where: ALIVE },
     { name: 'idx_contacts_status', columns: ['status'] }
   ]
 })

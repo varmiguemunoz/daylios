@@ -17,6 +17,10 @@ asarUnpack:
   - node_modules/ffmpeg-static/**
   # Teclado global (detectar cuándo se suelta el atajo de nota de voz).
   - node_modules/uiohook-napi/**
+protocols:
+  - name: DayliOS
+    schemes:
+      - daylios
 mac:
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:

@@ -16,29 +16,25 @@ export interface DayState {
   full: boolean
   undo: Undo | null
   add: (title: string) => Promise<boolean>
-  /** Mueve la tarea `id` a la posición `index` de hoy (arrastrar o ⌥↑/⌥↓). */
+
   reorder: (id: string, index: number) => Promise<void>
   toggle: (task: Task) => Promise<void>
   remove: (task: Task) => Promise<void>
-  /** Borra una subtarea con «Deshacer» (la quita el detalle de su lista). */
+
   removeSubtask: (task: Task) => Promise<void>
-  /** Sube en cada recarga: el detalle abierto lo usa para refrescar sus subtareas tras deshacer. */
+
   revision: number
-  /** Recalcula el «2/5» de una madre tras cambiar sus subtareas (sin recargar el día). */
+
   patchProgress: (parentId: string, subtasks: Task[]) => void
   bringToday: (task: Task) => Promise<void>
   bringAll: () => Promise<void>
   dismiss: (task: Task) => Promise<void>
   runUndo: () => Promise<void>
   clearUndo: () => void
-  /** Vuelve a leer hoy y ayer (p. ej. al salir del detalle de una tarea). */
+
   reload: () => Promise<void>
 }
 
-/**
- * Estado de "hoy" + pendientes de ayer.
- * Cambios optimistas: se pinta primero y, si main falla, se recarga desde la base de datos.
- */
 export function useDay(date: DayKey): DayState {
   const [today, setToday] = useState<Task[]>([])
   const [leftovers, setLeftovers] = useState<Task[]>([])
@@ -76,7 +72,6 @@ export function useDay(date: DayKey): DayState {
     }
   }, [reload])
 
-  /** Ejecuta la llamada a main; si falla, avisa y recarga. Devuelve si tuvo éxito. */
   const safely = useCallback(
     async (fn: () => Promise<unknown>): Promise<boolean> => {
       try {
@@ -124,7 +119,6 @@ export function useDay(date: DayKey): DayState {
     await safely(() => tasksApi.update(task.id, { done }))
   }
 
-  /** Borra sin confirmar y ofrece deshacer. */
   const deleteWithUndo = async (task: Task, message: string): Promise<void> => {
     const box: { removed?: RemovedTask } = {}
     if (!(await safely(async () => void (box.removed = await tasksApi.remove(task.id))))) return

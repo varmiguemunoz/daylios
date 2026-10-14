@@ -1,10 +1,6 @@
 import { EntitySchema } from 'typeorm'
 import type { NoteTargetType } from '@shared/notes'
 
-/**
- * Relación de una nota con otra nota o con un cliente.
- * Nota ↔ nota se guarda una sola vez: `noteId` = id menor, `targetId` = id mayor.
- */
 export interface NoteRelation {
   id: string
   noteId: string

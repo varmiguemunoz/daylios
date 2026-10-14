@@ -24,7 +24,6 @@ import { AppError } from './app.error'
 import { pageByDay } from './page-by-day'
 import type { WorkspaceService } from './workspace.service'
 
-/** Fila del índice del workspace → Nota. El día es el de creación (hora local). */
 export function toNote(row: WorkspaceRow): Note {
   return {
     id: row.id,
@@ -36,18 +35,12 @@ export function toNote(row: WorkspaceRow): Note {
   }
 }
 
-/**
- * Notas en markdown: archivos `.md` de la bóveda del workspace. Las del menubar y las de voz caen en
- * «Notas rápidas». Las relaciones (con otras notas y con clientes) siguen en SQLite, por id.
- * La UI (IPC) y Claude (HTTP) usan esta misma clase.
- */
 export class NoteService implements NotesApi {
   constructor(
     private readonly db: DataSource,
     private readonly workspace: WorkspaceService
   ) {}
 
-  /** Las de «Notas rápidas», por día, de la más reciente a la más antigua, paginadas por días. */
   async list(page: number, pageSize: number): Promise<NotesPage> {
     const quick = await this.workspace.quickNotesFolder()
     const notes = (await this.workspace.noteRows(quick.id))
@@ -69,7 +62,6 @@ export class NoteService implements NotesApi {
     return viewOf(this.db.manager, toNote(await this.workspace.noteRow(id)))
   }
 
-  /** Busca en título y texto de todas las notas del workspace, sin distinguir acentos. Vacío = recientes. */
   async search(query: string, limit = 20): Promise<NoteBrief[]> {
     const q = normalizeName(typeof query === 'string' ? query : '')
     const max = Math.max(1, Math.min(Number(limit) || 20, 50))
@@ -80,7 +72,6 @@ export class NoteService implements NotesApi {
       .map(noteBrief)
   }
 
-  /** En «Notas rápidas». Puede crearse vacía (la UI la borra si sale sin escribir) y ya relacionada. */
   async create(body: string, links: NoteLinks = {}): Promise<Note> {
     const text = checkBody(body)
     await this.workspace.quickNotesFolder()
@@ -99,14 +90,12 @@ export class NoteService implements NotesApi {
     return toNote(await this.workspace.writeNote(id, checkBody(body), expected))
   }
 
-  /** Al salir del editor o volver a lectura: el archivo se llama como el título. Vacía = no cambia. */
   async settle(id: string): Promise<Note> {
     const row = await this.workspace.noteRow(id)
     if (!row.text?.trim()) return toNote(row)
     return toNote(await this.workspace.renameNoteFile(id, noteFileName(row.text)))
   }
 
-  /** A la Papelera, con sus relaciones. */
   async remove(id: string): Promise<void> {
     await this.workspace.noteRow(id)
     await transactionGuard(this.db, async (manager) => {
@@ -147,7 +136,6 @@ async function notesByIds(manager: EntityManager, ids: string[]): Promise<Note[]
   return rows.map(toNote)
 }
 
-/** Notas relacionadas con un cliente, más recientes primero. */
 export async function notesOfClient(
   manager: EntityManager,
   clientId: string
@@ -163,7 +151,6 @@ export async function notesOfClient(
   ).map(noteBrief)
 }
 
-/** Borra las relaciones que apuntan a esa entidad (al borrar un cliente o una nota). */
 export async function removeRelationsOf(
   manager: EntityManager,
   type: NoteTargetType,
@@ -220,7 +207,6 @@ async function viewOf(manager: EntityManager, note: Note): Promise<NoteView> {
   }
 }
 
-/** Par canónico de una relación nota ↔ nota. */
 const ordered = (a: string, b: string): [string, string] => (a < b ? [a, b] : [b, a])
 
 function checkTarget(value: unknown): NoteTarget {

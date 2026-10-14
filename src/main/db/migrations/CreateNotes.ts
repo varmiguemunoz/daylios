@@ -1,6 +1,5 @@
 import { Table, type MigrationInterface, type QueryRunner } from 'typeorm'
 
-/** Crea la tabla `notes`. */
 export class CreateNotes1727800000001 implements MigrationInterface {
   name = 'CreateNotes1727800000001'
 

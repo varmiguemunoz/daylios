@@ -23,11 +23,14 @@ import {
   Section
 } from '../ui'
 import { ContactsSection } from '../ContactsSection'
-import { useScreenTitle } from '../chrome'
+import { TasksSection } from '../organisms/tasks/TasksSection'
+import { useGoneRedirect, useScreenTitle } from '../chrome'
 import { InlineField } from '../molecules/InlineField'
 import { Properties, PropertyRow } from '../molecules/Properties'
+import { Authorship } from '../organisms/orgs/Authorship'
+import { AssigneeRow } from '../organisms/orgs/AssigneeRow'
+import { EntityActivity } from '../organisms/activity/EntityActivity'
 
-/** Prospecto como una nota: propiedades de venta, contactos, notas y reuniones de venta. */
 export function Prospect({
   id,
   go,
@@ -40,6 +43,7 @@ export function Prospect({
   const load = useCallback(() => api.getProspect(id), [id])
   const { data: p, error: loadError } = useLoad(load)
   useScreenTitle(p?.company)
+  useGoneRedirect(loadError)
   const stagesLoad = useCallback(() => api.listStages(), [])
   const { data: stages } = useLoad(stagesLoad)
   const pipelinesLoad = useCallback(() => api.listPipelines(), [])
@@ -167,7 +171,11 @@ export function Prospect({
             className="h-[26px] rounded-[4px] bg-transparent px-1.5 text-[14px] text-ob-text outline-none [color-scheme:dark] hover:bg-ob-hover"
           />
         </PropertyRow>
+        <AssigneeRow value={p.assigneeId} onChange={(assigneeId) => void save({ assigneeId })} />
       </Properties>
+      <Authorship table="prospects" id={p.id} />
+
+      <TasksSection kind="prospect" id={p.id} />
 
       <ContactsSection contacts={p.contacts} prospect={p.id} go={go} />
 
@@ -204,6 +212,7 @@ export function Prospect({
           </List>
         )}
       </Section>
+      <EntityActivity entity="prospects" id={id} />
     </Page>
   )
 }

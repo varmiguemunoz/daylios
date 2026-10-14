@@ -11,18 +11,17 @@ import { Button, ConfirmButton, ErrorNote, IconButton, Modal } from '../../ui'
 import { finalIndex, useReorder } from '../../../lib/useReorder'
 
 interface Draft {
-  /** id de la etapa existente; vacío = nueva. */
   id: string
   key: string
   name: string
   kind: StageKind
-  /** Prospectos que tiene hoy (para pedir a dónde moverlos si se borra). */
+
   count: number
 }
 
 interface PipelineEditorModalProps {
   open: boolean
-  /** null = pipeline nuevo. */
+
   pipeline: Pipeline | null
   pipelines: PipelineSummary[]
   onClose: () => void
@@ -43,7 +42,6 @@ const DEFAULTS: Omit<Draft, 'key'>[] = [
 let seq = 0
 const key = (): string => `k${++seq}`
 
-/** Editar el pipeline desde el pipeline: nombre, columnas (ordenar, renombrar, tipo, añadir, borrar) y borrarlo. */
 export function PipelineEditorModal(props: PipelineEditorModalProps): React.JSX.Element | null {
   if (!props.open) return null
   // Montado solo al abrir: el estado inicial sale del pipeline actual.
@@ -76,7 +74,7 @@ function Editor({
   )
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  /** Fila cuyo asa está pulsada: solo esa es arrastrable. */
+
   const [grab, setGrab] = useState<string | null>(null)
 
   const total = pipeline?.stages.reduce((n, s) => n + s.prospects.length, 0) ?? 0

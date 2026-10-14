@@ -9,7 +9,9 @@
     "lint": "eslint --cache .",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
+    "typecheck:cloud": "tsc --noEmit -p services/cloud/tsconfig.json",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "check": "npm run typecheck && npm run typecheck:cloud && eslint --cache .",
     "test": "ELECTRON_RUN_AS_NODE=1 electron node_modules/vitest/vitest.mjs run",
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
@@ -23,6 +25,7 @@
   "dependencies": {
     "@electron-toolkit/utils": "^4.0.0",
     "@modelcontextprotocol/sdk": "1.31.0",
+    "@supabase/supabase-js": "2.117.3",
     "better-sqlite3": "^12.4.1",
     "express": "^5.1.0",
     "ffmpeg-static": "^5.2.0",

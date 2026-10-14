@@ -13,7 +13,6 @@ interface DeleteItemModalProps {
 
 const plural = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`
 
-/** Borrar: dice qué se pierde y qué enlaces quedan rotos. Todo va a la Papelera (recuperable). */
 export function DeleteItemModal({
   item,
   onClose,

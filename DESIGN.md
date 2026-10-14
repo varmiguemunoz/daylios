@@ -368,6 +368,10 @@ The day's ceiling, drawn. Eight equal pill segments in a row.
 
 - Same skeleton as History: headline title, day headings, surface cards with hairline dividers, pager. An apricot pill «Nueva» sits opposite the title. Each item: list type bold title, micro time at right, caption milk-soft excerpt.
 
+### Remembered interface
+
+Both windows reopen as they were left, like Obsidian's `workspace.json`. State lives in `ui-state.json` (main process, atomic writes, 500ms debounce), read before the first paint so nothing flashes. Menubar tabs stay mounted (inactive ones are `invisible` and `inert`) and details open over the list, so scroll, filters and typed text survive switching. The pin button, a 24px ghost circle at the top right, keeps the popover open on blur; pinned, it moves from the top edge or the bottom bar and resizes in height between 480 and 1000px.
+
 ### Consultora Window (Obsidian theme)
 
 Since W6 the whole Consultora window uses the Obsidian theme described under Workspace. The DayliOS look above (night, pastels, Nunito, pills) now belongs to the menubar only.
@@ -480,6 +484,78 @@ The Consultora window puts `theme-obsidian` on `body` while it is open (since W6
 - Selection menu floats above the selection: delete, color, zoom to selection, group, shape. A single edge gets: delete, color, no arrows, end arrow, both arrows, label.
 - Keys: ⌘A, ⌘C, ⌘X, ⌘V, ⌘D, ⌘G, ⌘Z, ⇧⌘Z, arrows 1px, ⇧ arrows 10px, ⇧1 fit, ⇧2 zoom to selection, ⌘0 100%.
 - Saving: the canvas only marks itself dirty; the file is serialized once, 500ms after the last change.
+
+### Tasks board (Consultora)
+
+- Section «Tareas» after Workspace. Two views, Tablero and Lista, in a segmented control; the choice, period, range, filters and sort are remembered.
+- Three columns: Pendiente, En curso, Hecha. Same KanbanColumn as the pipeline. Native drag between columns changes only the status; Hecha equals done, so the menubar shows it crossed out.
+- Card: title, day in grey (yellow when late), effort, tags in link color, relation name, subtask progress.
+- Lista is a Bases style table. Click a header to sort, again to invert, a third time to clear. Status changes from the row.
+- Filters live in the right drawer: period, text, tags, effort, client, project, prospect.
+- Detail opens as a right panel: Properties with status and relations above the usual task detail.
+- Client, project and prospect records show a «Tareas» section: open first, a checkbox to close, «Nueva» creates it for today already related.
+- The ceiling of eight per day still rules; when today is full the form suggests the next free day.
+
+### Dashboard (Inicio)
+
+- First section of Consultora. Monitor mode: in five seconds, is the week going well, what is late, how much is at stake.
+- Header: period select (week, month, quarter, year, range), pipeline select (all or one) and «Editar dashboard». Every number compares with the previous period of the same length.
+- Grid of 4 columns that drops to 2 below 768px of panel. Sizes: quarter, half, full; one or two rows of at least 150px.
+- Widget card: `ob-alt` background, 1px border, 8px radius, no shadow. Title 13px muted; clicking it opens the source already filtered. Number 28px semibold tabular. Delta 12px: green when better, red when worse, with arrow and text, never color alone.
+- Charts are own SVG or plain divs: BarList with direct labels and values, Sparkline as decoration only. Every chart has a text summary for screen readers and a table one click away.
+- Each widget owns its loading, empty and error states; one failing never breaks the others.
+- Edit mode: drag to reorder, settings for width, height, own period and own pipeline, remove. «Añadir» opens the catalog, «Restablecer» goes back to the six defaults.
+- New widget: add an entry in `organisms/dashboard/registry.ts`, its view in `widgets.tsx` and, if it needs new data, a pure function in `metrics.service.ts`.
+
+### Cloud architecture
+
+```
+renderer ── IPC ── main ── servicios ── SQLite + change_log
+                     └── puertos: Sync · FileSync · Identity · Presence · Entitlements
+                           ├── Local: adaptadores vacíos
+                           └── Equipo: src/main/cloud, carga perezosa
+                                  └── services/cloud, NestJS ── Supabase PostgreSQL con RLS
+                                  └── Supabase Auth y Realtime
+```
+
+- «Cuenta y equipo» in Settings: two edition cards, the active one with the accent border and «Activa». Copy says plainly that nothing is uploaded without confirmation.
+
+### Account
+
+- Strip, right side after the recorder: 24px avatar or initials in an accent-tinted circle. Click opens a menu with «Cuenta y equipo» and «Cerrar sesión». An expired session shows a yellow «Volver a entrar» pill instead.
+- Sign in panel: primary «Continuar con Google», then email plus «Enviar código». While waiting for the browser, a bordered row with a spinner and «Cancelar». The code field is numeric, tracked, 160px wide; «Pedir otro» counts down 60 s.
+- Signed in: profile card with 48px avatar, inline editable name, email muted. Devices as a plain list with «Este Mac» in link color. Session actions as setting rows; delete account asks to type BORRAR.
+
+### Organizations
+
+- Space switcher at the bottom of the ribbon, above Settings: a 32px rounded square. Local shows a drive icon in muted grey; an organization shows its initials on the accent tint. Click opens a menu with Local, each organization with a check on the active one, «Crear organización» and «Gestionar».
+- Create organization is a small modal: one name field, a muted line saying it gets its own copy and the app restarts, «Crear y abrir».
+- Members list: 28px initials circle, name with «· tú», email muted below, role select or plain role text, a quiet remove cross that turns red on hover.
+- Invite row: email field, role select, primary «Invitar» and quiet «Copiar enlace». Pending invitations below with expiry; expired ones in yellow.
+- «Responsable» is one more property row with a member select. «Creado por · Cambiado por» sits under the properties in 12px faint text.
+
+### Sync indicator
+
+- Strip, left of the recorder: a 28px icon button. Cloud when synced, spinning loader while syncing, cloud with a slash offline, pause icon when paused, yellow triangle on error. A 6px dot marks pending changes in accent, or something deleted by someone else in yellow.
+- Click opens a 300px panel under it: state title, download progress bar during the first sync, pending count and last send, the error in plain words, the list of records deleted by others with «Restaurar», then «Sincronizar ahora», «Pausar» or «Reanudar», and a faint «Volver a descargar todo».
+- Create organization from Local offers «Vacía» or «Llevar mis datos de Local» with the record count.
+
+### Team presence
+
+- Strip, left of the sync icon: overlapping 20px initials of who is online, max four plus a count. Someone on the same screen gets an accent ring.
+- Next to it, a small pill: «Ana también está aquí» in muted, «Ana está editando» in yellow at low alpha. It never blocks editing.
+
+### Activity
+
+- Third sidebar tab «Actividad», icon and label, with an accent count of unseen entries. Narrow sidebars show the label only on the active tab.
+- Filters on top: person, then type and element side by side. Entries grouped by day, «Hoy», «Ayer», then the weekday. Each row: 20px initials, the phrase, the time in faint tabular figures. Click opens the element.
+- Each record screen ends with its own «Actividad» section.
+- Something another person just changed fades in a light accent wash for about a second; under reduced motion it shows a thin accent outline instead.
+
+### File state
+
+- Explorer rows show a 6px dot after the name only in Team: no dot when in the cloud, accent pulsing while uploading, cyan pulsing while downloading, yellow on conflict, red on error. The tooltip and aria label say the state in words.
+- Settings, Account, Files: a usage meter with used and plan limit, the recordings toggle off by default, «Sincronizar ahora», and the organization trash listing who deleted what and when, with «Restaurar».
 
 ## Do's and Don'ts
 

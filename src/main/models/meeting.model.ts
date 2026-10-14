@@ -1,8 +1,8 @@
 import { EntitySchema } from 'typeorm'
+import { DELETED_AT, type SoftDeletable } from './soft-delete'
 import type { Meeting } from '@shared/consultora'
 
-/** Participantes y action items se guardan como JSON (simple-json) dentro de la reunión. */
-export const MeetingModel = new EntitySchema<Meeting>({
+export const MeetingModel = new EntitySchema<Meeting & SoftDeletable>({
   name: 'Meeting',
   tableName: 'meetings',
   columns: {
@@ -12,6 +12,7 @@ export const MeetingModel = new EntitySchema<Meeting>({
     clientId: { name: 'client_id', type: 'text', nullable: true },
     projectId: { name: 'project_id', type: 'text', nullable: true },
     prospectId: { name: 'prospect_id', type: 'text', nullable: true },
+    assigneeId: { name: 'assignee_id', type: 'text', nullable: true },
     participants: { type: 'simple-json' },
     summaryMd: { name: 'summary_md', type: 'text', default: '' },
     decisionsMd: { name: 'decisions_md', type: 'text', default: '' },
@@ -24,7 +25,8 @@ export const MeetingModel = new EntitySchema<Meeting>({
     status: { type: 'text' },
     error: { type: 'text', nullable: true },
     createdAt: { name: 'created_at', type: 'text' },
-    updatedAt: { name: 'updated_at', type: 'text' }
+    updatedAt: { name: 'updated_at', type: 'text' },
+    deletedAt: DELETED_AT
   },
   indices: [
     { name: 'idx_meetings_date', columns: ['date'] },

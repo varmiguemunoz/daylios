@@ -1,12 +1,14 @@
 # Requisitos · Arreglo de «Grabar» + notas de voz
 
 ## Contexto
+
 1. **Bug:** al pulsar «Grabar reunión» macOS vuelve a pedir permisos, el botón se queda en «Preparando…» para siempre
    y aparece una reunión rota (archivo `.webm` de 0 bytes en `_reuniones/`).
 2. **Feature:** dictar una nota. Mantener pulsado un atajo global, hablar, soltar; el agente transcribe y
    escribe la nota en markdown en Notas de DayliOS.
 
 ## Diagnóstico (evidencia)
+
 - `~/Library/Logs/daylios.log`: `UnhandledPromiseRejectionWarning: Failed to get sources.` (dos veces).
   Viene de `desktopCapturer.getSources()` dentro de `setDisplayMediaRequestHandler`: falla, nadie lo captura
   y **nunca se llama a `callback`**, así que `getDisplayMedia()` en la ventana espera para siempre.
@@ -21,6 +23,7 @@
 - `No existe esa reunión` en el log: la pantalla de una reunión borrada se recarga con `data:changed`. Solo ruido.
 
 ## A · Arreglo de grabación
+
 - A1 Si falta un permiso, «Grabar» no se queda colgado: muestra qué permiso falta, con botones
   «Abrir Ajustes del Sistema» y «Reiniciar DayliOS».
 - A2 La reunión y su archivo se crean **solo** cuando ya hay pantalla y audio capturándose.
@@ -32,6 +35,7 @@
 - A6 La pantalla de una reunión borrada muestra «Esta reunión ya no existe» en vez de reintentar.
 
 ## B · Notas de voz
+
 - B1 Atajo global **⌥ Espacio**, en cualquier app, aunque DayliOS esté oculta. Configurable en Ajustes.
 - B2 Mantener pulsado = grabar; soltar = terminar. Sin permiso de Monitorización de entrada:
   modo alternativo (pulsar para empezar, pulsar otra vez para terminar).
@@ -47,4 +51,5 @@
 - B9 Claude ya las lee con `list_notes` / `get_note` (sin cambios en el MCP).
 
 ## Fuera de alcance
+
 Asociar la nota a un cliente, dictar dentro de una nota existente, otros atajos para otras acciones.

@@ -15,6 +15,7 @@ import { ProspectController } from './controllers/prospect.controller'
 import { MeetingController } from './controllers/meeting.controller'
 import { ContextController } from './controllers/context.controller'
 import { ContactController } from './controllers/contact.controller'
+import { MetricsController } from './controllers/metrics.controller'
 import type { Consultora } from './consultora'
 import type { Marketing } from './marketing'
 import { MarketingController } from './controllers/marketing.controller'
@@ -26,16 +27,11 @@ import { requireToken } from './middlewares/auth.middleware'
 import { notifyOnWrite } from './middlewares/notify.middleware'
 import { errorHandler, notFound } from './middlewares/error.middleware'
 
-/** Lo que el MCP lee para conectarse. */
 export interface Connection {
   port: number
   token: string
 }
 
-/**
- * API local en Express, solo en 127.0.0.1 y con token. Es la puerta de Claude (vía MCP).
- * Al arrancar escribe `connection.json` (puerto + token, permisos 600) junto a la base de datos.
- */
 export function startServer(
   services: {
     tasks: TaskService
@@ -68,7 +64,8 @@ export function startServer(
       prospects: new ProspectController(c.prospects),
       meetings: new MeetingController(c.meetings, c.recordings),
       context: new ContextController(c.context),
-      contacts: new ContactController(c.contacts)
+      contacts: new ContactController(c.contacts),
+      metrics: new MetricsController(c.metrics, c.dashboards)
     })
   )
   app.use('/marketing', marketingRoutes(new MarketingController(services.marketing)))

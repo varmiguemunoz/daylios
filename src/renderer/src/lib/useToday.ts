@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { todayKey, type DayKey } from '@shared/tasks'
 import { onWindowShown } from './api'
 
-/** Clave del día actual; se actualiza al cruzar medianoche o al reabrir la ventana. */
 export function useToday(): DayKey {
   const [today, setToday] = useState(todayKey)
 

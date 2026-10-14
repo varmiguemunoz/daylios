@@ -1,7 +1,6 @@
 import { Router } from 'express'
 import type { MarketingController } from '../controllers/marketing.controller'
 
-/** Rutas del email marketing, montadas en `/marketing`. Los contactos viven en `/consultora/contacts`. */
 export function marketingRoutes(c: MarketingController): Router {
   return Router()
     .get('/status', c.status)

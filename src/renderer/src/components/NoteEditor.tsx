@@ -16,24 +16,18 @@ interface NoteEditorProps {
   note: Note
   today: DayKey
   onBack: () => void
-  /** Texto del botón Atrás. */
+
   backLabel?: string
-  /** Abrir una nota relacionada (la navegación la decide la ventana). */
+
   onOpenNote: (id: string) => void
-  /** Abrir un cliente relacionado. */
+
   onOpenClient: (id: string) => void
-  /**
-   * screen = pantalla con Atrás y borrar (menubar, Consultora).
-   * document = dentro del workspace, como Obsidian: columna de lectura, sin cabecera; Esc no sale.
-   */
+
   variant?: 'screen' | 'document'
+
+  scrollKey?: string
 }
 
-/**
- * Editor de una nota a pantalla completa. Guarda solo mientras escribes.
- * Arriba y abajo, el índice de notas y clientes relacionados.
- * Al volver: si la nota quedó vacía, se borra; si no, se guarda lo pendiente.
- */
 export function NoteEditor({
   note,
   today,
@@ -41,7 +35,8 @@ export function NoteEditor({
   backLabel = 'Notas',
   onOpenNote,
   onOpenClient,
-  variant = 'screen'
+  variant = 'screen',
+  scrollKey
 }: NoteEditorProps): React.JSX.Element {
   const documentMode = variant === 'document'
   const [body, setBody] = useState(note.body)
@@ -51,7 +46,7 @@ export function NoteEditor({
   const [picking, setPicking] = useState(false)
   const [conflict, setConflict] = useState(false)
   const id = note.id
-  /** Versión del archivo que tenemos: si cambió fuera, guardar avisa en vez de pisar. */
+
   const version = useRef<string | undefined>(note.updatedAt)
   const folder = note.path ? dirName(note.path) : undefined
   // Una nota vacía de «Notas rápidas» se borra al salir; en otras carpetas se respeta.
@@ -87,7 +82,6 @@ export function NoteEditor({
   )
   const { status, flush } = useAutosave(body, save)
 
-  /** Guarda lo pendiente y ajusta el nombre del archivo al título (notas rápidas). */
   const settle = useCallback(async () => {
     await flush()
     await notesApi.settle(id).catch(() => undefined)
@@ -99,7 +93,6 @@ export function NoteEditor({
     onBack()
   }, [body, settle, disposable, id, onBack])
 
-  /** Conflicto: traer lo que hay en disco… */
   const reloadFromDisk = async (): Promise<void> => {
     try {
       const fresh = await notesApi.get(id)
@@ -111,7 +104,6 @@ export function NoteEditor({
     }
   }
 
-  /** …o quedarse con lo de la app y sobrescribir. */
   const keepMine = async (): Promise<void> => {
     try {
       const saved = await notesApi.update(id, body)
@@ -122,7 +114,6 @@ export function NoteEditor({
     }
   }
 
-  /** Imágenes pegadas: a «Adjuntos» de la bóveda; devuelve su markdown. */
   const attachImages = async (files: File[]): Promise<string[]> => {
     const out: string[] = []
     for (const file of files) {
@@ -137,7 +128,6 @@ export function NoteEditor({
     return out
   }
 
-  /** Al volver a lectura: guarda y el archivo pasa a llamarse como el título. */
   const commit = useCallback(async () => {
     await flush()
     if (body.trim()) await notesApi.settle(id).catch(() => undefined)
@@ -163,7 +153,6 @@ export function NoteEditor({
     return () => window.removeEventListener('keydown', onKey, true)
   }, [back, documentMode])
 
-  /** Guarda antes de salir hacia otra nota o cliente. */
   const leaveTo = async (open: () => void): Promise<void> => {
     if (body.trim()) await settle()
     open()
@@ -189,7 +178,6 @@ export function NoteEditor({
     }
   }
 
-  /** Borrar (el ConfirmButton ya pidió confirmación). */
   const remove = async (): Promise<void> => {
     try {
       await notesApi.remove(id)
@@ -267,6 +255,7 @@ export function NoteEditor({
           autoEdit={!note.body.trim()}
           imageBase={folder}
           onPasteFiles={note.path ? attachImages : undefined}
+          scrollKey={scrollKey}
         />
       </div>
 

@@ -27,14 +27,10 @@ type Dialog =
 
 const ICON = 15
 
-/**
- * Acciones del workspace en un solo sitio: menús contextuales, crear, subir, renombrar, mover y borrar,
- * con sus diálogos. La usan la vista de carpeta, el árbol y las pantallas de nota, board e imagen.
- */
 export function useItemActions(
   go: Go,
   onError: (message: string | null) => void,
-  /** Tras borrar el elemento abierto (p. ej. volver atrás). */
+
   onDeleted?: (item: WorkspaceItem) => void
 ): {
   dialogs: React.JSX.Element | null
@@ -73,7 +69,6 @@ export function useItemActions(
     if (ok && box.item) openItem(box.item, go)
   }
 
-  /** Sin rutas: abre el diálogo del sistema. */
   const upload = async (folderId: string | null, paths?: string[]): Promise<void> => {
     const files = paths ?? (await ws.pickFiles())
     if (files.length) await run(() => ws.upload(folderId, files))

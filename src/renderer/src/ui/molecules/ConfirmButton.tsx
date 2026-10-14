@@ -2,16 +2,14 @@ import { useState, type ReactNode } from 'react'
 import { Trash2 } from 'lucide-react'
 
 interface ConfirmButtonProps {
-  /** Nombre accesible en reposo («Borrar contacto»). */
   label: string
   onConfirm: () => void
-  /** Texto del segundo paso. */
+
   confirmLabel?: string
   icon?: ReactNode
   size?: 'sm' | 'md'
 }
 
-/** Borrar en dos pasos: el primer clic pide confirmación; salir del botón lo resetea. */
 export function ConfirmButton({
   label,
   onConfirm,

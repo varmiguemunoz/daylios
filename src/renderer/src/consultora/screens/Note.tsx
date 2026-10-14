@@ -3,11 +3,10 @@ import { todayKey } from '@shared/tasks'
 import { noteTitle, type Note as NoteModel } from '@shared/notes'
 import type { Go } from '../lib'
 import { ErrorNote } from '../ui'
-import { useScreenTitle } from '../chrome'
+import { useGoneRedirect, useScreenTitle } from '../chrome'
 import { NoteEditor } from '../../components/NoteEditor'
 import { errorMessage, notesApi } from '../../lib/api'
 
-/** Una nota dentro de Consultora: el mismo editor que el workspace, columna de lectura de Obsidian. */
 export function Note({
   id,
   go,
@@ -20,6 +19,7 @@ export function Note({
   const [note, setNote] = useState<NoteModel | null>(null)
   const [error, setError] = useState<string | null>(null)
   useScreenTitle(note ? noteTitle(note.body) : null)
+  useGoneRedirect(error)
 
   useEffect(() => {
     notesApi
@@ -41,6 +41,7 @@ export function Note({
         note={note}
         today={todayKey()}
         variant="document"
+        scrollKey={`scroll.note:${note.id}`}
         onBack={back}
         onOpenNote={(noteId) => go({ name: 'note', id: noteId })}
         onOpenClient={(clientId) => go({ name: 'client', id: clientId })}

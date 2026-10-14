@@ -2,10 +2,6 @@ import { BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import type { WorkspaceService } from './services/workspace.service'
 import type { WorkspaceWatcher } from './services/workspace-watcher'
 
-/**
- * IPC `workspace:<método>` (contrato `WorkspaceApi`). Las escrituras avisan a las ventanas.
- * Diálogo, Finder y «abrir con» viven aquí porque son de Electron, no del servicio.
- */
 export function registerWorkspaceIpc(
   w: WorkspaceService,
   watcher: WorkspaceWatcher,

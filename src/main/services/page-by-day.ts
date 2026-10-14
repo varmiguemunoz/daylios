@@ -9,10 +9,6 @@ export interface DayPage<T> {
   totalDays: number
 }
 
-/**
- * Agrupa por día (en el orden en que llegan) y pagina por días.
- * Lo usan el historial de tareas y la lista de notas.
- */
 export function pageByDay<T extends { date: DayKey }>(
   items: T[],
   page: number,

@@ -18,7 +18,6 @@ interface PipelineTableProps {
   onStage: (id: string, stageId: string) => void
 }
 
-/** `wide` = solo con espacio (contenedor ≥ 768px). */
 const COLUMNS: { key: SortKey; label: string; className: string; wide?: boolean }[] = [
   { key: 'company', label: 'Prospecto', className: 'min-w-0 flex-[2]' },
   { key: 'stage', label: 'Etapa', className: 'w-32 shrink-0 @3xl:w-40' },
@@ -29,7 +28,6 @@ const COLUMNS: { key: SortKey; label: string; className: string; wide?: boolean 
   { key: 'updated', label: 'Actualizado', className: 'w-24 shrink-0', wide: true }
 ]
 
-/** Vista de lista: las mismas tarjetas en columnas fijas, ordenables; la etapa se cambia en la fila. */
 export function PipelineTable({
   data,
   visible,

@@ -22,46 +22,133 @@ servicios existentes a través de puertos.
 ## Dominio (`src/shared/automations.ts`, puro)
 
 ```ts
-export type TriggerType = 'contact.created' | 'contact.tag_added' | 'contact.tag_removed'
-  | 'contact.subscribed' | 'contact.unsubscribed' | 'contact.bounced' | 'prospect.created'
-  | 'prospect.stage_changed' | 'prospect.won' | 'prospect.lost' | 'client.created'
-  | 'meeting.ready' | 'task.completed' | 'manual'
-export interface Trigger { type: TriggerType; params: Record<string, string> }
+export type TriggerType =
+  | 'contact.created'
+  | 'contact.tag_added'
+  | 'contact.tag_removed'
+  | 'contact.subscribed'
+  | 'contact.unsubscribed'
+  | 'contact.bounced'
+  | 'prospect.created'
+  | 'prospect.stage_changed'
+  | 'prospect.won'
+  | 'prospect.lost'
+  | 'client.created'
+  | 'meeting.ready'
+  | 'task.completed'
+  | 'manual'
+export interface Trigger {
+  type: TriggerType
+  params: Record<string, string>
+}
 
-export type ConditionType = 'has_tag' | 'lacks_tag' | 'status_is' | 'source_is' | 'has_email'
-  | 'field_equals' | 'field_contains' | 'has_client' | 'in_stage' | 'value_at_least' | 'stage_open'
-export interface Condition { type: ConditionType; params: Record<string, string> }
+export type ConditionType =
+  | 'has_tag'
+  | 'lacks_tag'
+  | 'status_is'
+  | 'source_is'
+  | 'has_email'
+  | 'field_equals'
+  | 'field_contains'
+  | 'has_client'
+  | 'in_stage'
+  | 'value_at_least'
+  | 'stage_open'
+export interface Condition {
+  type: ConditionType
+  params: Record<string, string>
+}
 
-export type ActionType = 'add_tag' | 'remove_tag' | 'update_contact' | 'set_field'
-  | 'append_contact_note' | 'assign_client' | 'assign_project' | 'unassign_client' | 'unsubscribe'
-  | 'delete_contact' | 'create_prospect' | 'move_prospect' | 'update_prospect' | 'delete_prospect'
-  | 'create_client' | 'create_project' | 'send_email' | 'start_sequence' | 'email_owner'
-  | 'create_task' | 'create_note' | 'notify_mac' | 'webhook'
+export type ActionType =
+  | 'add_tag'
+  | 'remove_tag'
+  | 'update_contact'
+  | 'set_field'
+  | 'append_contact_note'
+  | 'assign_client'
+  | 'assign_project'
+  | 'unassign_client'
+  | 'unsubscribe'
+  | 'delete_contact'
+  | 'create_prospect'
+  | 'move_prospect'
+  | 'update_prospect'
+  | 'delete_prospect'
+  | 'create_client'
+  | 'create_project'
+  | 'send_email'
+  | 'start_sequence'
+  | 'email_owner'
+  | 'create_task'
+  | 'create_note'
+  | 'notify_mac'
+  | 'webhook'
 export type Step =
   | { id: string; kind: 'action'; type: ActionType; params: Record<string, string> }
   | { id: string; kind: 'wait'; amount: number; unit: 'minutes' | 'hours' | 'days' }
   | { id: string; kind: 'if'; conditions: Condition[] }
 
-export interface Automation { id: string; name: string; active: boolean; trigger: Trigger
-  conditions: Condition[]; steps: Step[]; reentry: 'once' | 'always'; destructive: boolean
-  createdAt: string; updatedAt: string }
+export interface Automation {
+  id: string
+  name: string
+  active: boolean
+  trigger: Trigger
+  conditions: Condition[]
+  steps: Step[]
+  reentry: 'once' | 'always'
+  destructive: boolean
+  createdAt: string
+  updatedAt: string
+}
 
 /** Lo que el motor sabe del sujeto al evaluar (se carga fresco antes de cada paso). */
-export interface Subject { contact: ContactSnapshot | null; prospect: ProspectSnapshot | null
-  client: { id: string; name: string } | null; meeting?: { id: string; title: string }
-  task?: { id: string; title: string; tags: string[] } }
+export interface Subject {
+  contact: ContactSnapshot | null
+  prospect: ProspectSnapshot | null
+  client: { id: string; name: string } | null
+  meeting?: { id: string; title: string }
+  task?: { id: string; title: string; tags: string[] }
+}
 ```
 
 Catálogo con metadatos para UI, validación y MCP (una sola fuente):
 
 ```ts
-interface ParamSpec { key: string; label: string; kind: 'text' | 'markdown' | 'number' | 'tag'
-  | 'pipeline' | 'stage' | 'client' | 'project' | 'source' | 'status' | 'url' | 'field' | 'effort'
-  | 'select'; required?: boolean; options?: string[]; vars?: boolean }
-interface ActionSpec { type: ActionType; group: 'contacto' | 'pipeline' | 'clientes' | 'email'
-  | 'productividad' | 'integraciones'; label: string; needs: 'contact' | 'prospect' | 'client' | null
-  external: boolean; destructive: boolean; params: ParamSpec[]; sentence(p): string }
-export const TRIGGERS: TriggerSpec[]; export const CONDITIONS: ConditionSpec[]; export const ACTIONS: ActionSpec[]
+interface ParamSpec {
+  key: string
+  label: string
+  kind:
+    | 'text'
+    | 'markdown'
+    | 'number'
+    | 'tag'
+    | 'pipeline'
+    | 'stage'
+    | 'client'
+    | 'project'
+    | 'source'
+    | 'status'
+    | 'url'
+    | 'field'
+    | 'effort'
+    | 'select'
+  required?: boolean
+  options?: string[]
+  vars?: boolean
+}
+interface ActionSpec {
+  type: ActionType
+  group: 'contacto' | 'pipeline' | 'clientes' | 'email' | 'productividad' | 'integraciones'
+  label: string
+  needs: 'contact' | 'prospect' | 'client' | null
+  external: boolean
+  destructive: boolean
+  params: ParamSpec[]
+  sentence(p): string
+}
+export const TRIGGERS: TriggerSpec[]
+export const CONDITIONS: ConditionSpec[]
+export const ACTIONS: ActionSpec[]
 ```
 
 Funciones puras (con tests):
@@ -136,9 +223,22 @@ DROP TABLE rules;
 exporta handlers `{ [type]: { run(ctx: ActionContext): Promise<void> } }`.
 
 ```ts
-interface ActionContext { manager?: EntityManager; subject: Subject; params: Record<string, string>
-  render(t: string): string; skip(reason: string): never; ports: Ports; runId: string; stepId: string }
-interface Ports { email: EmailPort; notifier: NotifierPort; http: HttpPort; settings: () => Settings }
+interface ActionContext {
+  manager?: EntityManager
+  subject: Subject
+  params: Record<string, string>
+  render(t: string): string
+  skip(reason: string): never
+  ports: Ports
+  runId: string
+  stepId: string
+}
+interface Ports {
+  email: EmailPort
+  notifier: NotifierPort
+  http: HttpPort
+  settings: () => Settings
+}
 ```
 
 Los handlers internos reutilizan los ayudantes existentes que reciben `manager`: `changeTags`,

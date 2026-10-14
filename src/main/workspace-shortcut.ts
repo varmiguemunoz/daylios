@@ -2,10 +2,6 @@ import { BrowserWindow, globalShortcut, ipcMain } from 'electron'
 import { config } from './config'
 import { consultoraWindow, openConsultoraAt } from './consultora-window'
 
-/**
- * Atajo global del workspace (por defecto ⌥⌘W): desde cualquier app abre Consultora en el workspace;
- * si el workspace ya está delante, oculta la ventana. La ventana avisa si está en el workspace.
- */
 export class WorkspaceShortcut {
   private current = ''
   private registered = false
@@ -13,11 +9,11 @@ export class WorkspaceShortcut {
 
   constructor() {
     ipcMain.on('workspace:active', (event, on: boolean) => {
-      if (BrowserWindow.fromWebContents(event.sender) === consultoraWindow()) this.active = Boolean(on)
+      if (BrowserWindow.fromWebContents(event.sender) === consultoraWindow())
+        this.active = Boolean(on)
     })
   }
 
-  /** (Re)registra el atajo de Ajustes. Vacío = ninguno. */
   refresh(): { shortcut: string; registered: boolean } {
     const wanted = config.workspaceShortcut()
     if (wanted !== this.current) {

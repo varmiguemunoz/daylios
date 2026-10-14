@@ -1,6 +1,5 @@
 import type { Effort } from '@shared/tasks'
 
-/** Chips de tags: color neutro, los tags no tienen significado propio (DESIGN.md: One Meaning Rule). */
 export function TagChips({
   tags,
   size = 'sm'
@@ -27,7 +26,6 @@ export function TagChips({
 
 const LEVEL: Record<Effort, number> = { bajo: 1, medio: 2, alto: 3 }
 
-/** Esfuerzo como 3 barras de altura creciente (1, 2 o 3 llenas). */
 export function EffortBars({ effort }: { effort: Effort | null }): React.JSX.Element | null {
   if (!effort) return null
   const level = LEVEL[effort]

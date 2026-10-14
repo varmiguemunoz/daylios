@@ -1,16 +1,10 @@
 import { useEffect, useRef } from 'react'
 
-/** Pila de capas abiertas (Drawer, Modal): Esc cierra solo la de arriba. */
 const stack: number[] = []
 let seq = 0
 
-/** true si hay un Drawer o Modal abierto (los atajos de pantalla lo respetan). */
 export const isOverlayOpen = (): boolean => stack.length > 0
 
-/**
- * Capa abierta: registra Esc (en captura, antes que los atajos de la ventana),
- * enfoca el primer control y devuelve el foco al cerrar.
- */
 export function useOverlay(
   open: boolean,
   onClose: () => void,
@@ -50,7 +44,6 @@ export function useOverlay(
   }, [open, panel])
 }
 
-/** Mantiene Tab dentro del panel. */
 function trapTab(e: KeyboardEvent, panel: HTMLElement): void {
   const items = [
     ...panel.querySelectorAll<HTMLElement>(

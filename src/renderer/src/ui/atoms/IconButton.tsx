@@ -4,14 +4,13 @@ interface IconButtonProps {
   label: string
   onClick: () => void
   children: ReactNode
-  /** danger = rose al pasar el ratón (borrar). */
+
   tone?: 'default' | 'danger'
   size?: 'sm' | 'md'
   disabled?: boolean
   className?: string
 }
 
-/** Botón redondo solo con icono. `label` es el nombre accesible y el tooltip. */
 export function IconButton({
   label,
   onClick,

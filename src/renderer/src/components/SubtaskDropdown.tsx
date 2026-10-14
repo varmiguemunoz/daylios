@@ -5,20 +5,15 @@ import { TaskRow } from './TaskRow'
 
 interface SubtaskDropdownProps {
   parent: Task
-  /** Sube cuando el día se recarga (deshacer, Claude): vuelve a leer. */
+
   revision: number
   onOpen: (sub: Task) => void
-  /** Borra con «Deshacer» (useDay). */
+
   onRemove: (sub: Task) => void
-  /** La madre recalcula su «2/5». */
+
   onChange: (subtasks: Task[]) => void
 }
 
-/**
- * Subtareas desplegadas debajo de su madre en Hoy: filas compactas alineadas al texto de la madre.
- * Va en su propio `<li>` para no alterar los índices de arrastre de las madres, y con su propio
- * grupo de arrastre: una subtarea no sale de su madre.
- */
 export function SubtaskDropdown({
   parent,
   revision,

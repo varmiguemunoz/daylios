@@ -1,7 +1,6 @@
 import type { HubConfig, HubHealth, HubItem } from '@shared/hub'
 import { config } from '../config'
 
-/** Cliente de la parte `/admin/*` del Worker `leads-hub`. Interfaz para poder usar un fake en tests. */
 export interface HubClient {
   health(): Promise<HubHealth>
   inbox(limit?: number): Promise<HubItem[]>
@@ -65,7 +64,6 @@ export function createHubClient(
 
 let cached: { key: string; client: HubClient } | null = null
 
-/** Cliente con la URL y el token de Ajustes (null si falta alguno). */
 export const hubFromConfig: HubProvider = () => {
   const url = config.hubUrl()
   const token = config.hubToken()

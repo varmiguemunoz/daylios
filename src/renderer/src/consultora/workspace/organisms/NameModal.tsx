@@ -7,12 +7,11 @@ interface NameModalProps {
   label: string
   initial?: string
   confirmLabel: string
-  /** Devuelve el error a mostrar, o null si fue bien (entonces se cierra). */
+
   onSubmit: (name: string) => Promise<string | null>
   onClose: () => void
 }
 
-/** Pedir un nombre (carpeta nueva, renombrar). Enter confirma. */
 export function NameModal({
   title,
   label,

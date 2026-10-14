@@ -2,7 +2,6 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import { api, tool, day, query, ref, enc } from '../client'
 
-/** Herramientas MCP: clients. */
 export function register(server: McpServer): void {
   server.registerTool(
     'get_overview',
@@ -181,7 +180,12 @@ export function register(server: McpServer): void {
       inputSchema: { project: ref('del proyecto'), confirm: z.literal(true).optional() }
     },
     ({ project, confirm }) =>
-      tool(() => api('DELETE', `/consultora/projects/${enc(project)}${query({ confirm: confirm ? 1 : undefined })}`))
+      tool(() =>
+        api(
+          'DELETE',
+          `/consultora/projects/${enc(project)}${query({ confirm: confirm ? 1 : undefined })}`
+        )
+      )
   )
 
   server.registerTool(
@@ -190,7 +194,11 @@ export function register(server: McpServer): void {
       description:
         'Crea o reemplaza un documento de texto (.md, .txt, .csv, .json) en la carpeta del cliente. path = ruta relativa ' +
         '(p. ej. "Entregables/propuesta.md").',
-      inputSchema: { client: ref('del cliente'), path: z.string(), content: z.string().max(1000000) }
+      inputSchema: {
+        client: ref('del cliente'),
+        path: z.string(),
+        content: z.string().max(1000000)
+      }
     },
     ({ client, path, content }) =>
       tool(() => api('PUT', `/consultora/clients/${enc(client)}/documents`, { path, content }))
@@ -199,7 +207,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     'rename_document',
     {
-      description: 'Renombra un documento en su misma subcarpeta. name = nombre nuevo con extensión.',
+      description:
+        'Renombra un documento en su misma subcarpeta. name = nombre nuevo con extensión.',
       inputSchema: { client: ref('del cliente'), path: z.string(), name: z.string().min(1) }
     },
     ({ client, path, name }) =>
@@ -209,12 +218,20 @@ export function register(server: McpServer): void {
   server.registerTool(
     'delete_document',
     {
-      description: 'Manda un documento de la carpeta del cliente a la Papelera de macOS. Sin confirm no borra.',
-      inputSchema: { client: ref('del cliente'), path: z.string(), confirm: z.literal(true).optional() }
+      description:
+        'Manda un documento de la carpeta del cliente a la Papelera de macOS. Sin confirm no borra.',
+      inputSchema: {
+        client: ref('del cliente'),
+        path: z.string(),
+        confirm: z.literal(true).optional()
+      }
     },
     ({ client, path, confirm }) =>
       tool(() =>
-        api('DELETE', `/consultora/clients/${enc(client)}/documents${query({ path, confirm: confirm ? 1 : undefined })}`)
+        api(
+          'DELETE',
+          `/consultora/clients/${enc(client)}/documents${query({ path, confirm: confirm ? 1 : undefined })}`
+        )
       )
   )
 }

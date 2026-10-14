@@ -11,7 +11,6 @@ import { NodeChrome } from './NodeChrome'
 import { TextPlaceholder, useZoomedOut } from './CardText'
 import { tint } from './CardNodes'
 
-/** Cabecera fina con el nombre del archivo, como las incrustaciones de Obsidian. */
 function FileTitle({ path, onOpen }: { path: string; onOpen: () => void }): React.JSX.Element {
   return (
     <button
@@ -26,7 +25,6 @@ function FileTitle({ path, onOpen }: { path: string; onOpen: () => void }): Reac
   )
 }
 
-/** Imagen de la bóveda, sin marco: se ve como la imagen. */
 export const ImageNode = memo(function ImageNode({
   data,
   selected
@@ -54,7 +52,6 @@ export const ImageNode = memo(function ImageNode({
   )
 })
 
-/** Nota incrustada: título y su texto en markdown (se carga una vez; doble clic la abre). */
 export const NoteNode = memo(function NoteNode({
   data,
   selected
@@ -108,7 +105,6 @@ export const NoteNode = memo(function NoteNode({
   )
 })
 
-/** Otro archivo de la bóveda: icono y nombre; se abre con su app. */
 export const FileNode = memo(function FileNode({
   data,
   selected
@@ -133,7 +129,6 @@ export const FileNode = memo(function FileNode({
   )
 })
 
-/** Enlace web: dominio y la URL; se abre en el navegador (Obsidian lo incrusta, aquí no: sin iframes). */
 export const LinkNode = memo(function LinkNode({
   data,
   selected

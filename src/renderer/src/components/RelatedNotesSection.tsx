@@ -8,7 +8,6 @@ interface RelatedNotesSectionProps {
   onAdd: () => void
 }
 
-/** Índice inferior de una nota: «Notas relacionadas» con extracto, quitar y «Relacionar». */
 export function RelatedNotesSection({
   notes,
   onOpen,

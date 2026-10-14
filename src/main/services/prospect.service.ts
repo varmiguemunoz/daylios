@@ -19,6 +19,7 @@ import { ProspectModel } from '../models/prospect.model'
 import { MeetingModel } from '../models/meeting.model'
 import { ContactModel } from '../models/contact.model'
 import { PipelineModel } from '../models/pipeline.model'
+import { StageEventModel } from '../models/metrics.model'
 import { transactionGuard } from '../guards/transaction.guard'
 import { AppError } from './app.error'
 import { findByRef } from './ref'
@@ -29,14 +30,15 @@ import {
   optionalAmount,
   optionalDay,
   optionalText,
+  optionalUserId,
   requiredText
 } from './fields'
 import { brief } from './meeting.helpers'
 import { insertClient } from './client.service'
 import { tagsByContact } from './tag.service'
 import { findPipeline, findStage, firstOpenStage } from './pipeline.helpers'
+import { unlinkTasks } from './task.service'
 
-/** Pipelines de ventas (uno por oferta), sus etapas y prospectos. Ganar crea el cliente. */
 export class ProspectService {
   constructor(private readonly db: DataSource) {}
 
@@ -46,9 +48,10 @@ export class ProspectService {
 
   // ---- pipelines ----
 
-  /** Pipelines con nº de etapas, prospectos y valor abierto. */
   async listPipelines(): Promise<PipelineSummary[]> {
-    const pipelines = await this.db.getRepository(PipelineModel).find({ order: { position: 'ASC', createdAt: 'ASC' } })
+    const pipelines = await this.db
+      .getRepository(PipelineModel)
+      .find({ order: { position: 'ASC', createdAt: 'ASC' } })
     const stages = await this.db.getRepository(StageModel).find()
     const prospects = await this.db.getRepository(ProspectModel).find()
     return pipelines.map((p) => {
@@ -67,15 +70,17 @@ export class ProspectService {
     })
   }
 
-  /** Un pipeline: etapas en orden, cada una con sus tarjetas y el valor sumado. Sin ref = el primero. */
   async pipeline(ref?: unknown): Promise<Pipeline> {
     const manager = this.db.manager
     const pipeline = await findPipeline(manager, ref)
-    const stages = await manager.getRepository(StageModel).find({ where: { pipelineId: pipeline.id }, order: { position: 'ASC' } })
+    const stages = await manager
+      .getRepository(StageModel)
+      .find({ where: { pipelineId: pipeline.id }, order: { position: 'ASC' } })
     const prospects = stages.length
-      ? await manager
-          .getRepository(ProspectModel)
-          .find({ where: { stageId: In(stages.map((s) => s.id)) }, order: { position: 'ASC', updatedAt: 'DESC' } })
+      ? await manager.getRepository(ProspectModel).find({
+          where: { stageId: In(stages.map((s) => s.id)) },
+          order: { position: 'ASC', updatedAt: 'DESC' }
+        })
       : []
     const cards = await toCards(manager, prospects)
     const columns = stages.map((stage) => {
@@ -89,7 +94,6 @@ export class ProspectService {
     }
   }
 
-  /** Crea o edita un pipeline: nombre y lista completa de etapas (con movimientos de las borradas). */
   async savePipeline(input: PipelineInput): Promise<Pipeline> {
     const id = await transactionGuard(this.db, async (manager) => {
       const repo = manager.getRepository(PipelineModel)
@@ -102,7 +106,13 @@ export class ProspectService {
         await repo.save(pipeline)
       } else {
         const last = await repo.findOne({ where: {}, order: { position: 'DESC' } })
-        pipeline = { id: randomUUID(), name, position: (last?.position ?? -1) + 1, createdAt: stamp, updatedAt: stamp }
+        pipeline = {
+          id: randomUUID(),
+          name,
+          position: (last?.position ?? -1) + 1,
+          createdAt: stamp,
+          updatedAt: stamp
+        }
         await repo.insert(pipeline)
       }
       const stages =
@@ -122,7 +132,6 @@ export class ProspectService {
     return this.pipeline(id)
   }
 
-  /** Borra un pipeline. Si tiene prospectos, `moveTo` (pipeline y etapa opcional) dice a dónde van. */
   removePipeline(ref: unknown, moveTo?: { pipeline: string; stage?: string }): Promise<void> {
     return transactionGuard(this.db, async (manager) => {
       const pipeline = await findPipeline(manager, ref)
@@ -131,19 +140,31 @@ export class ProspectService {
       }
       const stages = await manager.getRepository(StageModel).findBy({ pipelineId: pipeline.id })
       const prospects = manager.getRepository(ProspectModel)
-      const count = stages.length ? await prospects.countBy({ stageId: In(stages.map((s) => s.id)) }) : 0
+      const count = stages.length
+        ? await prospects.countBy({ stageId: In(stages.map((s) => s.id)) })
+        : 0
       if (count) {
         if (!moveTo?.pipeline) {
-          throw new AppError('invalid', `«${pipeline.name}» tiene ${count} prospecto(s). Elige a qué pipeline moverlos.`)
+          throw new AppError(
+            'invalid',
+            `«${pipeline.name}» tiene ${count} prospecto(s). Elige a qué pipeline moverlos.`
+          )
         }
         const target = await findPipeline(manager, moveTo.pipeline)
         if (target.id === pipeline.id) throw new AppError('invalid', 'Elige otro pipeline.')
-        const stage = moveTo.stage ? await findStage(manager, moveTo.stage, target.id) : await firstOpenStage(manager, target.id)
-        if (stage.pipelineId !== target.id) throw new AppError('invalid', 'La etapa no es de ese pipeline.')
-        await prospects.update({ stageId: In(stages.map((s) => s.id)) }, { stageId: stage.id, updatedAt: now() })
+        const stage = moveTo.stage
+          ? await findStage(manager, moveTo.stage, target.id)
+          : await firstOpenStage(manager, target.id)
+        if (stage.pipelineId !== target.id)
+          throw new AppError('invalid', 'La etapa no es de ese pipeline.')
+        await prospects.update(
+          { stageId: In(stages.map((s) => s.id)) },
+          { stageId: stage.id, updatedAt: now() }
+        )
       }
-      if (stages.length) await manager.getRepository(StageModel).delete({ pipelineId: pipeline.id })
-      await manager.getRepository(PipelineModel).delete({ id: pipeline.id })
+      if (stages.length)
+        await manager.getRepository(StageModel).softDelete({ pipelineId: pipeline.id })
+      await manager.getRepository(PipelineModel).softDelete({ id: pipeline.id })
     })
   }
 
@@ -158,7 +179,6 @@ export class ProspectService {
     return repo.find({ where: { pipelineId: p.id }, order: { position: 'ASC' } })
   }
 
-  /** Compatibilidad: guarda las etapas del primer pipeline (Ajustes antiguos, MCP). */
   async saveStages(input: StageInput[]): Promise<Stage[]> {
     const first = await findPipeline(this.db.manager)
     await transactionGuard(this.db, (manager) => replaceStages(manager, first.id, input, []))
@@ -170,7 +190,9 @@ export class ProspectService {
   async get(ref: unknown): Promise<ProspectDetail> {
     const prospect = await this.find(ref)
     const stage = await this.db.getRepository(StageModel).findOneByOrFail({ id: prospect.stageId })
-    const pipeline = await this.db.getRepository(PipelineModel).findOneByOrFail({ id: stage.pipelineId })
+    const pipeline = await this.db
+      .getRepository(PipelineModel)
+      .findOneByOrFail({ id: stage.pipelineId })
     const meetings = await this.db
       .getRepository(MeetingModel)
       .find({ where: { prospectId: prospect.id }, order: { date: 'DESC' } })
@@ -190,7 +212,6 @@ export class ProspectService {
     return transactionGuard(this.db, (manager) => insertProspect(manager, input))
   }
 
-  /** Edita datos. Para cambiar de etapa usa `move` (gestiona el paso a cliente). */
   update(ref: unknown, patch: ProspectInput): Promise<Prospect> {
     return transactionGuard(this.db, async (manager) => {
       const prospects = manager.getRepository(ProspectModel)
@@ -201,6 +222,7 @@ export class ProspectService {
       if (patch.source !== undefined) p.source = optionalText(patch.source, 'El origen')
       if (patch.notesMd !== undefined) p.notesMd = markdown(patch.notesMd, 'Las notas')
       if (patch.nextStep !== undefined) p.nextStep = optionalText(patch.nextStep, 'El próximo paso')
+      if (patch.assigneeId !== undefined) p.assigneeId = optionalUserId(patch.assigneeId)
       if (patch.nextStepDate !== undefined) {
         p.nextStepDate = optionalDay(patch.nextStepDate, 'La fecha del próximo paso')
       }
@@ -209,12 +231,6 @@ export class ProspectService {
     })
   }
 
-  /**
-   * Cambia de etapa (también a otro pipeline) y, si viene `index`, lo coloca en esa posición.
-   * `pipeline` acota la búsqueda de la etapa por nombre; sin él, se busca primero en su pipeline.
-   * Si la etapa es `won` y el prospecto aún no es cliente, crea el cliente (con su carpeta)
-   * en la misma transacción y le pasa sus reuniones y contactos de venta.
-   */
   move(
     ref: unknown,
     stageRef: unknown,
@@ -225,16 +241,24 @@ export class ProspectService {
       const prospects = manager.getRepository(ProspectModel)
       const p = await findByRef(prospects, ref, 'company', 'el prospecto')
       const current = await manager.getRepository(StageModel).findOneBy({ id: p.stageId })
-      const scope = pipelineRef ? (await findPipeline(manager, pipelineRef)).id : current?.pipelineId
+      const scope = pipelineRef
+        ? (await findPipeline(manager, pipelineRef)).id
+        : current?.pipelineId
       const stage = await findStage(manager, stageRef, scope)
 
+      await recordStage(manager, p, current, stage)
       p.stageId = stage.id
       p.updatedAt = now()
 
       // Reordenar la columna destino con el prospecto en su sitio nuevo
-      const column = (await prospects.find({ where: { stageId: stage.id }, order: { position: 'ASC', updatedAt: 'DESC' } }))
-        .filter((other) => other.id !== p.id)
-      const at = typeof index === 'number' ? Math.max(0, Math.min(Math.floor(index), column.length)) : 0
+      const column = (
+        await prospects.find({
+          where: { stageId: stage.id },
+          order: { position: 'ASC', updatedAt: 'DESC' }
+        })
+      ).filter((other) => other.id !== p.id)
+      const at =
+        typeof index === 'number' ? Math.max(0, Math.min(Math.floor(index), column.length)) : 0
       column.splice(at, 0, p)
       for (const [position, row] of column.entries()) {
         if (row.id !== p.id) await prospects.update({ id: row.id }, { position })
@@ -261,7 +285,6 @@ export class ProspectService {
     })
   }
 
-  /** Borra el prospecto. Sus contactos y reuniones quedan sin prospecto. */
   remove(ref: unknown): Promise<void> {
     return transactionGuard(this.db, (manager) => removeProspect(manager, ref))
   }
@@ -269,18 +292,21 @@ export class ProspectService {
 
 const sum = (list: Prospect[]): number => list.reduce((total, p) => total + (p.valueUsd ?? 0), 0)
 
-/** Prospectos → tarjetas con contacto principal (el más antiguo) y los tags de sus contactos. */
 async function toCards(manager: EntityManager, prospects: Prospect[]): Promise<ProspectCard[]> {
   if (!prospects.length) return []
   const contacts = await manager
     .getRepository(ContactModel)
     .find({ where: { prospectId: In(prospects.map((p) => p.id)) }, order: { createdAt: 'ASC' } })
-  const tags = await tagsByContact(manager, contacts.map((c) => c.id))
+  const tags = await tagsByContact(
+    manager,
+    contacts.map((c) => c.id)
+  )
   return prospects.map((p) => {
     const own = contacts.filter((c) => c.prospectId === p.id)
     const main = own[0]
     const seen = new Map<string, TagRef>()
-    for (const c of own) for (const t of tags.get(c.id) ?? []) seen.set(t.slug, { slug: t.slug, name: t.name })
+    for (const c of own)
+      for (const t of tags.get(c.id) ?? []) seen.set(t.slug, { slug: t.slug, name: t.name })
     return {
       ...p,
       contact: main ? { id: main.id, name: main.name || main.email || 'Sin nombre' } : null,
@@ -289,10 +315,6 @@ async function toCards(manager: EntityManager, prospects: Prospect[]): Promise<P
   })
 }
 
-/**
- * Reemplaza las etapas de un pipeline por `input` (renombrar, reordenar, cambiar tipo, añadir).
- * Las que faltan se borran; si tienen prospectos, `moves` dice a qué etapa pasan.
- */
 async function replaceStages(
   manager: EntityManager,
   pipelineId: string,
@@ -324,29 +346,43 @@ async function replaceStages(
     if (!used) continue
     const move = moves.find((m) => m.from === stage.id)
     if (!move || !kept.has(move.to)) {
-      throw new AppError('invalid', `«${stage.name}» tiene ${used} prospecto(s). Elige a qué columna moverlos.`)
+      throw new AppError(
+        'invalid',
+        `«${stage.name}» tiene ${used} prospecto(s). Elige a qué columna moverlos.`
+      )
     }
     await prospects.update({ stageId: stage.id }, { stageId: move.to, updatedAt: now() })
   }
-  if (removed.length) await stages.delete({ id: In(removed.map((s) => s.id)) })
+  if (removed.length) await stages.softDelete({ id: In(removed.map((s) => s.id)) })
   await stages.save(list)
 }
 
-/** Borra un prospecto (sin transacción propia). */
 export async function removeProspect(manager: EntityManager, ref: unknown): Promise<void> {
-  const prospect = await findByRef(manager.getRepository(ProspectModel), ref, 'company', 'el prospecto')
-  await manager.getRepository(ContactModel).update({ prospectId: prospect.id }, { prospectId: null })
-  await manager.getRepository(MeetingModel).update({ prospectId: prospect.id }, { prospectId: null })
-  await manager.getRepository(ProspectModel).delete({ id: prospect.id })
+  const prospect = await findByRef(
+    manager.getRepository(ProspectModel),
+    ref,
+    'company',
+    'el prospecto'
+  )
+  await manager
+    .getRepository(ContactModel)
+    .update({ prospectId: prospect.id }, { prospectId: null })
+  await manager
+    .getRepository(MeetingModel)
+    .update({ prospectId: prospect.id }, { prospectId: null })
+  await unlinkTasks(manager, 'prospect', prospect.id)
+  await manager.getRepository(StageEventModel).delete({ prospectId: prospect.id })
+  await manager.getRepository(ProspectModel).softDelete({ id: prospect.id })
 }
 
-/**
- * Inserta un prospecto (sin transacción propia). Sin etapa = primera abierta de su pipeline
- * (el indicado o el primero). Exportada para que «convertir en prospecto» lo cree en su misma transacción.
- */
-export async function insertProspect(manager: EntityManager, input: ProspectInput): Promise<Prospect> {
+export async function insertProspect(
+  manager: EntityManager,
+  input: ProspectInput
+): Promise<Prospect> {
   const pipeline = await findPipeline(manager, input.pipeline)
-  const stage = input.stage ? await findStage(manager, input.stage, pipeline.id) : await firstOpenStage(manager, pipeline.id)
+  const stage = input.stage
+    ? await findStage(manager, input.stage, pipeline.id)
+    : await firstOpenStage(manager, pipeline.id)
 
   const stamp = now()
   const prospect: Prospect = {
@@ -362,9 +398,35 @@ export async function insertProspect(manager: EntityManager, input: ProspectInpu
     nextStep: optionalText(input.nextStep, 'El próximo paso'),
     nextStepDate: optionalDay(input.nextStepDate, 'La fecha del próximo paso'),
     clientId: null,
+    closedAt: null,
+    assigneeId: optionalUserId(input.assigneeId),
     createdAt: stamp,
     updatedAt: stamp
   }
+  await recordStage(manager, prospect, null, stage)
   await manager.getRepository(ProspectModel).insert(prospect)
   return prospect
+}
+
+export async function recordStage(
+  manager: EntityManager,
+  p: Prospect,
+  from: Stage | null,
+  to: Stage
+): Promise<void> {
+  if (from?.id === to.id) return
+  const at = now()
+  await manager.getRepository(StageEventModel).insert({
+    id: randomUUID(),
+    prospectId: p.id,
+    pipelineId: to.pipelineId,
+    fromStageId: from?.id ?? null,
+    toStageId: to.id,
+    toKind: to.kind,
+    valueUsd: p.valueUsd,
+    source: 'app',
+    at
+  })
+  if (to.kind === 'open') p.closedAt = null
+  else if (from?.kind !== to.kind || !p.closedAt) p.closedAt = at
 }

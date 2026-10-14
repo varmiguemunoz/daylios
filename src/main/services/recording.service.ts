@@ -8,7 +8,13 @@ import { promisify } from 'util'
 import { Notification } from 'electron'
 import ffmpegPath from 'ffmpeg-static'
 import type { DataSource } from 'typeorm'
-import { LANGUAGES, type ImportInfo, type Language, type Meeting, type StopInfo } from '@shared/consultora'
+import {
+  LANGUAGES,
+  type ImportInfo,
+  type Language,
+  type Meeting,
+  type StopInfo
+} from '@shared/consultora'
 import { MeetingModel } from '../models/meeting.model'
 import { ClientModel } from '../models/client.model'
 import { ProjectModel } from '../models/project.model'
@@ -21,21 +27,10 @@ import type { AiService } from './ai.service'
 
 const run = promisify(execFile)
 
-/** ffmpeg incluido en la app. En la app empaquetada vive fuera del .asar. */
 const FFMPEG = (ffmpegPath ?? 'ffmpeg').replace('app.asar', 'app.asar.unpacked')
 
-/** Minutos por trozo de audio enviado a transcribir (muy por debajo del límite de 25 MB). */
 const PART_SECONDS = 600
 
-/**
- * Grabación de reuniones y su procesado.
- *
- * 1. start(): crea la reunión (estado `recording`) y el archivo .webm en `_reuniones/`.
- * 2. chunk(): el renderer manda trozos cada 5 s; se agregan al archivo.
- * 3. stop(): cierra el archivo, guarda título/participantes/asociación y lanza el procesado.
- * 4. process(): ffmpeg (audio 16 kHz en trozos de 10 min) → transcribir → resumir.
- *    Cada paso se guarda antes del siguiente: un reintento sigue desde donde quedó.
- */
 export class RecordingService {
   private active: { meetingId: string; stream: WriteStream } | null = null
   private running = new Set<string>()
@@ -44,9 +39,9 @@ export class RecordingService {
     private readonly db: DataSource,
     private readonly meetings: MeetingService,
     private readonly ai: AiService,
-    /** Avisa a las ventanas de que hay datos nuevos. */
+
     private readonly onChange: () => void,
-    /** Cambia el indicador del menubar. */
+
     private readonly onRecording: (recording: boolean) => void
   ) {}
 
@@ -68,6 +63,7 @@ export class RecordingService {
       clientId: null,
       projectId: null,
       prospectId: null,
+      assigneeId: null,
       participants: [],
       summaryMd: '',
       decisionsMd: '',
@@ -92,7 +88,6 @@ export class RecordingService {
     return meeting
   }
 
-  /** Agrega un trozo al archivo. Los trozos llegan en orden (el renderer los encola). */
   chunk(meetingId: string, data: Uint8Array): Promise<void> {
     const active = this.active
     if (!active || active.meetingId !== meetingId) return Promise.resolve()
@@ -124,11 +119,6 @@ export class RecordingService {
     return this.process(meetingId)
   }
 
-  /**
-   * Sube una grabación que ya existía (video o audio): la copia a la carpeta de documentos
-   * (el original no se toca), crea la reunión y lanza el mismo procesado que una grabación en vivo.
-   * Fecha = fecha de creación del archivo; duración = la que reporta ffmpeg.
-   */
   async import(source: string, info: ImportInfo): Promise<Meeting> {
     const ext = extname(source).toLowerCase()
     if (!IMPORT_EXTENSIONS.includes(ext)) {
@@ -151,6 +141,7 @@ export class RecordingService {
       clientId: null,
       projectId: null,
       prospectId: null,
+      assigneeId: null,
       participants: [],
       summaryMd: '',
       decisionsMd: '',
@@ -165,7 +156,9 @@ export class RecordingService {
       createdAt: stamp,
       updatedAt: stamp
     }
-    await transactionGuard(this.db, (manager) => manager.getRepository(MeetingModel).insert(meeting))
+    await transactionGuard(this.db, (manager) =>
+      manager.getRepository(MeetingModel).insert(meeting)
+    )
 
     // Asociación (mueve el archivo a la carpeta del cliente si hay cliente) y participantes
     await this.meetings.update(meeting.id, {
@@ -178,7 +171,6 @@ export class RecordingService {
     return this.process(meeting.id)
   }
 
-  /** Lanza el procesado en segundo plano y devuelve la reunión al momento. */
   async process(meetingId: string): Promise<Meeting> {
     const meeting = await this.meetings.get(meetingId)
     if (meeting.status === 'recording' && this.active?.meetingId === meetingId) {
@@ -188,11 +180,6 @@ export class RecordingService {
     return meeting
   }
 
-  /**
-   * Al arrancar, grabaciones que quedaron a medias (la app se cerró o la captura nunca empezó):
-   * - archivo vacío o inexistente: se borran la reunión y el archivo (no hay nada que salvar);
-   * - con datos: pasan a error con «Reintentar» para procesar lo grabado.
-   */
   async recoverInterrupted(): Promise<void> {
     const stuck = await this.db.getRepository(MeetingModel).findBy({ status: 'recording' })
     for (const meeting of stuck) {
@@ -202,7 +189,10 @@ export class RecordingService {
         if (size > 0) {
           await repo.update(
             { id: meeting.id },
-            { status: 'error', error: 'La grabación se interrumpió. Pulsa «Reintentar» para procesar lo grabado.' }
+            {
+              status: 'error',
+              error: 'La grabación se interrumpió. Pulsa «Reintentar» para procesar lo grabado.'
+            }
           )
         } else {
           await repo.delete({ id: meeting.id })
@@ -257,7 +247,6 @@ export class RecordingService {
     }
   }
 
-  /** webm → mp3 mono 16 kHz en trozos de 10 min (carpeta temporal) → texto. */
   private async transcribe(meeting: Meeting): Promise<string> {
     const temp = await mkdtemp(join(tmpdir(), 'daylios-'))
     try {
@@ -299,7 +288,6 @@ export class RecordingService {
     }
   }
 
-  /** "Cliente Acme · Proyecto Portal" para darle contexto al resumen. */
   private async about(meeting: Meeting): Promise<string> {
     const client = meeting.clientId
       ? await this.db.getRepository(ClientModel).findOneBy({ id: meeting.clientId })
@@ -312,7 +300,6 @@ export class RecordingService {
       .join(' · ')
   }
 
-  /** Guarda campos internos del procesado (estado, transcripción, resumen) y avisa a las ventanas. */
   private async patch(id: string, fields: Partial<Meeting>): Promise<void> {
     await transactionGuard(this.db, (manager) =>
       manager.getRepository(MeetingModel).update({ id }, { ...fields, updatedAt: now() })
@@ -321,15 +308,12 @@ export class RecordingService {
   }
 }
 
-/** Formatos que se pueden subir (ffmpeg los lee todos). */
 const IMPORT_EXTENSIONS = ['.mp4', '.mov', '.m4v', '.mkv', '.webm', '.mp3', '.m4a', '.wav']
 
-/** Idioma hablado válido o null (Whisper detecta solo). */
 function checkLanguage(value: unknown): Language | null {
   return LANGUAGES.includes(value as Language) ? (value as Language) : null
 }
 
-/** Duración en segundos según ffmpeg («Duration: 00:12:34.56»). null si no se puede leer. */
 async function mediaDuration(file: string): Promise<number | null> {
   // `ffmpeg -i` sin salida termina con error, pero antes imprime la duración en stderr.
   const stderr = await run(FFMPEG, ['-hide_banner', '-i', file]).then(
@@ -340,7 +324,6 @@ async function mediaDuration(file: string): Promise<number | null> {
   return m ? Math.round(Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3])) : null
 }
 
-/** Tamaño en bytes; 0 si no existe. */
 async function fileSize(path: string): Promise<number> {
   try {
     return (await stat(path)).size
@@ -349,7 +332,6 @@ async function fileSize(path: string): Promise<number> {
   }
 }
 
-/** "2026-10-02 1015" en hora local. */
 function fileStamp(date: Date): string {
   const pad = (n: number): string => String(n).padStart(2, '0')
   return (

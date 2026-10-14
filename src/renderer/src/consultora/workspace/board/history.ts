@@ -2,7 +2,6 @@ import { useCallback, useRef, useState } from 'react'
 
 const LIMIT = 60
 
-/** Deshacer y rehacer por instantáneas (máximo 60). `checkpoint` antes de cada cambio. */
 export function useHistory<T>(
   current: () => T,
   restore: (snapshot: T) => void

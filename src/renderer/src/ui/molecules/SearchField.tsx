@@ -9,7 +9,6 @@ interface SearchFieldProps {
   onEnter?: () => void
 }
 
-/** Pill de búsqueda. La X vacía el campo. */
 export function SearchField({
   value,
   onChange,

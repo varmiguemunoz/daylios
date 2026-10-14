@@ -14,11 +14,16 @@ export function taskView(t: Task): Task {
     tags: t.tags ?? [],
     effort: t.effort ?? null,
     parentId: t.parentId ?? null,
-    ...(t.subtasks ? { subtasks: t.subtasks } : {})
+    status: t.status ?? (t.done ? 'done' : 'todo'),
+    clientId: t.clientId ?? null,
+    projectId: t.projectId ?? null,
+    prospectId: t.prospectId ?? null,
+    assigneeId: t.assigneeId ?? null,
+    ...(t.subtasks ? { subtasks: t.subtasks } : {}),
+    ...(t.links ? { links: t.links } : {})
   }
 }
 
-/** Tareas del día + resumen para que Claude decida si pedir más. */
 export function dayView(date: DayKey, tasks: Task[]): DaySummary {
   const done = tasks.filter((t) => t.done).length
   return {

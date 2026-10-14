@@ -5,7 +5,6 @@ import { StageModel } from '../models/stage.model'
 import { AppError } from './app.error'
 import { findByRef } from './ref'
 
-/** Pipeline por id o nombre; sin ref = el primero (por posición). */
 export async function findPipeline(manager: EntityManager, ref?: unknown): Promise<PipelineRow> {
   const repo = manager.getRepository(PipelineModel)
   if (ref === undefined || ref === null || ref === '') {
@@ -16,11 +15,11 @@ export async function findPipeline(manager: EntityManager, ref?: unknown): Promi
   return findByRef(repo, ref, 'name', 'el pipeline')
 }
 
-/**
- * Etapa por id o nombre. Con `pipelineId` busca el nombre solo en ese pipeline
- * (varios pipelines pueden tener una columna «Lead»).
- */
-export async function findStage(manager: EntityManager, ref: unknown, pipelineId?: string): Promise<Stage> {
+export async function findStage(
+  manager: EntityManager,
+  ref: unknown,
+  pipelineId?: string
+): Promise<Stage> {
   const repo = manager.getRepository(StageModel)
   if (typeof ref !== 'string' || !ref.trim()) throw new AppError('invalid', 'Indica la etapa.')
   const byId = await repo.findOneBy({ id: ref })
@@ -29,13 +28,18 @@ export async function findStage(manager: EntityManager, ref: unknown, pipelineId
   const wanted = normalizeName(ref)
   const stages = await repo.findBy({ pipelineId })
   const exact = stages.filter((s) => normalizeName(s.name) === wanted)
-  const matches = exact.length ? exact : stages.filter((s) => normalizeName(s.name).includes(wanted))
+  const matches = exact.length
+    ? exact
+    : stages.filter((s) => normalizeName(s.name).includes(wanted))
   if (matches.length === 1) return matches[0]
-  if (!matches.length) throw new AppError('not_found', `No encontré la etapa «${ref}» en ese pipeline.`)
-  throw new AppError('invalid', `«${ref}» coincide con varias etapas. Usa el nombre completo o el id.`)
+  if (!matches.length)
+    throw new AppError('not_found', `No encontré la etapa «${ref}» en ese pipeline.`)
+  throw new AppError(
+    'invalid',
+    `«${ref}» coincide con varias etapas. Usa el nombre completo o el id.`
+  )
 }
 
-/** Primera etapa abierta de un pipeline. */
 export async function firstOpenStage(manager: EntityManager, pipelineId: string): Promise<Stage> {
   const stage = await manager
     .getRepository(StageModel)

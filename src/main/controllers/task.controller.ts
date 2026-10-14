@@ -1,12 +1,16 @@
 import type { Request, Response } from 'express'
-import { addDays, todayKey, type TaskPatch } from '@shared/tasks'
+import {
+  TASK_PERIODS,
+  addDays,
+  periodQuery,
+  todayKey,
+  type TaskBoardQuery,
+  type TaskPatch,
+  type TaskPeriod
+} from '@shared/tasks'
 import type { TaskService } from '../services/task.service'
 import { dayView, taskView } from '../views/task.view'
 
-/**
- * Controlador: lee la petición, llama al servicio y responde con la vista.
- * Sin reglas de negocio aquí. Los errores los atrapa `errorHandler` (Express 5 captura async).
- */
 export class TaskController {
   constructor(private readonly service: TaskService) {}
 
@@ -31,13 +35,16 @@ export class TaskController {
     res.json({ ...view, task: taskView(view.task), subtasks: view.subtasks.map(taskView) })
   }
 
-  /** Con `parent` crea una subtarea (vive en el día de la madre). */
   create = async (req: Request, res: Response): Promise<void> => {
     const body = req.body ?? {}
     const parent = text(body.parent)
     const task = parent
       ? await this.service.addSubtask(parent, text(body.title) ?? '', text(body.description))
-      : await this.service.add(text(body.date) ?? todayKey(), text(body.title) ?? '', text(body.description))
+      : await this.service.add(
+          text(body.date) ?? todayKey(),
+          text(body.title) ?? '',
+          text(body.description)
+        )
     // Tags / esfuerzo explícitos (además de los que vengan en el título)
     const extra: TaskPatch = {}
     if (Array.isArray(body.tags)) extra.tags = [...task.tags, ...body.tags]
@@ -51,6 +58,11 @@ export class TaskController {
     const patch: TaskPatch = {}
     if (typeof body.title === 'string') patch.title = body.title
     if (typeof body.done === 'boolean') patch.done = body.done
+    if (typeof body.status === 'string') patch.status = body.status
+    for (const key of ['client', 'project', 'prospect', 'assignee'] as const) {
+      if (typeof body[key] === 'string') patch[key] = body[key]
+      else if (body[key] === null) patch[key] = ''
+    }
     if (typeof body.description === 'string') patch.description = body.description
     if (Array.isArray(body.tags)) patch.tags = body.tags
     if (body.effort !== undefined) patch.effort = body.effort
@@ -78,7 +90,9 @@ export class TaskController {
   }
 
   renameTag = async (req: Request, res: Response): Promise<void> => {
-    res.json({ changed: await this.service.renameTag(String(req.params.tag), (req.body ?? {}).name) })
+    res.json({
+      changed: await this.service.renameTag(String(req.params.tag), (req.body ?? {}).name)
+    })
   }
 
   removeTag = async (req: Request, res: Response): Promise<void> => {
@@ -94,7 +108,37 @@ export class TaskController {
     res.json(taskView(await this.service.moveToDate(String(req.params.id), text(body.date) ?? '')))
   }
 
-  /** Por defecto: de ayer a hoy. */
+  board = async (req: Request, res: Response): Promise<void> => {
+    const q = req.query
+    const today = todayKey()
+    const period = text(q.period) as TaskPeriod | undefined
+    const dates =
+      period && TASK_PERIODS.some((p) => p.id === period)
+        ? periodQuery(period, today, { from: text(q.from) ?? today, to: text(q.to) ?? today })
+        : { from: text(q.from), to: text(q.to), onlyOpen: q.open === 'true' }
+    const status = text(q.status)
+    let tasks = await this.service.board({
+      ...dates,
+      query: text(q.query),
+      tags: text(q.tags)?.split(',').filter(Boolean),
+      effort: text(q.effort) as TaskBoardQuery['effort'],
+      client: text(q.client),
+      project: text(q.project),
+      prospect: text(q.prospect),
+      assignee: text(q.assignee)
+    })
+    if (status) tasks = tasks.filter((t) => t.status === status)
+    res.json({
+      period: period ?? null,
+      counts: {
+        todo: tasks.filter((t) => t.status === 'todo').length,
+        doing: tasks.filter((t) => t.status === 'doing').length,
+        done: tasks.filter((t) => t.status === 'done').length
+      },
+      tasks: tasks.map(taskView)
+    })
+  }
+
   carryOver = async (req: Request, res: Response): Promise<void> => {
     const body = req.body ?? {}
     const to = text(body.to) ?? todayKey()

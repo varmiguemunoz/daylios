@@ -7,7 +7,6 @@ interface SegmentedToggleProps<T extends string> {
   onChange: (value: T) => void
 }
 
-/** Control segmentado (rail del tab switcher, items de 32px). */
 export function SegmentedToggle<T extends string>({
   label,
   value,

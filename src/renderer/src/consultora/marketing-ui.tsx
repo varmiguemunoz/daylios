@@ -3,12 +3,6 @@ import { X } from 'lucide-react'
 import type { ContactStatus, TagRef } from '@shared/marketing'
 import { Pill } from './ui'
 
-/**
- * Piezas del email marketing con el aspecto de Obsidian. Un color, un significado:
- * verde = suscrito (recibe emails), rojo = rebote o queja (error), neutro = baja o sin marketing.
- * Los tags son neutros: un tag es una etiqueta, no un estado.
- */
-
 const STATUS: Record<ContactStatus, { tone: 'mint' | 'coral' | 'neutral'; label: string } | null> =
   {
     none: null,
@@ -18,13 +12,11 @@ const STATUS: Record<ContactStatus, { tone: 'mint' | 'coral' | 'neutral'; label:
     complained: { tone: 'coral', label: 'Spam' }
   }
 
-/** Estado de suscripción. `none` no muestra nada (contacto de trabajo: calma por defecto). */
 export function ContactStatusPill({ status }: { status: ContactStatus }): React.JSX.Element | null {
   const entry = STATUS[status]
   return entry ? <Pill tone={entry.tone}>{entry.label}</Pill> : null
 }
 
-/** Grupo de botones de una sola elección, como los filtros de Obsidian. */
 export function Chips<T extends string>({
   label,
   value,
@@ -62,7 +54,6 @@ export function Chips<T extends string>({
   )
 }
 
-/** Tag en una lista (solo lectura). */
 export function TagPill({ tag }: { tag: TagRef }): React.JSX.Element {
   return (
     <span
@@ -74,7 +65,6 @@ export function TagPill({ tag }: { tag: TagRef }): React.JSX.Element {
   )
 }
 
-/** Hasta `max` tags y «+n» con el resto. */
 export function TagList({
   tags,
   max = 2
@@ -104,10 +94,6 @@ export function TagList({
   )
 }
 
-/**
- * Editor de tags: etiquetas violetas con «quitar» y un campo para añadir (Enter o coma).
- * `suggestions` = tags existentes (autocompletado nativo).
- */
 export function TagEditor({
   tags,
   suggestions,

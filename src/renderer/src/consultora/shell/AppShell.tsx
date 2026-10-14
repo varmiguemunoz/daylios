@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import {
+  Activity,
   ChevronLeft,
   ChevronRight,
   FilePlus2,
@@ -15,19 +16,22 @@ import { RibbonButton } from './RibbonButton'
 import type { Sidebar, SidebarTab } from './useSidebar'
 
 interface AppShellProps {
-  /** Ruta de lo abierto, en el centro de la franja («Clientes › Acme»). */
   title: string
   canBack: boolean
   canForward: boolean
   onBack: () => void
   onForward: () => void
-  /** Control de grabación: vive en la franja para que nunca se desmonte. */
+
   recorder: ReactNode
-  /** Menú «…» de lo abierto, si tiene. */
+  account?: ReactNode
+  org?: ReactNode
+
   onMore?: (anchor: HTMLElement) => void
   sidebar: Sidebar
   sections: ReactNode
   files: ReactNode
+  activity?: ReactNode
+  activityUnseen?: number
   onSearch: () => void
   onNewNote: () => void
   onNewBoard: () => void
@@ -38,13 +42,10 @@ interface AppShellProps {
 
 const TABS: { id: SidebarTab; label: string; Icon: typeof Files }[] = [
   { id: 'sections', label: 'Secciones', Icon: LayoutGrid },
-  { id: 'files', label: 'Archivos', Icon: Files }
+  { id: 'files', label: 'Archivos', Icon: Files },
+  { id: 'activity', label: 'Actividad', Icon: Activity }
 ]
 
-/**
- * Marco de toda la ventana Consultora, como Obsidian: franja de 38 px para arrastrar la ventana,
- * cinta de iconos, barra lateral con pestañas y el panel principal. No cambia al cambiar de sección.
- */
 export function AppShell({
   title,
   canBack,
@@ -52,10 +53,14 @@ export function AppShell({
   onBack,
   onForward,
   recorder,
+  account,
+  org,
   onMore,
   sidebar,
   sections,
   files,
+  activity,
+  activityUnseen = 0,
   onSearch,
   onNewNote,
   onNewBoard,
@@ -63,7 +68,7 @@ export function AppShell({
   settingsActive,
   children
 }: AppShellProps): React.JSX.Element {
-  /** Arrastrar el borde de la barra cambia su ancho (se recuerda al soltar). */
+  const tab = sidebar.tab === 'activity' && !activity ? 'sections' : sidebar.tab
   const startResize = (e: React.PointerEvent): void => {
     e.preventDefault()
     const startX = e.clientX
@@ -98,6 +103,7 @@ export function AppShell({
         </p>
         <div className="ml-auto flex items-center gap-1 [-webkit-app-region:no-drag]">
           {recorder}
+          {account}
           {onMore && (
             <RibbonButton label="Más opciones" onClick={(e) => onMore(e.currentTarget)}>
               <MoreHorizontal size={16} />
@@ -127,7 +133,8 @@ export function AppShell({
           <RibbonButton label="Nuevo board" onClick={onNewBoard}>
             <Shapes size={17} />
           </RibbonButton>
-          <div className="mt-auto">
+          <div className="mt-auto flex flex-col items-center gap-1">
+            {org}
             <RibbonButton label="Ajustes (⌘,)" onClick={onSettings} active={settingsActive}>
               <Settings size={17} />
             </RibbonButton>
@@ -145,38 +152,56 @@ export function AppShell({
               aria-label="Vistas"
               className="flex h-9 shrink-0 items-center gap-0.5 border-b border-ob-border px-2"
             >
-              {TABS.map(({ id, label, Icon }) => (
+              {TABS.filter((t) => t.id !== 'activity' || activity).map(({ id, label, Icon }) => (
                 <button
                   key={id}
                   type="button"
                   role="tab"
-                  aria-selected={sidebar.tab === id}
+                  aria-selected={tab === id}
+                  aria-label={label}
                   title={label}
                   onClick={() => sidebar.show(id)}
                   className={`flex h-[26px] items-center gap-1.5 rounded-[4px] px-2 text-[12px] transition-colors hover:bg-ob-hover hover:text-ob-text ${
-                    sidebar.tab === id ? 'bg-ob-active text-ob-text' : 'text-ob-muted'
+                    tab === id ? 'bg-ob-active text-ob-text' : 'text-ob-muted'
                   }`}
                 >
                   <Icon size={14} aria-hidden />
-                  {label}
+                  {(tab === id || sidebar.width >= 320) && label}
+                  {id === 'activity' && activityUnseen > 0 && (
+                    <span
+                      aria-label={`${activityUnseen} sin ver`}
+                      className="grid h-4 min-w-4 place-items-center rounded-full bg-ob-accent px-1 text-[10px] font-semibold text-white tabular-nums"
+                    >
+                      {activityUnseen > 99 ? '99+' : activityUnseen}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
             {/* Las dos vistas quedan montadas: el explorador no se recarga al cambiar de pestaña. */}
             <div
               role="tabpanel"
-              aria-hidden={sidebar.tab !== 'sections'}
-              className={`min-h-0 flex-1 flex-col ${sidebar.tab === 'sections' ? 'flex' : 'hidden'}`}
+              aria-hidden={tab !== 'sections'}
+              className={`min-h-0 flex-1 flex-col ${tab === 'sections' ? 'flex' : 'hidden'}`}
             >
               {sections}
             </div>
             <div
               role="tabpanel"
-              aria-hidden={sidebar.tab !== 'files'}
-              className={`min-h-0 flex-1 flex-col ${sidebar.tab === 'files' ? 'flex' : 'hidden'}`}
+              aria-hidden={tab !== 'files'}
+              className={`min-h-0 flex-1 flex-col ${tab === 'files' ? 'flex' : 'hidden'}`}
             >
               {files}
             </div>
+            {activity && (
+              <div
+                role="tabpanel"
+                aria-hidden={tab !== 'activity'}
+                className={`min-h-0 flex-1 flex-col ${tab === 'activity' ? 'flex' : 'hidden'}`}
+              >
+                {activity}
+              </div>
+            )}
             <div
               role="separator"
               aria-orientation="vertical"

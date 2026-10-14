@@ -4,18 +4,9 @@ import { noteTitle, type Note, type VoiceResult } from '@shared/notes'
 import type { NoteService } from './note.service'
 import type { AiService } from './ai.service'
 
-/** Grabaciones más cortas que esto se ignoran (pulsación accidental del atajo). */
 const MIN_SECONDS = 1
 const MIN_BYTES = 2_000
 
-/**
- * Notas de voz: audio del micrófono → transcribir (Whisper) → el modelo escribe la nota
- * en markdown → se guarda en Notas.
- *
- * El audio se escribe primero en `<userData>/voice-pending/`. Si todo sale bien se borra;
- * si falla la transcripción se queda ahí y Ajustes ofrece «Reintentar».
- * Si falla solo el formato, se guarda la transcripción tal cual: lo dicho nunca se pierde.
- */
 export class VoiceNoteService {
   private readonly dir: string
 
@@ -23,7 +14,7 @@ export class VoiceNoteService {
     dataDir: string,
     private readonly notes: NoteService,
     private readonly ai: AiService,
-    /** Avisa a las ventanas (Notas se recarga) y muestra la notificación. */
+
     private readonly onCreated: (note: Note) => void
   ) {
     this.dir = join(dataDir, 'voice-pending')
@@ -37,12 +28,10 @@ export class VoiceNoteService {
     return this.process(file)
   }
 
-  /** Cuántos audios esperan reintento. */
   async pending(): Promise<number> {
     return (await this.pendingFiles()).length
   }
 
-  /** Reprocesa los audios que fallaron, uno detrás de otro. */
   async retry(): Promise<{ created: number; failed: number }> {
     let created = 0
     let failed = 0

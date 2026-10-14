@@ -1,9 +1,7 @@
 import { Table, TableColumn, TableIndex, type MigrationInterface, type QueryRunner } from 'typeorm'
 
-/** Id fijo del pipeline inicial: las etapas existentes pasan a él. */
 export const DEFAULT_PIPELINE_ID = '00000000-0000-4000-8000-000000000001'
 
-/** Varios pipelines. El actual pasa a llamarse «Ventas» con sus etapas y prospectos. */
 export class AddPipelines1728600000000 implements MigrationInterface {
   name = 'AddPipelines1728600000000'
 
@@ -22,12 +20,10 @@ export class AddPipelines1728600000000 implements MigrationInterface {
       true
     )
     const now = new Date().toISOString()
-    await query.query('INSERT INTO pipelines (id, name, position, created_at, updated_at) VALUES (?, ?, 0, ?, ?)', [
-      DEFAULT_PIPELINE_ID,
-      'Ventas',
-      now,
-      now
-    ])
+    await query.query(
+      'INSERT INTO pipelines (id, name, position, created_at, updated_at) VALUES (?, ?, 0, ?, ?)',
+      [DEFAULT_PIPELINE_ID, 'Ventas', now, now]
+    )
     if (!(await query.hasColumn('pipeline_stages', 'pipeline_id'))) {
       await query.addColumn(
         'pipeline_stages',

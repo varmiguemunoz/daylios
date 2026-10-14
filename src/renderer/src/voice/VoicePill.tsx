@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check } from 'lucide-react'
 
-/** Máximo por nota de voz. Al llegar, se para sola. */
 const MAX_SECONDS = 600
 
 type State =
@@ -11,14 +10,9 @@ type State =
   | { name: 'done'; title: string }
   | { name: 'error'; message: string }
 
-/**
- * Pastilla flotante de la nota de voz (ventana `?window=voice`).
- * main avisa `voice:start` / `voice:stop`; aquí se graba el micrófono (WebM/Opus)
- * y al terminar se manda el audio a main, que transcribe y crea la nota.
- */
 export function VoicePill(): React.JSX.Element | null {
   const [state, setState] = useState<State>({ name: 'idle' })
-  const [now, setNow] = useState(Date.now())
+  const [now, setNow] = useState(() => Date.now())
   const recorder = useRef<MediaRecorder | null>(null)
   const stopRequested = useRef(false)
 
@@ -41,7 +35,9 @@ export function VoicePill(): React.JSX.Element | null {
       stopRequested.current = false
       let stream: MediaStream
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } })
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true }
+        })
       } catch {
         setState({ name: 'error', message: 'Sin permiso de micrófono' })
         hideLater(2500)
@@ -49,7 +45,10 @@ export function VoicePill(): React.JSX.Element | null {
       }
 
       const chunks: Blob[] = []
-      const rec = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 32_000 })
+      const rec = new MediaRecorder(stream, {
+        mimeType: 'audio/webm;codecs=opus',
+        audioBitsPerSecond: 32_000
+      })
       const startedAt = Date.now()
       rec.ondataavailable = (e) => e.data.size && chunks.push(e.data)
       rec.onstop = async () => {
@@ -95,7 +94,10 @@ export function VoicePill(): React.JSX.Element | null {
     if (state.name !== 'listening') return
     const timer = window.setInterval(() => {
       setNow(Date.now())
-      if ((Date.now() - state.startedAt) / 1000 >= MAX_SECONDS && recorder.current?.state === 'recording') {
+      if (
+        (Date.now() - state.startedAt) / 1000 >= MAX_SECONDS &&
+        recorder.current?.state === 'recording'
+      ) {
         recorder.current.stop()
       }
     }, 250)

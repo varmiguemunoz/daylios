@@ -5,6 +5,7 @@ import type { ProspectController } from '../controllers/prospect.controller'
 import type { MeetingController } from '../controllers/meeting.controller'
 import type { ContextController } from '../controllers/context.controller'
 import type { ContactController } from '../controllers/contact.controller'
+import type { MetricsController } from '../controllers/metrics.controller'
 
 export interface ConsultoraControllers {
   clients: ClientController
@@ -13,12 +14,14 @@ export interface ConsultoraControllers {
   meetings: MeetingController
   context: ContextController
   contacts: ContactController
+  metrics: MetricsController
 }
 
-/** Rutas de la Consultora, montadas en `/consultora`. `:ref` acepta id o nombre. */
 export function consultoraRoutes(c: ConsultoraControllers): Router {
   return Router()
     .get('/overview', c.context.overview)
+    .get('/metrics', c.metrics.query)
+    .get('/dashboard', c.metrics.dashboard)
     .get('/search', c.context.search)
     .post('/notes/append', c.context.appendNote)
 

@@ -3,15 +3,9 @@ import type { EntityManager } from 'typeorm'
 import { OutboxModel, type OutboxJob } from '../models/marketing.model'
 import { now } from './fields'
 
-/**
- * Cola local hacia Resend. Los servicios encolan dentro de su transacción; `marketing-sync`
- * la vacía con reintentos. Así ninguna escritura del usuario falla porque Resend no responda.
- */
-
 type Listener = () => void
 const listeners = new Set<Listener>()
 
-/** Avisa cuando hay trabajo nuevo (el sync lo usa para no esperar al próximo minuto). */
 export function onEnqueue(listener: Listener): () => void {
   listeners.add(listener)
   return () => listeners.delete(listener)
@@ -22,12 +16,6 @@ const notify = (): void => {
   setTimeout(() => listeners.forEach((l) => l()), 0)
 }
 
-/**
- * Sincronizar un contacto (crear/actualizar en Resend y reconciliar segments).
- * Un solo job pendiente por contacto: si ya hay uno, se fusionan los emails anteriores.
- * `previousEmail` = email que tenía en Resend y que hay que dar de baja (cambio o borrado).
- * `resubscribe` = el dueño lo volvió a suscribir a mano: se permite reactivar una baja de Resend.
- */
 export async function enqueueContactSync(
   manager: EntityManager,
   contactId: string,
@@ -58,7 +46,6 @@ export async function enqueueContactSync(
   notify()
 }
 
-/** Disparar un evento de Resend (`tag.<slug>`, `lead.created`…) para un contacto. */
 export async function enqueueEvent(
   manager: EntityManager,
   contactId: string,
@@ -69,7 +56,6 @@ export async function enqueueEvent(
   notify()
 }
 
-/** Borrar un Segment de Resend (`ref` = slug del tag, para el historial de errores). */
 export async function enqueueSegmentDelete(
   manager: EntityManager,
   slug: string,
@@ -79,7 +65,6 @@ export async function enqueueSegmentDelete(
   notify()
 }
 
-/** Marca de tiempo estrictamente creciente: el orden de la cola es el orden en que se encoló. */
 let lastStamp = 0
 function stamp(): string {
   lastStamp = Math.max(Date.now(), lastStamp + 1)

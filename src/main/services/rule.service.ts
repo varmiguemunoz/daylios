@@ -17,10 +17,6 @@ import { ensureTags } from './tag.service'
 
 const EVENT = /^[a-zA-Z0-9._-]{1,100}$/
 
-/**
- * Reglas por tag: «cuando entra el tag X → acciones». Las evalúan el Worker (al recibir un lead)
- * y la app (al añadir un tag a mano o desde Claude). Cambiar algo avisa para empujarlas al Worker.
- */
 export class RuleService {
   constructor(
     private readonly db: DataSource,
@@ -71,12 +67,11 @@ export class RuleService {
 
   async remove(id: unknown): Promise<void> {
     await transactionGuard(this.db, async (manager) => {
-      await manager.getRepository(RuleModel).delete({ id: (await find(manager, id)).id })
+      await manager.getRepository(RuleModel).softDelete({ id: (await find(manager, id)).id })
     })
     this.onChange()
   }
 
-  /** Nuevo orden (lista completa de ids). Las reglas de un mismo tag se aplican en este orden. */
   async reorder(ids: unknown): Promise<Rule[]> {
     if (!Array.isArray(ids) || ids.some((id) => typeof id !== 'string')) {
       throw new AppError('invalid', 'El orden debe ser una lista de ids.')
@@ -103,14 +98,12 @@ async function find(manager: EntityManager, id: unknown): Promise<Rule> {
   return rule
 }
 
-/** El tag que dispara la regla (se crea si no existe, para que aparezca en los selectores). */
 async function trigger(manager: EntityManager, value: unknown): Promise<string> {
   const text = requiredText(value, 'El tag que dispara la regla', 60)
   const [tag] = await ensureTags(manager, [text])
   return tag.slug
 }
 
-/** Valida y normaliza las acciones. Las etapas se guardan por id (renombrarlas no rompe la regla). */
 async function actions(manager: EntityManager, value: unknown): Promise<RuleAction[]> {
   if (!Array.isArray(value) || value.length === 0) {
     throw new AppError('invalid', 'La regla necesita al menos una acción.')

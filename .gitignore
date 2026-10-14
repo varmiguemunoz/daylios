@@ -6,3 +6,6 @@ out
 *.log*
 .wrangler
 .dev.vars
+# Configuración local de la nube (MAIN_VITE_*). Ver .env.example.
+.env
+.env.local

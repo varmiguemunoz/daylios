@@ -1,3 +1,4 @@
+import { mkdirSync } from 'fs'
 import { join } from 'path'
 import { DataSource } from 'typeorm'
 import { TaskModel } from '../models/task.model'
@@ -22,6 +23,17 @@ import { AddNoteRelations1728400000000 } from './migrations/AddNoteRelations'
 import { AddContactProject1728500000000 } from './migrations/AddContactProject'
 import { AddPipelines1728600000000 } from './migrations/AddPipelines'
 import { CreateWorkspace1728700000000 } from './migrations/CreateWorkspace'
+import { AddTaskStatusAndLinks1728800000000 } from './migrations/AddTaskStatusAndLinks'
+import { AddMetrics1728900000000 } from './migrations/AddMetrics'
+import { AddSyncMetadata1729000000000 } from './migrations/AddSyncMetadata'
+import { installChangeTriggers } from './change-log'
+import { registerAuthorFunction } from './author'
+import { AddChangeLogAuthor1729100000000 } from './migrations/AddChangeLogAuthor'
+import { AddAssignees1729200000000 } from './migrations/AddAssignees'
+import { AddSyncTables1729300000000 } from './migrations/AddSyncTables'
+import { AddFileManifest1729400000000 } from './migrations/AddFileManifest'
+import { AddActivityCache1729500000000 } from './migrations/AddActivityCache'
+import { DashboardModel, StageEventModel } from '../models/metrics.model'
 import {
   ContactEventModel,
   ContactTagModel,
@@ -52,7 +64,9 @@ export const ENTITIES = [
   NoteRelationModel,
   PipelineModel,
   WorkspaceItemModel,
-  WorkspaceRefModel
+  WorkspaceRefModel,
+  StageEventModel,
+  DashboardModel
 ]
 
 // En orden. Nunca edites una publicada: añade una nueva al final.
@@ -68,23 +82,34 @@ export const MIGRATIONS = [
   AddNoteRelations1728400000000,
   AddContactProject1728500000000,
   AddPipelines1728600000000,
-  CreateWorkspace1728700000000
+  CreateWorkspace1728700000000,
+  AddTaskStatusAndLinks1728800000000,
+  AddMetrics1728900000000,
+  AddSyncMetadata1729000000000,
+  AddChangeLogAuthor1729100000000,
+  AddAssignees1729200000000,
+  AddSyncTables1729300000000,
+  AddFileManifest1729400000000,
+  AddActivityCache1729500000000
 ]
 
-/** Abre `daylios.db` en la carpeta de datos de la app y aplica las migraciones pendientes. */
 export async function openDatabase(dir: string): Promise<DataSource> {
+  mkdirSync(dir, { recursive: true })
   return openAt(join(dir, 'daylios.db'))
 }
 
-/** Abre una base en `database` (ruta o `:memory:` en tests) con todas las migraciones aplicadas. */
-export function openAt(database: string): Promise<DataSource> {
+export async function openAt(database: string): Promise<DataSource> {
   const db = new DataSource({
     type: 'better-sqlite3',
     database,
     entities: ENTITIES,
     migrations: MIGRATIONS,
-    migrationsRun: true,
+    migrationsRun: false,
     synchronize: false
   })
-  return db.initialize()
+  await db.initialize()
+  registerAuthorFunction(db)
+  await db.runMigrations({ transaction: 'all' })
+  await installChangeTriggers(db)
+  return db
 }

@@ -1,11 +1,7 @@
 import type { DataSource, EntityManager } from 'typeorm'
 
-/**
- * Guard de transacciones: serializa las escrituras y revierte todo si algo falla.
- */
 let queue: Promise<unknown> = Promise.resolve()
 
-/** Callbacks pendientes por transacción abierta (se ejecutan solo si confirma). */
 const pending = new WeakMap<EntityManager, (() => void)[]>()
 
 export function transactionGuard<T>(
@@ -26,7 +22,6 @@ export function transactionGuard<T>(
   return result
 }
 
-/** Ejecuta `fn` cuando la transacción de `manager` confirme (o ya, si no hay transacción del guard). */
 export function afterCommit(manager: EntityManager, fn: () => void): void {
   const list = pending.get(manager)
   if (list) list.push(fn)

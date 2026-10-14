@@ -1,15 +1,5 @@
 import { globalShortcut, systemPreferences } from 'electron'
 
-/**
- * Atajo global de «mantener pulsado para hablar».
- *
- * macOS no avisa a los atajos globales de Electron cuando se SUELTA la tecla, así que se combinan dos piezas:
- * - Pulsar: `globalShortcut` (además se «come» la tecla: no se escribe un espacio en la app de delante).
- * - Soltar: `uiohook-napi`, que escucha el teclado del sistema (solo lectura). Necesita el permiso de Accesibilidad.
- *
- * Sin ese permiso (o si uiohook no carga) funciona como interruptor: pulsar empieza, pulsar otra vez termina.
- */
-
 interface Handlers {
   start: () => void
   stop: () => void
@@ -20,7 +10,6 @@ export interface ShortcutState {
   mode: 'hold' | 'toggle'
 }
 
-/** Partes del atajo (formato Electron) → nombre de tecla de uiohook. */
 const KEY_NAMES: Record<string, string[]> = {
   alt: ['Alt', 'AltRight'],
   option: ['Alt', 'AltRight'],
@@ -35,18 +24,21 @@ const KEY_NAMES: Record<string, string[]> = {
 }
 
 type Hook = {
-  uIOhook: { start: () => void; stop: () => void; on: (event: string, cb: (e: { keycode: number }) => void) => void }
+  uIOhook: {
+    start: () => void
+    stop: () => void
+    on: (event: string, cb: (e: { keycode: number }) => void) => void
+  }
   UiohookKey: Record<string, number>
 }
 
 let hook: Hook | null = null
 let hookStarted = false
-/** Última vez que uiohook vio una tecla: si no ve nada, no está funcionando (falta permiso). */
+
 let lastHookEvent = 0
 let releaseCodes = new Set<number>()
 let onRelease: (() => void) | null = null
 
-/** Carga y arranca uiohook una sola vez, solo si hay permiso de Accesibilidad. */
 async function startHook(): Promise<boolean> {
   if (hookStarted) return true
   if (!systemPreferences.isTrustedAccessibilityClient(false)) return false
@@ -67,11 +59,10 @@ async function startHook(): Promise<boolean> {
 
 let current: string | null = null
 
-/**
- * Registra (o vuelve a registrar) el atajo. Devuelve si quedó registrado y en qué modo.
- * `accelerator` en formato Electron: "Alt+Space", "CommandOrControl+Shift+P"…
- */
-export async function registerVoiceShortcut(accelerator: string, handlers: Handlers): Promise<ShortcutState> {
+export async function registerVoiceShortcut(
+  accelerator: string,
+  handlers: Handlers
+): Promise<ShortcutState> {
   unregisterVoiceShortcut()
   const hold = await startHook()
 
@@ -79,7 +70,9 @@ export async function registerVoiceShortcut(accelerator: string, handlers: Handl
   releaseCodes = new Set(
     accelerator
       .split('+')
-      .flatMap((part) => KEY_NAMES[part.toLowerCase()] ?? [part.length === 1 ? part.toUpperCase() : part])
+      .flatMap(
+        (part) => KEY_NAMES[part.toLowerCase()] ?? [part.length === 1 ? part.toUpperCase() : part]
+      )
       .map((name) => hook?.UiohookKey[name])
       .filter((code): code is number => typeof code === 'number')
   )
@@ -118,7 +111,6 @@ export function unregisterVoiceShortcut(): void {
   onRelease = null
 }
 
-/** Al salir de la app. */
 export function disposeVoiceShortcut(): void {
   unregisterVoiceShortcut()
   if (hookStarted) hook?.uIOhook.stop()

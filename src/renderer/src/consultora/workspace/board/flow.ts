@@ -10,11 +10,6 @@ import {
 import { groupZ } from '@shared/canvas-groups'
 import { IMAGE_EXT, extOf } from '@shared/workspace'
 
-/**
- * JSON Canvas ↔ React Flow. Cada nodo de Flow guarda su nodo de canvas original en `data.canvas`,
- * así al guardar no se pierde ningún campo que no conocemos (archivos editados en Obsidian).
- */
-
 export type FlowKind = 'card' | 'text' | 'shape' | 'image' | 'note' | 'file' | 'link' | 'group'
 
 export interface BoardNodeData extends Record<string, unknown> {
@@ -29,7 +24,6 @@ export interface BoardEdgeData extends Record<string, unknown> {
 
 export type BoardEdge = Edge<BoardEdgeData>
 
-/** Los seis colores de canvas de Obsidian («1»…«6»). Un hex se usa tal cual. */
 export const COLORS: { id: string; label: string; value: string }[] = [
   { id: '1', label: 'Rojo', value: '#fb464c' },
   { id: '2', label: 'Naranja', value: '#e9973f' },
@@ -45,7 +39,6 @@ export const colorValue = (color?: string): string | null =>
     : (COLORS.find((c) => c.id === color)?.value ??
       (/^#[0-9a-f]{3,8}$/i.test(color) ? color : null))
 
-/** Qué componente pinta un nodo de canvas. Las tarjetas de texto de Obsidian son `card`. */
 export function flowKind(n: CanvasNode): FlowKind {
   if (n.type === 'group') return 'group'
   if (n.type === 'link') return 'link'
@@ -58,7 +51,6 @@ export function flowKind(n: CanvasNode): FlowKind {
   return kind === 'shape' ? 'shape' : kind === 'text' ? 'text' : 'card'
 }
 
-/** Lados más cercanos entre dos nodos (para conexiones sin lado guardado). */
 function bestSides(a: CanvasNode, b: CanvasNode): [Side, Side] {
   const dx = b.x + b.width / 2 - (a.x + a.width / 2)
   const dy = b.y + b.height / 2 - (a.y + a.height / 2)
@@ -104,7 +96,6 @@ export function toFlow(canvas: CanvasFile): { nodes: BoardNode[]; edges: BoardEd
   }
 }
 
-/** Nodo de Flow → nodo de canvas con su posición y tamaño actuales. */
 export function canvasOf(n: BoardNode): CanvasNode {
   return {
     ...n.data.canvas,
@@ -153,7 +144,6 @@ const at = (
   height: h
 })
 
-/** Tarjeta de texto de JSON Canvas, sin extensiones: Obsidian la ve igual. */
 export function newCard(p: { x: number; y: number }): CanvasNode {
   return { id: newId(), type: 'text', text: '', ...at(p, 250, 60) }
 }

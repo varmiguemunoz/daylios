@@ -2,14 +2,13 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import { api, tool, day, query } from '../client'
 
-/** Herramientas MCP: tasks. */
 export function register(server: McpServer): void {
   server.registerTool(
     'get_day',
     {
       description:
         'Tareas de un día y su resumen: total, hechas, pendientes, huecos libres y techo (8). Sin fecha = hoy. ' +
-          'Cada tarea trae `subtasks: { total, done }` si tiene subtareas (no cuentan para el techo; detalle con get_task).',
+        'Cada tarea trae `subtasks: { total, done }` si tiene subtareas (no cuentan para el techo; detalle con get_task).',
       inputSchema: { date: day.optional() }
     },
     ({ date }) => tool(() => api('GET', `/day${query({ date })}`))
@@ -63,17 +62,57 @@ export function register(server: McpServer): void {
     {
       description:
         'Edita el título, la descripción (markdown; cadena vacía la borra), los tags (lista completa), ' +
-        'el esfuerzo (null lo quita) y/o marca una tarea como hecha (done: true) o pendiente (done: false).',
+        'el esfuerzo (null lo quita), el estado del tablero (todo, doing, done; done equivale a done: true) ' +
+        'y la relación con un cliente, proyecto o prospecto por id (cadena vacía la quita). ' +
+        'Las subtareas no admiten relaciones.',
       inputSchema: {
         id: z.string(),
         title: z.string().min(1).max(200).optional(),
         description: z.string().max(20000).optional(),
         tags: z.array(z.string()).max(5).optional(),
         effort: z.enum(['alto', 'medio', 'bajo']).nullable().optional(),
-        done: z.boolean().optional()
+        done: z.boolean().optional(),
+        status: z.enum(['todo', 'doing', 'done']).optional(),
+        client: z.string().optional().describe('id del cliente, vacío quita la relación'),
+        project: z.string().optional().describe('id del proyecto, vacío quita la relación'),
+        prospect: z.string().optional().describe('id del prospecto, vacío quita la relación'),
+        assignee: z
+          .string()
+          .optional()
+          .describe('id de usuario del miembro responsable, vacío lo quita. Solo con organización')
       }
     },
     ({ id, ...fields }) => tool(() => api('PATCH', `/tasks/${encodeURIComponent(id)}`, fields))
+  )
+
+  server.registerTool(
+    'list_tasks',
+    {
+      description:
+        'Tablero de tareas: lista tareas madre con estado, progreso y relaciones, más el conteo por estado. ' +
+        'Usa period (today, week, overdue, upcoming, open, range con from y to) o solo from y to. Filtra por estado, texto, tags, esfuerzo, ' +
+        'cliente, proyecto o prospecto (ids).',
+      inputSchema: {
+        period: z.enum(['today', 'week', 'overdue', 'upcoming', 'open', 'range']).optional(),
+        from: day.optional(),
+        to: day.optional(),
+        status: z.enum(['todo', 'doing', 'done']).optional(),
+        query: z.string().optional(),
+        tags: z.array(z.string()).max(5).optional(),
+        effort: z.enum(['alto', 'medio', 'bajo']).optional(),
+        client: z.string().optional(),
+        project: z.string().optional(),
+        prospect: z.string().optional(),
+        assignee: z.string().optional().describe('id de usuario del responsable')
+      }
+    },
+    ({ tags, ...params }) =>
+      tool(() =>
+        api(
+          'GET',
+          `/tasks-board${query({ ...params, tags: tags?.length ? tags.join(',') : undefined })}`
+        )
+      )
   )
 
   server.registerTool(
@@ -121,7 +160,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     'reorder_tasks',
     {
-      description: 'Nuevo orden de las tareas de un día: todos los ids de ese día en el orden deseado.',
+      description:
+        'Nuevo orden de las tareas de un día: todos los ids de ese día en el orden deseado.',
       inputSchema: { date: day.optional(), ids: z.array(z.string()).min(1) }
     },
     (args) => tool(() => api('POST', '/reorder', args))
@@ -143,6 +183,7 @@ export function register(server: McpServer): void {
       description: 'Marca como hechas todas las subtareas pendientes de una tarea.',
       inputSchema: { parent: z.string() }
     },
-    ({ parent }) => tool(() => api('POST', `/tasks/${encodeURIComponent(parent)}/subtasks/complete`))
+    ({ parent }) =>
+      tool(() => api('POST', `/tasks/${encodeURIComponent(parent)}/subtasks/complete`))
   )
 }

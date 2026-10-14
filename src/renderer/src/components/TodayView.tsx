@@ -9,33 +9,25 @@ import { TaskRow } from './TaskRow'
 import { SubtaskDropdown } from './SubtaskDropdown'
 import { YesterdayTray } from './YesterdayTray'
 import { finalIndex, useReorder } from '../lib/useReorder'
+import { uiState, useScrollMemory, useUiState } from '../lib/ui-state'
 
 interface TodayViewProps {
   date: DayKey
   day: DayState
-  /** `parent` = se abrió una subtarea desde su madre desplegada. */
+
   onOpenTask: (task: Task, parent?: Task) => void
+
+  active: boolean
 }
 
 const EXPANDED_KEY = 'today.expanded'
 
-/** Madres desplegadas, recordadas entre aperturas. localStorage puede fallar: entonces solo en memoria. */
 function readExpanded(): Set<string> {
-  try {
-    const raw = localStorage.getItem(EXPANDED_KEY)
-    return new Set(raw ? (JSON.parse(raw) as string[]) : [])
-  } catch {
-    return new Set()
-  }
+  const ids = uiState.get<unknown>(EXPANDED_KEY, [])
+  return new Set(Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : [])
 }
 
-function writeExpanded(ids: Set<string>): void {
-  try {
-    localStorage.setItem(EXPANDED_KEY, JSON.stringify([...ids]))
-  } catch {
-    // sin persistencia
-  }
-}
+const writeExpanded = (ids: Set<string>): void => uiState.set(EXPANDED_KEY, [...ids])
 
 function statusLine(done: number, total: number): string {
   const free = DAILY_LIMIT - total
@@ -47,19 +39,30 @@ function statusLine(done: number, total: number): string {
   return `${plural(total, 'planificada', 'planificadas')} · ${slots}`
 }
 
-export function TodayView({ date, day, onOpenTask }: TodayViewProps): React.JSX.Element {
-  const [draft, setDraft] = useState('')
+export function TodayView({ date, day, onOpenTask, active }: TodayViewProps): React.JSX.Element {
+  // Lo escrito y no enviado sobrevive a cambiar de pestaña, cerrar el popover y reiniciar.
+  const [draft, setDraft] = useUiState('capture.draft', '', (v) => typeof v === 'string')
   const [expanded, setExpanded] = useState<Set<string>>(readExpanded)
   const inputRef = useRef<HTMLInputElement>(null)
+  const scroller = useRef<HTMLElement>(null)
+  useScrollMemory(scroller, 'scroll.menubar.today')
+  const activeRef = useRef(active)
+  useEffect(() => {
+    activeRef.current = active
+    if (active) inputRef.current?.focus()
+  }, [active])
 
   const total = day.today.length
   const done = day.today.filter((t) => t.done).length
 
   // Foco al campo de captura al abrir la ventana: escribir es lo primero.
-  useEffect(() => {
-    inputRef.current?.focus()
-    return onWindowShown(() => inputRef.current?.focus())
-  }, [])
+  useEffect(
+    () =>
+      onWindowShown(() => {
+        if (activeRef.current) inputRef.current?.focus()
+      }),
+    []
+  )
 
   // Arrastrar para reordenar (una sola lista: grupo 'today')
   const ids = day.today.map((t) => t.id)
@@ -162,7 +165,7 @@ export function TodayView({ date, day, onOpenTask }: TodayViewProps): React.JSX.
         </form>
       </header>
 
-      <main className="scroll-area mt-3 min-h-0 flex-1 overflow-y-auto pb-3 pl-6">
+      <main ref={scroller} className="scroll-area mt-3 min-h-0 flex-1 overflow-y-auto pb-3 pl-6">
         {day.error && (
           <p role="alert" className="mb-3 rounded-md bg-coral/12 px-4 py-3 text-caption text-coral">
             {day.error}

@@ -11,11 +11,6 @@ import { changeTags, logEvent, promoteContact, setStatus } from './contact.servi
 import { enqueueContactSync, enqueueEvent } from './outbox'
 import type { HubProvider } from './hub.client'
 
-/**
- * Puente con el Worker `leads-hub`: empuja la config (fuentes, reglas, segments) cuando cambia
- * y descarga la cola. Cada item se aplica en su transacción y se confirma (ack) solo después.
- * Un item ya aplicado (recibo en `hub_receipts`) se confirma sin volver a aplicarse.
- */
 export class HubSync {
   private pushedHash: string | null = null
   private pushedTo: unknown = null
@@ -29,7 +24,6 @@ export class HubSync {
     return Boolean(this.hub())
   }
 
-  /** Fuerza a empujar la config en el próximo pull (cambió una fuente o una regla). */
   invalidate(): void {
     this.pushedHash = null
   }
@@ -55,7 +49,6 @@ export class HubSync {
     }
   }
 
-  /** Un ciclo: config (si cambió) → cola → ack. Devuelve cuántos items aplicó. */
   async pull(): Promise<number> {
     const hub = this.hub()
     if (!hub) return 0
@@ -90,7 +83,6 @@ export class HubSync {
     return applied
   }
 
-  /** Lo que el Worker necesita: fuentes (hash del secreto), reglas y segments conocidos. */
   async buildConfig(): Promise<HubConfig> {
     const sources = await this.db.getRepository(LeadSourceModel).find({ order: { slug: 'ASC' } })
     const rules = await this.db.getRepository(RuleModel).find({ order: { position: 'ASC' } })
@@ -110,7 +102,6 @@ export class HubSync {
     }
   }
 
-  /** Aplica un item de la cola (idempotente). */
   async apply(item: HubItem): Promise<void> {
     await transactionGuard(this.db, async (manager) => {
       const receipts = manager.getRepository(HubReceiptModel)
@@ -137,11 +128,6 @@ async function saveSegments(
   }
 }
 
-/**
- * Un lead del Worker. Contacto nuevo → suscrito con su consentimiento. Existente: completa nombre
- * y campos; un contacto de trabajo (`none`) pasa a suscrito porque acaba de dejar su email;
- * una baja, rebote o queja se respeta. Si el Worker no pudo hablar con Resend, la app lo hace.
- */
 async function applyLead(manager: EntityManager, item: HubLeadItem): Promise<void> {
   const repo = manager.getRepository(ContactModel)
   const { lead } = item
@@ -218,7 +204,6 @@ async function applyLead(manager: EntityManager, item: HubLeadItem): Promise<voi
   }
 }
 
-/** Baja, rebote o queja que avisó Resend. Contactos desconocidos se ignoran. */
 async function applyStatus(manager: EntityManager, item: HubStatusItem): Promise<void> {
   const contact = await manager.getRepository(ContactModel).findOneBy({ email: item.email })
   if (!contact || contact.status === item.status) return

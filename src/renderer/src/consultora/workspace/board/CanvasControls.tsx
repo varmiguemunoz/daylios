@@ -41,7 +41,6 @@ function Control({
   )
 }
 
-/** Columna de controles arriba a la derecha, como Obsidian: zoom, encuadrar, deshacer y minimapa. */
 export function CanvasControls(p: CanvasControlsProps): React.JSX.Element {
   // Solo esta pieza se vuelve a pintar al hacer zoom.
   const zoom = useStore((s) => s.transform[2])

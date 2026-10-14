@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto'
 import { stat } from 'fs/promises'
 import { basename } from 'path'
-import { In, IsNull, type DataSource, type EntityManager } from 'typeorm'
+import { In, IsNull, type DataSource, type EntityManager, type Repository } from 'typeorm'
 import { normalizeName } from '@shared/consultora'
 import { NOTE_MAX, setNoteTitle } from '@shared/notes'
 import {
@@ -37,7 +37,12 @@ import {
   type BoardOp
 } from '@shared/canvas'
 import { noteRefs, rewriteMarkdownLinks } from '@shared/vault-links'
-import { WorkspaceItemModel, WorkspaceRefModel, type WorkspaceRow } from '../models/workspace.model'
+import {
+  WorkspaceItemModel,
+  WorkspaceRefModel,
+  type WorkspaceRef,
+  type WorkspaceRow
+} from '../models/workspace.model'
 import { NoteRelationModel } from '../models/note-relation.model'
 import { transactionGuard } from '../guards/transaction.guard'
 import { AppError } from './app.error'
@@ -45,7 +50,6 @@ import { safeName, type DiskEntry, type Vault } from './vault'
 
 const iso = (ms: number): string => new Date(ms).toISOString()
 
-/** Fila del índice → lo que ve la UI (sin inode, mtime ni texto). */
 export function toItem(r: WorkspaceRow): WorkspaceItem {
   return {
     id: r.id,
@@ -59,12 +63,6 @@ export function toItem(r: WorkspaceRow): WorkspaceItem {
   }
 }
 
-/**
- * Workspace: la bóveda en disco y su índice en SQLite.
- * Cada operación hace el cambio en disco y luego `sync()`, que reconcilia el índice con el disco
- * (también lo llama el vigilante cuando cambia algo en Finder o lo hace Claude).
- * Las operaciones se ejecutan de una en una, para que el vigilante nunca vea un estado a medias.
- */
 export class WorkspaceService {
   private chain: Promise<unknown> = Promise.resolve()
 
@@ -81,12 +79,10 @@ export class WorkspaceService {
     return { root: this.vault.root(), quickNotesId: quick.id }
   }
 
-  /** Carpetas en árbol con cuántos archivos tiene cada una (para Claude y «Mover a…»). */
   async tree(): Promise<FolderNode[]> {
     return (await this.buildTree(false)).folders
   }
 
-  /** Árbol completo para el explorador: carpetas con sus archivos y los archivos de la raíz. */
   explorer(): Promise<ExplorerTree> {
     return this.buildTree(true)
   }
@@ -97,7 +93,14 @@ export class WorkspaceService {
     const roots: FolderNode[] = []
     const rootFiles: WorkspaceItem[] = []
     for (const r of rows.filter((x) => x.kind === 'folder')) {
-      nodes.set(r.id, { id: r.id, name: r.name, path: r.path, children: [], files: 0, ...(withItems ? { items: [] } : {}) })
+      nodes.set(r.id, {
+        id: r.id,
+        name: r.name,
+        path: r.path,
+        children: [],
+        files: 0,
+        ...(withItems ? { items: [] } : {})
+      })
     }
     for (const r of rows) {
       if (r.kind === 'folder') {
@@ -113,7 +116,8 @@ export class WorkspaceService {
         } else if (withItems && !r.parentId) rootFiles.push(toItem(r))
       }
     }
-    const byName = (a: { name: string }, b: { name: string }): number => a.name.localeCompare(b.name, 'es')
+    const byName = (a: { name: string }, b: { name: string }): number =>
+      a.name.localeCompare(b.name, 'es')
     const sort = (list: FolderNode[]): FolderNode[] => {
       list.sort(byName)
       for (const n of list) {
@@ -139,7 +143,6 @@ export class WorkspaceService {
     return toItem(await this.rowOrFail(id))
   }
 
-  /** Id o ruta de la bóveda («Ventas/Embudo.canvas»). Claude suele hablar en rutas. */
   async resolve(ref: string): Promise<WorkspaceItem> {
     const value = String(ref ?? '').trim()
     const byId = value ? await this.rows().findOneBy({ id: value }) : null
@@ -150,7 +153,6 @@ export class WorkspaceService {
     return toItem(byPath)
   }
 
-  /** Igual que `resolve` pero para carpetas; '', 'root' o '/' = raíz (null). */
   async resolveFolder(ref: string | null | undefined): Promise<string | null> {
     const value = String(ref ?? '').trim()
     if (!value || value === 'root' || value === '/') return null
@@ -159,7 +161,6 @@ export class WorkspaceService {
     return item.id
   }
 
-  /** Texto de una nota o JSON de un board; de otro archivo, solo sus datos. */
   async content(
     id: string
   ): Promise<{ item: WorkspaceItem; text: string | null; modifiedAt: string }> {
@@ -169,7 +170,6 @@ export class WorkspaceService {
     return { item: toItem(row), text, modifiedAt: iso(row.mtimeMs) }
   }
 
-  /** Por nombre y por texto de las notas, sin acentos. Máximo 50. */
   async search(query: string): Promise<SearchHit[]> {
     const q = normalizeName(String(query ?? ''))
     if (q.length < 2) return []
@@ -203,19 +203,16 @@ export class WorkspaceService {
     }
   }
 
-  /** Ruta absoluta validada (Finder, abrir con su app, protocolo `vault://`). */
   async absPath(id: string): Promise<string> {
     return this.vault.safe((await this.rowOrFail(id)).path)
   }
 
-  /** Ruta absoluta validada de una ruta de la bóveda (protocolo `vault://path/`). */
   absOf(path: string): Promise<string> {
     return this.vault.safe(path)
   }
 
   // ---------------------------------------------------------------- escrituras
 
-  /** Reconcilia el índice con el disco. true si cambió algo (y avisa a las ventanas). */
   sync(): Promise<boolean> {
     return this.exclusive(() => this.syncNow())
   }
@@ -249,7 +246,6 @@ export class WorkspaceService {
     })
   }
 
-  /** Nombre nuevo en la misma carpeta. Notas, boards y archivos conservan su extensión. */
   rename(id: string, name: string): Promise<WorkspaceItem> {
     return this.exclusive(async () => {
       const row = await this.rowOrFail(id)
@@ -285,7 +281,6 @@ export class WorkspaceService {
     })
   }
 
-  /** A la Papelera de macOS. El índice lo limpia `sync()`. */
   remove(id: string): Promise<void> {
     return this.exclusive(async () => {
       const row = await this.rowOrFail(id)
@@ -300,7 +295,6 @@ export class WorkspaceService {
     })
   }
 
-  /** Copia archivos de fuera a la carpeta. Nombre repetido = «Nombre 2.ext». Máximo 50 MB cada uno. */
   upload(folderId: string | null, paths: string[]): Promise<WorkspaceItem[]> {
     return this.exclusive(async () => {
       if (!Array.isArray(paths) || !paths.length) return []
@@ -324,7 +318,6 @@ export class WorkspaceService {
     })
   }
 
-  /** Imagen pegada en una nota: va a `Adjuntos/` y devuelve el enlace relativo a la nota. */
   attach(
     noteId: string,
     name: string,
@@ -370,7 +363,6 @@ export class WorkspaceService {
     })
   }
 
-  /** Board en forma compacta (para Claude). */
   async boardSummary(
     id: string
   ): Promise<{ item: WorkspaceItem } & ReturnType<typeof summarizeCanvas>> {
@@ -382,7 +374,6 @@ export class WorkspaceService {
     }
   }
 
-  /** Aplica operaciones (añadir, editar, quitar nodos y conexiones) sin reescribir el board a mano. */
   editBoard(id: string, ops: BoardOp[]): Promise<{ created: string[]; item: WorkspaceItem }> {
     return this.exclusive(async () => {
       const row = await this.rowOrFail(id)
@@ -403,14 +394,12 @@ export class WorkspaceService {
 
   // ---------------------------------------------------------------- notas (las usa NoteService)
 
-  /** Fila de una nota (con su texto), o error. */
   async noteRow(id: string): Promise<WorkspaceRow> {
     const row = await this.rowOrFail(id)
     if (row.kind !== 'note') throw new AppError('not_found', 'No existe esa nota.')
     return row
   }
 
-  /** Notas de una carpeta (o de toda la bóveda con null), más recientes primero. */
   async noteRows(folderId?: string | null): Promise<WorkspaceRow[]> {
     const notes = await this.rows().find({ where: { kind: 'note' }, order: { updatedAt: 'DESC' } })
     return folderId === undefined ? notes : notes.filter((n) => n.parentId === folderId)
@@ -421,7 +410,6 @@ export class WorkspaceService {
     return this.rows().find({ where: { id: In(ids), kind: 'note' }, order: { updatedAt: 'DESC' } })
   }
 
-  /** Escribe el texto de una nota. `expected` = `updatedAt` que tenía la UI; distinto = conflicto. */
   writeNote(id: string, text: string, expected?: string): Promise<WorkspaceRow> {
     return this.exclusive(async () => {
       const row = await this.noteRow(id)
@@ -432,9 +420,6 @@ export class WorkspaceService {
     })
   }
 
-  /**
-   * Nota nueva en una carpeta (por ruta). La migración pasa `keep` para conservar id y fechas.
-   */
   createNoteAt(
     folderPath: string,
     fileName: string,
@@ -466,7 +451,6 @@ export class WorkspaceService {
     })
   }
 
-  /** Renombra el archivo de una nota para que siga a su título. No toca nada si ya coincide. */
   renameNoteFile(id: string, fileName: string): Promise<WorkspaceRow> {
     return this.exclusive(async () => {
       const row = await this.noteRow(id)
@@ -479,7 +463,6 @@ export class WorkspaceService {
     })
   }
 
-  /** «Notas rápidas» en la raíz; se crea si falta. */
   async quickNotesFolder(): Promise<WorkspaceRow> {
     const found = await this.rows().findOneBy({ path: QUICK_NOTES })
     if (found) return found
@@ -492,15 +475,14 @@ export class WorkspaceService {
 
   // ---------------------------------------------------------------- internos
 
-  private rows() {
+  private rows(): Repository<WorkspaceRow> {
     return this.db.getRepository(WorkspaceItemModel)
   }
 
-  private refs() {
+  private refs(): Repository<WorkspaceRef> {
     return this.db.getRepository(WorkspaceRefModel)
   }
 
-  /** Cola: una operación a la vez (también el vigilante). */
   private exclusive<T>(work: () => Promise<T>): Promise<T> {
     const run = this.chain.then(work, work)
     this.chain = run.catch(() => undefined)
@@ -519,7 +501,6 @@ export class WorkspaceService {
     return row
   }
 
-  /** Ruta de una carpeta por id; null o '' = raíz. */
   private async folderPath(folderId: string | null | undefined): Promise<string> {
     return folderId ? (await this.folderOrFail(folderId)).path : ''
   }
@@ -549,7 +530,6 @@ export class WorkspaceService {
     if (entry && iso(entry.mtimeMs) !== expected) throw new AppError('conflict', CONFLICT_MESSAGE)
   }
 
-  /** Tras crear algo: sincroniza y devuelve su item. */
   private async afterWrite(path: string): Promise<WorkspaceItem> {
     await this.syncNow()
     const row = await this.rows().findOneBy({ path })
@@ -557,10 +537,6 @@ export class WorkspaceService {
     return toItem(row)
   }
 
-  /**
-   * Renombra o mueve en disco y reescribe los enlaces afectados: los de quien apunta a lo movido y
-   * los relativos de las notas movidas. El id se conserva (sync empareja por inode).
-   */
   private async moveRow(row: WorkspaceRow, path: string): Promise<WorkspaceItem> {
     const inside = await this.descendants(row)
     const moved = new Map<string, string>([[row.path, path]])
@@ -593,7 +569,6 @@ export class WorkspaceService {
     return toItem(await this.rowOrFail(row.id))
   }
 
-  /** Actualiza una sola fila tras escribir su archivo (más barato que un sync completo). */
   private async refreshOne(path: string): Promise<WorkspaceRow> {
     const entry = await this.vault.entry(path)
     if (!entry) throw new AppError('not_found', 'El archivo ya no existe.')
@@ -615,7 +590,6 @@ export class WorkspaceService {
     return row
   }
 
-  /** El corazón del índice: el disco manda. Empareja por ruta y, si no, por inode (renombres). */
   private async syncNow(): Promise<boolean> {
     const disk = await this.vault.scan()
     const changed = await transactionGuard(this.db, async (m) => {
@@ -721,7 +695,6 @@ export class WorkspaceService {
     return changed
   }
 
-  /** Vuelve a calcular a qué apunta una nota o un board. */
   private async replaceRefs(
     m: EntityManager,
     row: WorkspaceRow,
@@ -773,7 +746,6 @@ function byKindThenName(a: WorkspaceItem, b: WorkspaceItem): number {
   return KIND_ORDER[a.kind] - KIND_ORDER[b.kind] || a.name.localeCompare(b.name, 'es')
 }
 
-/** Fragmento de ~120 caracteres alrededor de la coincidencia. */
 function snippetAt(text: string, at: number, length: number): string {
   const start = Math.max(0, at - 50)
   const end = Math.min(text.length, at + length + 70)

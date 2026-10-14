@@ -5,7 +5,6 @@ import { Button, ErrorNote, Field, Section } from '../ui'
 
 const input = 'bg-transparent text-[14px] text-ob-text outline-none placeholder:text-ob-faint'
 
-/** Hub: el Worker de Cloudflare que recibe leads con el Mac apagado. URL y token de administración. */
 export function HubSettings(): React.JSX.Element {
   const load = useCallback(() => api.settings(), [])
   const { data: settings } = useLoad(load)

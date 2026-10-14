@@ -43,7 +43,6 @@ function Tool({
   )
 }
 
-/** Paleta de Obsidian: sin color y los seis del canvas. */
 function ColorRow({
   current,
   onColor
@@ -90,7 +89,6 @@ interface SelectionMenuProps {
   onShape: (shape: ShapeKind) => void
 }
 
-/** Menú flotante sobre lo seleccionado (como Obsidian): borrar, color, encuadrar, agrupar y forma. */
 export function SelectionMenu({
   nodes,
   onDelete,
@@ -151,7 +149,6 @@ interface EdgeMenuProps {
   onDelete: () => void
 }
 
-/** Menú de una conexión: puntas, rótulo, color y borrar. */
 export function EdgeMenu({
   edge,
   onArrows,

@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 
-/** Botón de icono de la cinta y de la franja, como los de Obsidian: 28 px, gris, sin borde. */
 export function RibbonButton({
   label,
   onClick,

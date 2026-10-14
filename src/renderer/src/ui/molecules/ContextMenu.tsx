@@ -6,12 +6,11 @@ export interface MenuAction {
   label: string
   icon?: ReactNode
   onSelect: () => void
-  /** rose: acciones que borran. */
+
   danger?: boolean
   disabled?: boolean
 }
 
-/** `null` en la lista = separador. */
 export type MenuEntry = MenuAction | null
 
 interface MenuState {
@@ -20,10 +19,6 @@ interface MenuState {
   items: MenuEntry[]
 }
 
-/**
- * Menú contextual: clic derecho o botón «…». Flechas recorren, Enter elige, Esc o clic fuera cierra.
- * Uso: `const menu = useContextMenu()`, `onContextMenu={(e) => menu.openAt(e, items)}` y `{menu.element}`.
- */
 export function useContextMenu(): {
   element: React.JSX.Element | null
   openAt: (e: React.MouseEvent, items: MenuEntry[]) => void
@@ -65,7 +60,6 @@ function ContextMenu({
     const { width, height } = el.getBoundingClientRect()
     const left = Math.max(8, Math.min(x, window.innerWidth - width - 8))
     const top = y + height > window.innerHeight - 8 ? Math.max(8, y - height) : y
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- medir y recolocar antes de pintar
     setPos({ left, top })
   }, [x, y])
 

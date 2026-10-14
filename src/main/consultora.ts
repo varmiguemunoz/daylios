@@ -7,8 +7,9 @@ import { ContextService } from './services/context.service'
 import { AiService } from './services/ai.service'
 import { RecordingService } from './services/recording.service'
 import { ContactService } from './services/contact.service'
+import { MetricsService } from './services/metrics.service'
+import { DashboardService } from './services/dashboard.service'
 
-/** Crea los servicios de la Consultora una sola vez. Los usan IPC (ventana) y Express (Claude). */
 export function createConsultora(
   db: DataSource,
   notify: () => void,
@@ -25,6 +26,8 @@ export function createConsultora(
     ai,
     context: new ContextService(db, clients),
     contacts: new ContactService(db),
+    metrics: new MetricsService(db),
+    dashboards: new DashboardService(db),
     recordings: new RecordingService(db, meetings, ai, notify, onRecording)
   }
 }
@@ -37,5 +40,7 @@ export interface Consultora {
   ai: AiService
   context: ContextService
   contacts: ContactService
+  metrics: MetricsService
+  dashboards: DashboardService
   recordings: RecordingService
 }

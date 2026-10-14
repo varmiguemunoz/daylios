@@ -5,18 +5,61 @@ import { api, tool, day, query, ref, enc } from '../client'
 const stage = z.object({
   id: z.string().optional().describe('id de una etapa existente (sin id = nueva)'),
   name: z.string().min(1).max(60),
-  kind: z.enum(['open', 'won', 'lost']).describe('open = abierta, won = ganada (crea cliente), lost = perdida')
+  kind: z
+    .enum(['open', 'won', 'lost'])
+    .describe('open = abierta, won = ganada (crea cliente), lost = perdida')
 })
 
-/** Herramientas MCP: pipelines y prospectos. */
 export function register(server: McpServer): void {
   server.registerTool(
     'list_pipelines',
     {
-      description: 'Pipelines (uno por oferta, p. ej.) con nº de etapas, prospectos y valor abierto.',
+      description:
+        'Pipelines (uno por oferta, p. ej.) con nº de etapas, prospectos y valor abierto.',
       inputSchema: {}
     },
     () => tool(() => api('GET', '/consultora/pipelines'))
+  )
+
+  server.registerTool(
+    'get_metrics',
+    {
+      description:
+        'Indicadores del dashboard Inicio con la comparación contra el periodo anterior: tareas abiertas y ' +
+        'cerradas, tareas por estado, pipeline abierto, ganados y perdidos con su valor, valor por etapa, ' +
+        'tasa de cierre, atrasadas, reuniones, action items abiertos y contactos nuevos. ' +
+        'Sin kinds devuelve todos. Sin pipeline, todos los pipelines.',
+      inputSchema: {
+        period: z.enum(['week', 'month', 'quarter', 'year', 'range']).default('week'),
+        from: day.optional().describe('solo con period range'),
+        to: day.optional().describe('solo con period range'),
+        pipeline: z.string().optional().describe('id o nombre del pipeline'),
+        kinds: z
+          .array(
+            z.enum([
+              'tasks',
+              'tasksByStatus',
+              'openPipeline',
+              'won',
+              'lost',
+              'valueByStage',
+              'winRate',
+              'overdue',
+              'meetings',
+              'actionItems',
+              'contacts'
+            ])
+          )
+          .optional()
+      }
+    },
+    ({ kinds, ...params }) =>
+      tool(() =>
+        api(
+          'GET',
+          `/consultora/metrics${query({ ...params, kinds: kinds?.length ? kinds.join(',') : undefined })}`
+        )
+      )
   )
 
   server.registerTool(
@@ -82,7 +125,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     'get_prospect',
     {
-      description: 'Un prospecto con su pipeline, etapa, notas, próximo paso, contactos y reuniones de venta.',
+      description:
+        'Un prospecto con su pipeline, etapa, notas, próximo paso, contactos y reuniones de venta.',
       inputSchema: { prospect: ref('del prospecto (empresa)') }
     },
     ({ prospect }) => tool(() => api('GET', `/consultora/prospects/${enc(prospect)}`))
@@ -125,20 +169,37 @@ export function register(server: McpServer): void {
         prospect: ref('del prospecto'),
         stage: ref('de la etapa'),
         pipeline: z.string().optional().describe('id o nombre del pipeline de destino'),
-        index: z.number().int().min(0).optional().describe('Posición dentro de la etapa (0 = arriba)')
+        index: z
+          .number()
+          .int()
+          .min(0)
+          .optional()
+          .describe('Posición dentro de la etapa (0 = arriba)')
       }
     },
     ({ prospect, stage: target, pipeline, index }) =>
-      tool(() => api('POST', `/consultora/prospects/${enc(prospect)}/move`, { stage: target, pipeline, index }))
+      tool(() =>
+        api('POST', `/consultora/prospects/${enc(prospect)}/move`, {
+          stage: target,
+          pipeline,
+          index
+        })
+      )
   )
 
   server.registerTool(
     'delete_prospect',
     {
-      description: 'Borra un prospecto; sus contactos y reuniones quedan sin prospecto. Sin confirm no borra.',
+      description:
+        'Borra un prospecto; sus contactos y reuniones quedan sin prospecto. Sin confirm no borra.',
       inputSchema: { prospect: ref('del prospecto'), confirm: z.literal(true).optional() }
     },
     ({ prospect, confirm }) =>
-      tool(() => api('DELETE', `/consultora/prospects/${enc(prospect)}${query({ confirm: confirm ? 1 : undefined })}`))
+      tool(() =>
+        api(
+          'DELETE',
+          `/consultora/prospects/${enc(prospect)}${query({ confirm: confirm ? 1 : undefined })}`
+        )
+      )
   )
 }

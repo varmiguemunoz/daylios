@@ -7,10 +7,6 @@ interface MeterProps {
   size?: 'lg' | 'sm'
 }
 
-/**
- * El día como ocho segmentos.
- * menta = hecha · melocotón suave = pendiente · contorno = hueco libre.
- */
 export function Meter({ done, total, size = 'lg' }: MeterProps): React.JSX.Element {
   const complete = done >= DAILY_LIMIT
   const prevDone = useRef(done)

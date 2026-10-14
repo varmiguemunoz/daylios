@@ -1,7 +1,6 @@
 import type { Request, Response } from 'express'
 import type { Marketing } from '../marketing'
 
-/** Email marketing para Claude (vía MCP): tags, fuentes, reglas, secuencias y newsletter. */
 export class MarketingController {
   constructor(private readonly m: Marketing) {}
 
@@ -14,20 +13,21 @@ export class MarketingController {
     res.json((await this.m.sources.list()).map((s) => ({ ...s, secret: undefined })))
   }
 
-  /** Body: `{ name, slug?, defaultTags? }`. Devuelve la fuente sin su secreto (se copia desde la app). */
   createSource = async (req: Request, res: Response): Promise<void> => {
     res.status(201).json({ ...(await this.m.sources.create(req.body ?? {})), secret: undefined })
   }
 
   updateSource = async (req: Request, res: Response): Promise<void> => {
-    res.json({ ...(await this.m.sources.update(String(req.params.slug), req.body ?? {})), secret: undefined })
+    res.json({
+      ...(await this.m.sources.update(String(req.params.slug), req.body ?? {})),
+      secret: undefined
+    })
   }
 
   rotateSource = async (req: Request, res: Response): Promise<void> => {
     res.json({ ...(await this.m.sources.rotateSecret(String(req.params.slug))), secret: undefined })
   }
 
-  /** Sin `?confirm=1` no borra. */
   removeSource = async (req: Request, res: Response): Promise<void> => {
     if (req.query.confirm !== '1') {
       res.json({ needsConfirm: true, slug: String(req.params.slug) })
@@ -37,7 +37,6 @@ export class MarketingController {
     res.json({ ok: true })
   }
 
-  /** Descarga el hub y vacía la cola hacia Resend ahora. */
   syncNow = async (_req: Request, res: Response): Promise<void> => {
     await this.m.sync.tick()
     res.json(await this.m.sync.status())
@@ -68,7 +67,6 @@ export class MarketingController {
     res.json(await this.m.sequences.get(String(req.params.id)))
   }
 
-  /** Body: `{ id?, name, event, emails: [{ wait?, subject, html }], enabled? }`. */
   saveSequence = async (req: Request, res: Response): Promise<void> => {
     res.json(await this.m.sequences.save(req.body ?? {}))
   }
@@ -89,7 +87,6 @@ export class MarketingController {
     res.json(await this.m.newsletters.context())
   }
 
-  /** Body: `{ tag, subject, html, scheduledAt? }`. */
   sendNewsletter = async (req: Request, res: Response): Promise<void> => {
     res.status(201).json(await this.m.newsletters.send(req.body ?? {}))
   }
@@ -98,7 +95,6 @@ export class MarketingController {
     res.json(await this.m.tags.list())
   }
 
-  /** Body: `{ name?, audience? }`. */
   updateTag = async (req: Request, res: Response): Promise<void> => {
     const slug = String(req.params.slug)
     const body = req.body ?? {}
@@ -111,7 +107,6 @@ export class MarketingController {
     res.json(await this.m.tags.usage(String(req.params.slug)))
   }
 
-  /** Sin `?confirm=1` solo devuelve el uso (qué se perdería). */
   removeTag = async (req: Request, res: Response): Promise<void> => {
     const slug = String(req.params.slug)
     if (req.query.confirm !== '1') {

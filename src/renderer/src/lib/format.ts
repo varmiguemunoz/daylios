@@ -19,7 +19,6 @@ export function longDate(key: DayKey): string {
   return dayMonth.format(fromDayKey(key))
 }
 
-/** "Hoy", "Ayer" o "Lun, 28 sept" */
 export function relativeDay(key: DayKey, today: DayKey): string {
   if (key === today) return 'Hoy'
   if (key === addDays(today, -1)) return 'Ayer'
@@ -32,7 +31,6 @@ export function plural(n: number, one: string, many: string): string {
 
 const clock = new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' })
 
-/** "14:32" a partir de una fecha ISO. */
 export function timeOf(iso: string): string {
   return clock.format(new Date(iso))
 }

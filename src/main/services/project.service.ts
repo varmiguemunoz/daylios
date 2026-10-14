@@ -13,10 +13,10 @@ import { MeetingModel } from '../models/meeting.model'
 import { ContactModel } from '../models/contact.model'
 import { transactionGuard } from '../guards/transaction.guard'
 import { findByRef } from './ref'
-import { markdown, now, oneOf, requiredText } from './fields'
+import { markdown, now, oneOf, optionalUserId, requiredText } from './fields'
 import { brief } from './meeting.helpers'
+import { unlinkTasks } from './task.service'
 
-/** Proyectos de un cliente: objetivo, entregables (casillas) y notas. */
 export class ProjectService {
   constructor(private readonly db: DataSource) {}
 
@@ -24,7 +24,6 @@ export class ProjectService {
     return findByRef(this.db.getRepository(ProjectModel), ref, 'name', 'el proyecto')
   }
 
-  /** Proyecto + cliente + entregables pendientes + reuniones del proyecto. */
   async get(ref: unknown): Promise<ProjectDetail> {
     const project = await this.find(ref)
     const client = await this.db
@@ -58,6 +57,7 @@ export class ProjectService {
         objectiveMd: markdown(input.objectiveMd, 'El objetivo'),
         deliverablesMd: markdown(input.deliverablesMd, 'Los entregables'),
         notesMd: markdown(input.notesMd, 'Las notas'),
+        assigneeId: optionalUserId(input.assigneeId),
         createdAt: stamp,
         updatedAt: stamp
       }
@@ -66,13 +66,22 @@ export class ProjectService {
     })
   }
 
-  /** Borra el proyecto. Sus reuniones y contactos se quedan en el cliente, sin proyecto. */
   remove(ref: unknown): Promise<void> {
     return transactionGuard(this.db, async (manager) => {
-      const project = await findByRef(manager.getRepository(ProjectModel), ref, 'name', 'el proyecto')
-      await manager.getRepository(MeetingModel).update({ projectId: project.id }, { projectId: null })
-      await manager.getRepository(ContactModel).update({ projectId: project.id }, { projectId: null })
-      await manager.getRepository(ProjectModel).delete({ id: project.id })
+      const project = await findByRef(
+        manager.getRepository(ProjectModel),
+        ref,
+        'name',
+        'el proyecto'
+      )
+      await manager
+        .getRepository(MeetingModel)
+        .update({ projectId: project.id }, { projectId: null })
+      await manager
+        .getRepository(ContactModel)
+        .update({ projectId: project.id }, { projectId: null })
+      await unlinkTasks(manager, 'project', project.id)
+      await manager.getRepository(ProjectModel).softDelete({ id: project.id })
     })
   }
 
@@ -90,6 +99,7 @@ export class ProjectService {
         project.deliverablesMd = markdown(patch.deliverablesMd, 'Los entregables')
       }
       if (patch.notesMd !== undefined) project.notesMd = markdown(patch.notesMd, 'Las notas')
+      if (patch.assigneeId !== undefined) project.assigneeId = optionalUserId(patch.assigneeId)
       if (patch.client !== undefined) {
         const client = await findByRef(
           manager.getRepository(ClientModel),

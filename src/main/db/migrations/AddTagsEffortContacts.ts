@@ -1,9 +1,5 @@
 import { Table, TableColumn, type MigrationInterface, type QueryRunner } from 'typeorm'
 
-/**
- * Tags y esfuerzo en tareas, orden de prospectos dentro de su etapa, idioma de reuniones
- * y la tabla de contactos. Las filas existentes quedan sin tags, sin esfuerzo y con posición 0.
- */
 export class AddTagsEffortContacts1728000000000 implements MigrationInterface {
   name = 'AddTagsEffortContacts1728000000000'
 

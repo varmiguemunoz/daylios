@@ -10,13 +10,12 @@ interface TaskDetailsDrawerProps {
   onClose: () => void
   task: Task
   onUpdate: (patch: TaskPatch) => void
-  /** Ausente en una subtarea: el panel no muestra la sección. */
+
   subtasks?: SubtasksState
   onOpenSubtask: (sub: Task) => void
   onRemoveSubtask: (sub: Task) => void
 }
 
-/** Panel derecho del detalle: esfuerzo, tags y subtareas. Fuera de la pantalla principal para que no haga ruido. */
 export function TaskDetailsDrawer({
   open,
   onClose,

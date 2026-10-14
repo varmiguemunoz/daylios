@@ -11,21 +11,36 @@ export type DomainEvent =
   | { type: 'contact.tag_removed'; contactId: string; tag: string }
   | { type: 'contact.status_changed'; contactId: string; from: ContactStatus; to: ContactStatus }
   | { type: 'prospect.created'; prospectId: string; pipelineId: string; stageId: string }
-  | { type: 'prospect.stage_changed'; prospectId: string; pipelineId: string
-      fromStageId: string; toStageId: string; kind: StageKind }
+  | {
+      type: 'prospect.stage_changed'
+      prospectId: string
+      pipelineId: string
+      fromStageId: string
+      toStageId: string
+      kind: StageKind
+    }
   | { type: 'client.created'; clientId: string }
   | { type: 'meeting.ready'; meetingId: string }
   | { type: 'task.completed'; taskId: string; tags: string[] }
 
-export interface EventEnvelope { id: string; at: string; event: DomainEvent; cause: EventCause | null }
-export interface EventCause { runId: string; automationId: string; depth: number }
+export interface EventEnvelope {
+  id: string
+  at: string
+  event: DomainEvent
+  cause: EventCause | null
+}
+export interface EventCause {
+  runId: string
+  automationId: string
+  depth: number
+}
 ```
 
 `src/main/events/bus.ts`:
 
 ```ts
 type Handler = (manager: EntityManager, e: EventEnvelope) => Promise<void>
-export function onEvent(handler: Handler): () => void          // registra (lo usa el motor de automatizaciones)
+export function onEvent(handler: Handler): () => void // registra (lo usa el motor de automatizaciones)
 export async function emit(manager: EntityManager, event: DomainEvent): Promise<void>
 export function afterCommit(manager: EntityManager, fn: () => void): void // corre al confirmar
 ```
@@ -39,16 +54,16 @@ export function afterCommit(manager: EntityManager, fn: () => void): void // cor
 
 Puntos de emisión (se añaden en los módulos que los tocan, aquí solo la infraestructura):
 
-| Evento                  | Dónde                                                      |
-| ----------------------- | ---------------------------------------------------------- |
-| contact.created         | `ContactService.create`, `hub-sync.applyLead` (nuevo)      |
-| contact.tag_added/removed | `changeTags` (por cada slug añadido/quitado)             |
-| contact.status_changed  | `setStatus`, `subscribe`, `unsubscribe`                     |
-| prospect.created        | `insertProspect`                                           |
-| prospect.stage_changed  | `ProspectService.move` (solo si cambia de etapa)           |
-| client.created          | `insertClient`                                             |
-| meeting.ready           | `meeting.service` al pasar a `ready`                       |
-| task.completed          | `TaskService.update` cuando `done` pasa a true             |
+| Evento                    | Dónde                                                 |
+| ------------------------- | ----------------------------------------------------- |
+| contact.created           | `ContactService.create`, `hub-sync.applyLead` (nuevo) |
+| contact.tag_added/removed | `changeTags` (por cada slug añadido/quitado)          |
+| contact.status_changed    | `setStatus`, `subscribe`, `unsubscribe`               |
+| prospect.created          | `insertProspect`                                      |
+| prospect.stage_changed    | `ProspectService.move` (solo si cambia de etapa)      |
+| client.created            | `insertClient`                                        |
+| meeting.ready             | `meeting.service` al pasar a `ready`                  |
+| task.completed            | `TaskService.update` cuando `done` pasa a true        |
 
 ## Primitivas de UI
 

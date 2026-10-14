@@ -2,11 +2,6 @@ import type { FindOptionsWhere, Repository } from 'typeorm'
 import { normalizeName } from '@shared/consultora'
 import { AppError } from './app.error'
 
-/**
- * Busca una fila por id o por nombre (sin mayúsculas ni acentos).
- * Primero coincidencia exacta; si no hay, «contiene». Varias coincidencias = error con candidatos.
- * Así Claude puede decir "Acme" en vez de un uuid.
- */
 export async function findByRef<T extends { id: string }>(
   repo: Repository<T>,
   ref: unknown,
