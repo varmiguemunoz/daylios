@@ -1,4 +1,5 @@
 import { File, FileText, Folder, Image as ImageIcon, Shapes, type LucideIcon } from 'lucide-react'
+import { normalizeName } from '@shared/consultora'
 import type { ExplorerTree, FolderNode, ItemKind, WorkspaceItem } from '@shared/workspace'
 import type { Go } from '../lib'
 
@@ -108,4 +109,19 @@ export function flattenExplorer(tree: ExplorerTree): WorkspaceItem[] {
   }
   walk(tree.folders)
   return out
+}
+
+/** Coincidencia difusa: las letras de la búsqueda aparecen en orden. Más puntos si van seguidas. */
+export function fuzzyScore(text: string, query: string): number {
+  const t = normalizeName(text)
+  if (t.includes(query)) return 1000 - t.indexOf(query)
+  let at = -1
+  let points = 0
+  for (const ch of query) {
+    const next = t.indexOf(ch, at + 1)
+    if (next < 0) return -1
+    points += next === at + 1 ? 3 : 1
+    at = next
+  }
+  return points
 }

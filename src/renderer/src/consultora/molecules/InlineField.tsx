@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import type { LucideIcon } from 'lucide-react'
+import { PropertyRow } from './Properties'
 
 interface InlineFieldProps {
   label: string
@@ -7,10 +9,18 @@ interface InlineFieldProps {
   onSave: (value: string) => void
   /** Tipo del campo al editar (teclado y validación nativa). */
   type?: 'text' | 'email' | 'tel' | 'url'
+  icon?: LucideIcon
 }
 
-/** Dato de referencia: etiqueta micro + valor; clic edita en el sitio. Enter o salir guarda; Esc cancela. */
-export function InlineField({ label, value, placeholder, onSave, type = 'text' }: InlineFieldProps): React.JSX.Element {
+/** Propiedad editable en el sitio: clic edita, Enter o salir guarda, Esc cancela. */
+export function InlineField({
+  label,
+  value,
+  placeholder,
+  onSave,
+  type = 'text',
+  icon
+}: InlineFieldProps): React.JSX.Element {
   const [draft, setDraft] = useState<string | null>(null)
 
   const commit = (): void => {
@@ -19,8 +29,7 @@ export function InlineField({ label, value, placeholder, onSave, type = 'text' }
   }
 
   return (
-    <div className="flex min-h-11 flex-col justify-center rounded-sm px-3 py-1.5 transition-colors hover:bg-surface">
-      <span className="text-micro font-bold text-milk-soft">{label}</span>
+    <PropertyRow icon={icon} label={label}>
       {draft !== null ? (
         <input
           autoFocus
@@ -37,18 +46,20 @@ export function InlineField({ label, value, placeholder, onSave, type = 'text' }
           }}
           spellCheck={false}
           aria-label={label}
-          className="-mx-1 rounded-[8px] bg-night/60 px-1 text-list outline-none"
+          className="h-[26px] w-full rounded-[4px] border border-ob-accent bg-ob-bg px-1.5 text-[14px] text-ob-text outline-none"
         />
       ) : (
         <button
           type="button"
           onClick={() => setDraft(value ?? '')}
-          className={`truncate text-left text-list ${value ? 'text-milk' : 'text-milk-soft'}`}
+          className={`block h-[26px] w-full truncate rounded-[4px] px-1.5 text-left text-[14px] transition-colors hover:bg-ob-hover ${
+            value ? 'text-ob-text' : 'text-ob-faint'
+          }`}
           title={value ? `${value} · clic para editar` : `Añadir ${label.toLowerCase()}`}
         >
           {value || placeholder}
         </button>
       )}
-    </div>
+    </PropertyRow>
   )
 }

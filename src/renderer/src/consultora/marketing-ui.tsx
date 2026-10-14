@@ -4,8 +4,8 @@ import type { ContactStatus, TagRef } from '@shared/marketing'
 import { Pill } from './ui'
 
 /**
- * Piezas del email marketing. Mismo mundo (DESIGN.md), One Meaning Rule:
- * mint = suscrito (recibe emails), coral = rebote o queja (error), neutro = baja o sin marketing.
+ * Piezas del email marketing con el aspecto de Obsidian. Un color, un significado:
+ * verde = suscrito (recibe emails), rojo = rebote o queja (error), neutro = baja o sin marketing.
  * Los tags son neutros: un tag es una etiqueta, no un estado.
  */
 
@@ -24,7 +24,7 @@ export function ContactStatusPill({ status }: { status: ContactStatus }): React.
   return entry ? <Pill tone={entry.tone}>{entry.label}</Pill> : null
 }
 
-/** Grupo de chips de una sola elección (patrón Periodo de Historial). */
+/** Grupo de botones de una sola elección, como los filtros de Obsidian. */
 export function Chips<T extends string>({
   label,
   value,
@@ -49,10 +49,10 @@ export function Chips<T extends string>({
           role="radio"
           aria-checked={value === o.id}
           onClick={() => onChange(o.id)}
-          className={`h-9 shrink-0 rounded-full px-3.5 text-caption font-bold transition-colors ${
+          className={`h-[26px] shrink-0 rounded-[4px] px-2.5 text-[12px] font-medium transition-colors ${
             value === o.id
-              ? 'bg-apricot text-ink'
-              : 'bg-surface text-milk-soft hover:bg-surface-raised hover:text-milk'
+              ? 'bg-ob-active text-ob-text'
+              : 'text-ob-muted hover:bg-ob-hover hover:text-ob-text'
           }`}
         >
           {o.label}
@@ -67,7 +67,7 @@ export function TagPill({ tag }: { tag: TagRef }): React.JSX.Element {
   return (
     <span
       title={tag.slug}
-      className="inline-flex h-6 max-w-40 shrink-0 items-center truncate rounded-full bg-surface-raised px-2.5 text-micro font-bold text-milk-soft"
+      className="inline-flex h-5 max-w-40 shrink-0 items-center truncate rounded-full bg-ob-accent/15 px-2 text-[12px] text-ob-link"
     >
       {tag.name}
     </span>
@@ -91,7 +91,7 @@ export function TagList({
       ))}
       {rest > 0 && (
         <span
-          className="text-micro font-bold text-milk-soft"
+          className="text-[12px] text-ob-faint"
           title={tags
             .slice(max)
             .map((t) => t.name)
@@ -105,7 +105,7 @@ export function TagList({
 }
 
 /**
- * Editor de tags: pills con «quitar» y un campo para añadir (Enter o coma).
+ * Editor de tags: etiquetas violetas con «quitar» y un campo para añadir (Enter o coma).
  * `suggestions` = tags existentes (autocompletado nativo).
  */
 export function TagEditor({
@@ -128,21 +128,21 @@ export function TagEditor({
   const free = suggestions.filter((s) => !tags.some((t) => t.slug === s.slug))
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5 rounded-md bg-surface px-3 py-2.5">
+    <div className="flex min-h-[30px] flex-wrap items-center gap-1 rounded-[4px] border border-ob-border bg-ob-bg px-1.5 py-1 transition-colors focus-within:border-ob-accent">
       {tags.map((t) => (
         <span
           key={t.slug}
           title={t.slug}
-          className="inline-flex h-8 items-center gap-1 rounded-full bg-surface-raised pr-1 pl-3 text-caption font-bold"
+          className="inline-flex h-5 items-center gap-0.5 rounded-full bg-ob-accent/15 pr-0.5 pl-2 text-[12px] text-ob-link"
         >
           {t.name}
           <button
             type="button"
             onClick={() => onRemove(t.slug)}
             aria-label={`Quitar tag ${t.name}`}
-            className="grid size-6 place-items-center rounded-full text-milk-soft transition-colors hover:bg-rose/15 hover:text-rose"
+            className="grid size-4 place-items-center rounded-full text-ob-link transition-colors hover:bg-ob-red/20 hover:text-ob-red"
           >
-            <X size={13} strokeWidth={2.5} />
+            <X size={11} strokeWidth={2.5} />
           </button>
         </span>
       ))}
@@ -161,7 +161,7 @@ export function TagEditor({
         list="contact-tag-suggestions"
         placeholder={tags.length ? 'Añadir…' : 'Añadir tag y Enter'}
         aria-label="Añadir tag"
-        className="h-8 min-w-32 flex-1 bg-transparent px-1 text-caption outline-none placeholder:text-milk-soft"
+        className="h-6 min-w-32 flex-1 bg-transparent px-1 text-[13px] text-ob-text outline-none placeholder:text-ob-faint"
       />
       <datalist id="contact-tag-suggestions">
         {free.map((s) => (

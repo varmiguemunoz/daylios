@@ -130,21 +130,17 @@ export function FolderPane({ folderId }: { folderId: string | null }): React.JSX
           }
           onClick={changeSort}
         >
-          {sort === 'name' ? (
-            <ArrowDownAZ size={16} strokeWidth={2.5} />
-          ) : (
-            <CalendarClock size={16} strokeWidth={2.5} />
-          )}
+          {sort === 'name' ? <ArrowDownAZ size={16} /> : <CalendarClock size={16} />}
         </IconButton>
         <IconButton label="Subir archivos" onClick={() => void actions.upload(folderId)}>
-          <Upload size={16} strokeWidth={2.5} />
+          <Upload size={16} />
         </IconButton>
         <button
           type="button"
           onClick={(e) => menu.openFrom(e.currentTarget, actions.folderMenu(folderId))}
-          className="flex h-9 items-center gap-1.5 rounded-full bg-apricot pr-4 pl-3 text-caption font-extrabold text-ink transition-transform active:scale-95"
+          className="flex h-[30px] shrink-0 items-center gap-1.5 rounded-[4px] bg-ob-accent px-3 text-[13px] font-medium text-white transition-colors hover:bg-[#7a4fe0] disabled:pointer-events-none disabled:opacity-40"
         >
-          <Plus size={16} strokeWidth={3} />
+          <Plus size={16} />
           Nuevo
         </button>
       </header>
@@ -172,8 +168,8 @@ export function FolderPane({ folderId }: { folderId: string | null }): React.JSX
         onDrop={(e) => dropInto(folderId, e)}
       >
         {dropping && (
-          <div className="pointer-events-none absolute inset-2 z-10 grid place-items-center rounded-xl bg-night/80 shadow-[inset_0_0_0_2px_var(--color-apricot)]">
-            <p className="text-list font-bold">Suelta para subir aquí</p>
+          <div className="pointer-events-none absolute inset-2 z-10 grid place-items-center rounded-xl bg-ob-bg/80 shadow-[inset_0_0_0_2px_var(--color-ob-accent)]">
+            <p className="text-list font-medium">Suelta para subir aquí</p>
           </div>
         )}
 
@@ -223,7 +219,7 @@ function SearchResults({
       />
     )
   return (
-    <ul className="overflow-hidden rounded-md bg-surface [&>li+li]:shadow-[inset_0_1px_0_var(--color-hairline)]">
+    <ul className="overflow-hidden rounded-[6px] border border-ob-border [&>li+li]:border-t [&>li+li]:border-ob-border">
       {hits.map(({ item, snippet }) => {
         const Icon = KIND_ICON[item.kind]
         return (
@@ -231,17 +227,17 @@ function SearchResults({
             <button
               type="button"
               onClick={() => onOpen(item)}
-              className="flex w-full items-start gap-3 px-4 py-2.5 text-left transition-colors hover:bg-surface-raised focus-visible:bg-surface-raised"
+              className="flex w-full items-start gap-3 px-4 py-2.5 text-left transition-colors hover:bg-ob-hover focus-visible:bg-ob-hover"
             >
               <Icon
                 size={17}
-                strokeWidth={2.25}
-                className="mt-0.5 shrink-0 text-milk-soft"
+
+                className="mt-0.5 shrink-0 text-ob-muted"
                 aria-hidden
               />
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-list font-bold">{item.name}</span>
-                <span className="block truncate text-caption text-milk-soft">
+                <span className="block truncate text-list font-medium">{item.name}</span>
+                <span className="block truncate text-caption text-ob-muted">
                   {snippet || item.path}
                 </span>
               </span>
@@ -258,7 +254,7 @@ function Skeleton(): React.JSX.Element {
   return (
     <ul aria-busy="true" aria-label="Cargando" className="flex flex-col gap-1">
       {[0, 1, 2].map((i) => (
-        <li key={i} className="h-11 animate-pulse rounded-md bg-surface/60" />
+        <li key={i} className="h-8 animate-pulse rounded-[6px] border border-ob-border/60" />
       ))}
     </ul>
   )

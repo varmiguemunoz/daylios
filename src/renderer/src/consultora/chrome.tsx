@@ -1,21 +1,29 @@
-import { createContext, useContext } from 'react'
+import { createContext, useContext, useEffect } from 'react'
 import type { Screen } from './lib'
 import type { Section } from './sections'
 
-/** Lo que el workspace (sin cromo) necesita de la ventana Consultora. */
+/** Lo que las pantallas necesitan del marco de la ventana Consultora. */
 export interface ConsultoraChrome {
-  /** Hay una grabación en curso (el workspace muestra «REC»). */
-  recording: boolean
-  /** Ir a una sección de Consultora (sale del workspace). */
+  /** Ir a una sección de Consultora (reinicia la pila). */
   openSection: (id: Section) => void
   /** Reemplaza la pila entera (p. ej. al ir a la grabación). */
   reset: (screens: Screen[]) => void
+  /** Nombre de lo abierto para la ruta de la franja («Clientes › Acme»). */
+  setTitle: (title: string | null) => void
 }
 
 export const ChromeContext = createContext<ConsultoraChrome>({
-  recording: false,
   openSection: () => undefined,
-  reset: () => undefined
+  reset: () => undefined,
+  setTitle: () => undefined
 })
 
 export const useChrome = (): ConsultoraChrome => useContext(ChromeContext)
+
+/** La pantalla dice su nombre a la franja superior (cliente, contacto, reunión…). */
+export function useScreenTitle(title: string | null | undefined): void {
+  const { setTitle } = useChrome()
+  useEffect(() => {
+    setTitle(title ?? null)
+  }, [title, setTitle])
+}

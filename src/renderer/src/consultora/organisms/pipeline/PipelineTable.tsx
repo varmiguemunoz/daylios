@@ -72,42 +72,40 @@ export function PipelineTable({
     setSort((s) => (s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: 1 }))
 
   return (
-    <div className="@container mt-2 overflow-hidden rounded-md bg-surface">
-      <div className="flex items-center gap-3 px-4 py-2.5 text-micro font-bold text-milk-soft shadow-[inset_0_-1px_0_var(--color-hairline)]">
+    <div className="@container mt-1">
+      <div className="flex h-7 items-center gap-3 border-b border-ob-border px-2 text-[12px] font-medium text-ob-muted">
         {COLUMNS.map((c) => (
           <button
             key={c.key}
             type="button"
             onClick={() => toggle(c.key)}
             aria-sort={sort.key === c.key ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}
-            className={`items-center gap-1 truncate hover:text-milk ${c.wide ? 'hidden @3xl:flex' : 'flex'} ${c.className} ${c.key === 'value' ? 'justify-end' : ''}`}
+            className={`items-center gap-1 truncate hover:text-ob-text ${c.wide ? 'hidden @3xl:flex' : 'flex'} ${c.className} ${c.key === 'value' ? 'justify-end' : ''}`}
           >
             {c.label}
             {sort.key === c.key &&
-              (sort.dir === 1 ? (
-                <ArrowUp size={12} strokeWidth={2.75} />
-              ) : (
-                <ArrowDown size={12} strokeWidth={2.75} />
-              ))}
+              (sort.dir === 1 ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
           </button>
         ))}
       </div>
       {rows.length === 0 && (
-        <p className="px-4 py-4 text-caption text-milk-soft">Ningún prospecto coincide.</p>
+        <p className="px-2 py-6 text-center text-[14px] text-ob-muted">
+          Ningún prospecto coincide.
+        </p>
       )}
-      <ul className="[&>li+li]:shadow-[inset_0_1px_0_var(--color-hairline)]">
+      <ul className="[&>li]:border-b [&>li]:border-ob-border">
         {rows.map(({ card, stage }) => {
           const late =
             card.nextStepDate !== null && card.nextStepDate < today && stage.kind === 'open'
           return (
             <li
               key={card.id}
-              className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface-raised"
+              className="flex min-h-8 items-center gap-3 px-2 py-1 transition-colors hover:bg-ob-hover"
             >
               <button
                 type="button"
                 onClick={() => onOpen(card.id)}
-                className="min-w-0 flex-[2] truncate text-left text-list font-bold"
+                className="min-w-0 flex-[2] truncate text-left text-[14px] text-ob-text"
               >
                 {card.company}
               </button>
@@ -116,7 +114,7 @@ export function PipelineTable({
                   value={stage.id}
                   aria-label={`Etapa de ${card.company}`}
                   onChange={(e) => onStage(card.id, e.target.value)}
-                  className="h-8 w-full cursor-pointer truncate rounded-full bg-surface-raised px-3 text-micro font-bold text-milk outline-none"
+                  className="h-[26px] w-full cursor-pointer truncate rounded-[4px] bg-transparent px-1.5 text-[13px] text-ob-text outline-none hover:bg-ob-active"
                 >
                   {data.stages.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -125,23 +123,23 @@ export function PipelineTable({
                   ))}
                 </select>
               </span>
-              <span className="w-24 shrink-0 text-right text-caption tabular-nums">
+              <span className="w-24 shrink-0 text-right text-[13px] tabular-nums">
                 {money(card.valueUsd)}
               </span>
-              <span className="hidden min-w-0 flex-1 truncate text-caption text-milk-soft @3xl:block">
+              <span className="hidden min-w-0 flex-1 truncate text-[13px] text-ob-muted @3xl:block">
                 {card.contact?.name ?? '—'}
               </span>
               <span
-                className={`min-w-0 flex-[1.5] truncate text-caption ${late ? 'text-butter' : 'text-milk-soft'}`}
+                className={`min-w-0 flex-[1.5] truncate text-[13px] ${late ? 'text-ob-yellow' : 'text-ob-muted'}`}
               >
                 {card.nextStep ?? '—'}
               </span>
               <span
-                className={`w-24 shrink-0 text-caption tabular-nums ${late ? 'text-butter' : 'text-milk-soft'}`}
+                className={`w-24 shrink-0 text-[13px] tabular-nums ${late ? 'text-ob-yellow' : 'text-ob-muted'}`}
               >
                 {card.nextStepDate ? shortDate(card.nextStepDate) : '—'}
               </span>
-              <span className="hidden w-24 shrink-0 text-caption text-milk-soft tabular-nums @3xl:block">
+              <span className="hidden w-24 shrink-0 text-[13px] text-ob-muted tabular-nums @3xl:block">
                 {shortDate(card.updatedAt)}
               </span>
             </li>

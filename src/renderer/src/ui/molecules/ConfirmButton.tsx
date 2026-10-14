@@ -34,8 +34,10 @@ export function ConfirmButton({
       onBlur={() => setArmed(false)}
       aria-label={armed ? `Confirmar: ${label}` : label}
       title={label}
-      className={`flex shrink-0 items-center justify-center rounded-full text-caption font-extrabold transition-colors ${height} ${
-        armed ? 'bg-rose px-4 text-ink' : `${size === 'sm' ? 'w-8' : 'w-9'} text-milk-soft hover:bg-rose/15 hover:text-rose`
+      className={`ui-confirm ${armed ? 'ui-armed' : ''} flex shrink-0 items-center justify-center rounded-full text-caption font-extrabold transition-colors ${height} ${
+        armed
+          ? 'bg-rose px-4 text-ink'
+          : `${size === 'sm' ? 'w-8' : 'w-9'} text-milk-soft hover:bg-rose/15 hover:text-rose`
       }`}
     >
       {armed ? confirmLabel : icon}

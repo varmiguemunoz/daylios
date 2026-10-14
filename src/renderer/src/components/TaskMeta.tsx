@@ -1,7 +1,13 @@
 import type { Effort } from '@shared/tasks'
 
 /** Chips de tags: color neutro, los tags no tienen significado propio (DESIGN.md: One Meaning Rule). */
-export function TagChips({ tags, size = 'sm' }: { tags: string[]; size?: 'sm' | 'md' }): React.JSX.Element | null {
+export function TagChips({
+  tags,
+  size = 'sm'
+}: {
+  tags: string[]
+  size?: 'sm' | 'md'
+}): React.JSX.Element | null {
   if (!tags.length) return null
   return (
     <span className="flex min-w-0 flex-wrap gap-1">
@@ -26,7 +32,12 @@ export function EffortBars({ effort }: { effort: Effort | null }): React.JSX.Ele
   if (!effort) return null
   const level = LEVEL[effort]
   return (
-    <span className="flex h-3 shrink-0 items-end gap-[2px]" role="img" aria-label={`Esfuerzo ${effort}`} title={`Esfuerzo ${effort}`}>
+    <span
+      className="flex h-3 shrink-0 items-end gap-[2px]"
+      role="img"
+      aria-label={`Esfuerzo ${effort}`}
+      title={`Esfuerzo ${effort}`}
+    >
       {[8, 10, 12].map((height, i) => (
         <span
           key={height}

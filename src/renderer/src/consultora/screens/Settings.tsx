@@ -1,24 +1,80 @@
 import { useCallback, useState } from 'react'
-import { FolderOpen } from 'lucide-react'
+import { Cog, FolderOpen, Keyboard, Mail, Mic, Waypoints } from 'lucide-react'
 import type { SettingsInput } from '@shared/consultora'
 import { api, attempt, openPath, useLoad } from '../lib'
-import { Button, ErrorNote, Field, Page, Section, Select } from '../ui'
+import { Button, ErrorNote, Field, Section, Select } from '../ui'
+import { prefs } from '../workspace/lib'
+import { SettingRow, Toggle } from '../molecules/SettingRow'
 import { EmailSettings } from './SettingsEmail'
 import { HubSettings } from './SettingsHub'
 
-/** Ajustes: OpenAI, carpeta de clientes, email, hub y nota de voz. Todo se guarda al momento. */
+type Category = 'general' | 'email' | 'hub' | 'voice' | 'shortcuts'
+
+const CATEGORIES: { id: Category; label: string; Icon: typeof Cog }[] = [
+  { id: 'general', label: 'General', Icon: Cog },
+  { id: 'email', label: 'Email', Icon: Mail },
+  { id: 'hub', label: 'Hub de leads', Icon: Waypoints },
+  { id: 'voice', label: 'Nota de voz', Icon: Mic },
+  { id: 'shortcuts', label: 'Atajos', Icon: Keyboard }
+]
+const TAB_KEY = 'settings.tab'
+
+/**
+ * Ajustes como los de Obsidian: categorías a la izquierda y sus opciones a la derecha.
+ * Todo se guarda al momento.
+ */
 export function Settings(): React.JSX.Element {
+  const [tab, setTab] = useState<Category>(() => {
+    const saved = prefs.get(TAB_KEY)
+    return CATEGORIES.some((c) => c.id === saved) ? (saved as Category) : 'general'
+  })
+  const choose = (id: Category): void => {
+    setTab(id)
+    prefs.set(TAB_KEY, id)
+  }
+
   return (
-    <Page title="Ajustes">
-      <Connection />
-      <EmailSettings />
-      <HubSettings />
-      <Voice />
-      <WorkspaceKey />
-      <p className="mt-9 px-1 text-caption text-milk-soft">
-        Las columnas del pipeline se editan en Pipeline, con «Editar pipeline».
-      </p>
-    </Page>
+    <div className="flex h-full min-h-0">
+      <nav
+        aria-label="Categorías de ajustes"
+        className="flex w-[200px] shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-ob-border bg-ob-alt p-2"
+      >
+        <p className="px-2.5 pt-1 pb-1.5 text-[12px] font-semibold text-ob-faint">Opciones</p>
+        {CATEGORIES.map(({ id, label, Icon }) => (
+          <button
+            key={id}
+            type="button"
+            aria-current={tab === id ? 'page' : undefined}
+            onClick={() => choose(id)}
+            className={`flex h-[30px] items-center gap-2.5 rounded-[4px] px-2.5 text-left text-[13px] transition-colors hover:bg-ob-hover hover:text-ob-text ${
+              tab === id ? 'bg-ob-active text-ob-text' : 'text-ob-muted'
+            }`}
+          >
+            <Icon size={15} className="shrink-0" aria-hidden />
+            {label}
+          </button>
+        ))}
+      </nav>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="@container mx-auto max-w-[808px] px-6 pt-6 pb-16">
+          <h1 className="text-[20px] font-semibold text-ob-text">
+            {CATEGORIES.find((c) => c.id === tab)?.label}
+          </h1>
+          {tab === 'general' && (
+            <>
+              <Connection />
+              <p className="mt-8 text-[13px] text-ob-faint">
+                Las columnas del pipeline se editan en Pipeline, con «Editar pipeline».
+              </p>
+            </>
+          )}
+          {tab === 'email' && <EmailSettings />}
+          {tab === 'hub' && <HubSettings />}
+          {tab === 'voice' && <Voice />}
+          {tab === 'shortcuts' && <WorkspaceKey />}
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -64,7 +120,7 @@ function Connection(): React.JSX.Element {
 
   if (!settings) return <Section title="OpenAI y carpeta">{null}</Section>
 
-  const input = 'bg-transparent text-list outline-none'
+  const input = 'bg-transparent text-[14px] text-ob-text outline-none placeholder:text-ob-faint'
 
   return (
     <>
@@ -113,13 +169,13 @@ function Connection(): React.JSX.Element {
 
           {test && (
             <p
-              className={`rounded-md px-4 py-3 text-caption ${test.ok ? 'bg-mint/15 text-mint' : 'bg-coral/12 text-coral'}`}
+              className={`rounded-[6px] border-l-2 px-3 py-2 text-[13px] ${test.ok ? 'border-ob-green bg-ob-green/10 text-ob-green' : 'border-ob-red bg-ob-red/10 text-ob-red'}`}
             >
               {test.message}
             </p>
           )}
           {!settings.hasApiKey && (
-            <p className="px-1 text-caption text-milk-soft">
+            <p className="px-1 text-caption text-ob-muted">
               Sin API key todo funciona salvo transcribir y resumir reuniones. Créala en
               platform.openai.com → API keys.
             </p>
@@ -167,42 +223,42 @@ function Connection(): React.JSX.Element {
         </div>
       </Section>
 
-      <Section title="Carpeta de clientes">
-        <div className="flex items-center gap-2 rounded-md bg-surface py-2 pr-2 pl-5">
-          <span className="min-w-0 flex-1 truncate text-list" title={settings.docsPath}>
-            {settings.docsPath}
-          </span>
+      <Section title="Carpetas">
+        <SettingRow
+          name="Carpeta de clientes"
+          description={
+            <>
+              <span className="block truncate text-ob-text" title={settings.docsPath}>
+                {settings.docsPath}
+              </span>
+              Aquí se crea una carpeta por cliente nuevo. Cambiarla no mueve las que ya existen.
+            </>
+          }
+        >
           <Button onClick={() => void openPath(settings.docsPath).catch(() => undefined)}>
-            <FolderOpen size={15} strokeWidth={2.5} />
+            <FolderOpen size={15} />
             Abrir
           </Button>
-          <Button kind="primary" onClick={() => void pickFolder()}>
-            Cambiar…
-          </Button>
-        </div>
-        <p className="mt-2 px-1 text-caption text-milk-soft">
-          Aquí se crea una carpeta por cliente nuevo. Cambiarla no mueve las carpetas de los
-          clientes que ya existen.
-        </p>
-      </Section>
-
-      <Section title="Carpeta del workspace">
-        <div className="flex items-center gap-2 rounded-md bg-surface py-2 pr-2 pl-5">
-          <span className="min-w-0 flex-1 truncate text-list" title={settings.workspacePath}>
-            {settings.workspacePath}
-          </span>
+          <Button onClick={() => void pickFolder()}>Cambiar…</Button>
+        </SettingRow>
+        <SettingRow
+          name="Carpeta del workspace"
+          description={
+            <>
+              <span className="block truncate text-ob-text" title={settings.workspacePath}>
+                {settings.workspacePath}
+              </span>
+              Tus notas, boards y archivos viven aquí como archivos normales. Cambiarla no mueve
+              nada: mueve la carpeta en Finder y elige la nueva ubicación.
+            </>
+          }
+        >
           <Button onClick={() => void openPath(settings.workspacePath).catch(() => undefined)}>
-            <FolderOpen size={15} strokeWidth={2.5} />
+            <FolderOpen size={15} />
             Abrir
           </Button>
-          <Button kind="primary" onClick={() => void pickWorkspace()}>
-            Cambiar…
-          </Button>
-        </div>
-        <p className="mt-2 px-1 text-caption text-milk-soft">
-          Tus notas, boards y archivos del workspace viven aquí como archivos normales. Cambiarla no
-          mueve nada: si quieres llevártelo, mueve la carpeta en Finder y elige la nueva ubicación.
-        </p>
+          <Button onClick={() => void pickWorkspace()}>Cambiar…</Button>
+        </SettingRow>
       </Section>
 
       <ErrorNote message={error} />
@@ -230,15 +286,18 @@ function WorkspaceKey(): React.JSX.Element {
   const load = useCallback(() => api.workspaceShortcutStatus(), [])
   const { data } = useLoad(load)
   const [error, setError] = useState<string | null>(null)
-  if (!data) return <Section title="Atajo del workspace">{null}</Section>
+  if (!data) return <Section title="Workspace">{null}</Section>
 
   const options = WORKSPACE_SHORTCUTS.some((s) => s.value === data.shortcut)
     ? WORKSPACE_SHORTCUTS
     : [...WORKSPACE_SHORTCUTS, { value: data.shortcut, label: data.shortcut }]
 
   return (
-    <Section title="Atajo del workspace">
-      <div className="flex flex-wrap items-center gap-3 rounded-md bg-surface px-5 py-4">
+    <Section title="Workspace">
+      <SettingRow
+        name="Abrir el workspace"
+        description="Desde cualquier app abre el workspace; otra vez lo oculta."
+      >
         <Select
           label="Atajo del workspace"
           value={data.shortcut}
@@ -247,17 +306,14 @@ function WorkspaceKey(): React.JSX.Element {
             void attempt(() => api.saveSettings({ workspaceShortcut })).then(setError)
           }
         />
-        <span className="text-caption text-milk-soft">
-          Desde cualquier app abre el workspace; otra vez lo oculta.
-        </span>
-      </div>
+      </SettingRow>
       {data.shortcut && !data.registered && (
-        <p className="mt-3 rounded-md bg-coral/12 px-4 py-3 text-caption text-coral">
+        <p className="mt-3 rounded-[6px] border-l-2 border-ob-red bg-ob-red/10 px-3 py-2 text-caption text-ob-red">
           Otra app ya usa ese atajo. Elige otro.
         </p>
       )}
       {data.shortcut === 'Alt+CommandOrControl+W' && data.registered && (
-        <p className="mt-2 px-1 text-caption text-milk-soft">
+        <p className="mt-2 px-1 text-caption text-ob-muted">
           En Finder y en el navegador ⌥⌘W es «Cerrar todas las ventanas»: mientras DayliOS esté
           abierto, ese atajo abre el workspace.
         </p>
@@ -277,7 +333,7 @@ function Voice(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null)
   const [retried, setRetried] = useState<string | null>(null)
 
-  if (!voice) return <Section title="Nota de voz">{null}</Section>
+  if (!voice) return <Section title="Dictado">{null}</Section>
 
   const save = async (input: SettingsInput): Promise<void> =>
     setError(await attempt(() => api.saveSettings(input)))
@@ -286,43 +342,46 @@ function Voice(): React.JSX.Element {
     : [...SHORTCUTS, { value: voice.shortcut, label: voice.shortcut }]
 
   return (
-    <Section title="Nota de voz">
-      <div className="rounded-md bg-surface px-5 py-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="flex cursor-pointer items-center gap-2 text-list font-bold">
-            <input
-              type="checkbox"
-              checked={voice.enabled}
-              onChange={(e) => void save({ voiceEnabled: e.target.checked })}
-              className="size-4 cursor-pointer accent-[var(--color-apricot)]"
-            />
-            Activada
-          </label>
+    <Section title="Dictado">
+      <div>
+        <SettingRow
+          name="Activada"
+          description="Funciona en cualquier app. Lo que dices se escribe como nota en markdown; el audio se borra al terminar."
+        >
+          <Toggle
+            label="Nota de voz activada"
+            checked={voice.enabled}
+            onChange={(voiceEnabled) => void save({ voiceEnabled })}
+          />
+        </SettingRow>
+        <SettingRow
+          name="Atajo"
+          description={
+            !voice.enabled
+              ? 'Desactivada'
+              : !voice.registered
+                ? ''
+                : voice.mode === 'hold'
+                  ? 'Mantén pulsado, habla y suelta.'
+                  : 'Pulsa para empezar y otra vez para terminar.'
+          }
+        >
           <Select
             label="Atajo"
             value={voice.shortcut}
             options={options}
             onChange={(voiceShortcut) => void save({ voiceShortcut })}
           />
-          <span className="text-caption text-milk-soft">
-            {!voice.enabled
-              ? 'Desactivada'
-              : !voice.registered
-                ? ''
-                : voice.mode === 'hold'
-                  ? 'Mantén pulsado, habla y suelta.'
-                  : 'Pulsa para empezar y otra vez para terminar.'}
-          </span>
-        </div>
+        </SettingRow>
 
         {voice.enabled && !voice.registered && (
-          <p className="mt-3 rounded-md bg-coral/12 px-4 py-3 text-caption text-coral">
+          <p className="mt-3 rounded-[6px] border-l-2 border-ob-red bg-ob-red/10 px-3 py-2 text-caption text-ob-red">
             Otra app ya usa ese atajo. Elige otro.
           </p>
         )}
 
         {voice.enabled && !voice.accessibility && (
-          <div className="mt-3 rounded-md bg-apricot/10 px-4 py-3 text-caption text-apricot">
+          <div className="mt-3 rounded-[6px] border-l-2 border-ob-accent bg-ob-accent/10 px-3 py-2 text-caption text-ob-link">
             <p>
               Para «mantener pulsado» macOS pide el permiso de <b>Accesibilidad</b> (sirve para
               saber cuándo sueltas la tecla; DayliOS no lee lo que escribes). Actívalo para daily-os
@@ -343,7 +402,7 @@ function Voice(): React.JSX.Element {
         )}
 
         {voice.pending > 0 && (
-          <div className="mt-3 flex items-center justify-between gap-3 rounded-md bg-butter/10 px-4 py-3 text-caption text-butter">
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-[6px] border-l-2 border-ob-yellow bg-ob-yellow/10 px-3 py-2 text-caption text-ob-yellow">
             <span>
               {voice.pending}{' '}
               {voice.pending === 1
@@ -368,12 +427,7 @@ function Voice(): React.JSX.Element {
             </Button>
           </div>
         )}
-        {retried && <p className="mt-2 text-caption text-milk-soft">{retried}</p>}
-
-        <p className="mt-3 text-caption text-milk-soft">
-          Funciona en cualquier app. Lo que dices se transcribe y se escribe como nota en markdown
-          en la pestaña Notas. El audio se borra al terminar.
-        </p>
+        {retried && <p className="mt-2 text-caption text-ob-muted">{retried}</p>}
       </div>
       <ErrorNote message={error} />
     </Section>

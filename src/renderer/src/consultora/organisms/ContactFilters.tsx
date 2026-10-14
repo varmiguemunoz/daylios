@@ -26,7 +26,11 @@ export const EMPTY_CONTACT_FILTERS: ContactFilterState = {
 
 /** Filtros activos (el número del botón). */
 export const activeContactFilters = (f: ContactFilterState): number =>
-  (f.status !== 'all' ? 1 : 0) + f.tags.length + (f.source ? 1 : 0) + (f.client ? 1 : 0) + (f.pipeline !== 'any' ? 1 : 0)
+  (f.status !== 'all' ? 1 : 0) +
+  f.tags.length +
+  (f.source ? 1 : 0) +
+  (f.client ? 1 : 0) +
+  (f.pipeline !== 'any' ? 1 : 0)
 
 const STATUS: { id: StatusFilter; label: string }[] = [
   { id: 'all', label: 'Todos' },
@@ -46,11 +50,19 @@ interface ContactFiltersProps {
 }
 
 /** Contenido del panel «Filtros» de Contactos. Aplica al instante. */
-export function ContactFilters({ value, onChange, tags, sources, clients }: ContactFiltersProps): React.JSX.Element {
+export function ContactFilters({
+  value,
+  onChange,
+  tags,
+  sources,
+  clients
+}: ContactFiltersProps): React.JSX.Element {
   const [tagQuery, setTagQuery] = useState('')
   const set = (patch: Partial<ContactFilterState>): void => onChange({ ...value, ...patch })
   const toggleTag = (slug: string): void =>
-    set({ tags: value.tags.includes(slug) ? value.tags.filter((t) => t !== slug) : [...value.tags, slug] })
+    set({
+      tags: value.tags.includes(slug) ? value.tags.filter((t) => t !== slug) : [...value.tags, slug]
+    })
   const q = normalizeName(tagQuery)
   const shownTags = tags.filter((t) => !q || normalizeName(t.name).includes(q))
 
@@ -58,7 +70,12 @@ export function ContactFilters({ value, onChange, tags, sources, clients }: Cont
     <div className="flex flex-col gap-6 pt-1">
       <Group label="Suscripción">
         <div className="flex flex-wrap gap-1 [&>div]:flex-wrap">
-          <Chips label="Suscripción" value={value.status} options={STATUS} onChange={(status) => set({ status })} />
+          <Chips
+            label="Suscripción"
+            value={value.status}
+            options={STATUS}
+            onChange={(status) => set({ status })}
+          />
         </div>
       </Group>
 
@@ -80,7 +97,10 @@ export function ContactFilters({ value, onChange, tags, sources, clients }: Cont
           <Select
             label="Empresa"
             value={value.client}
-            options={[{ value: '', label: 'Todas las empresas' }, ...clients.map((c) => ({ value: c.id, label: c.name }))]}
+            options={[
+              { value: '', label: 'Todas las empresas' },
+              ...clients.map((c) => ({ value: c.id, label: c.name }))
+            ]}
             onChange={(client) => set({ client })}
           />
         </Group>
@@ -104,11 +124,16 @@ export function ContactFilters({ value, onChange, tags, sources, clients }: Cont
       <Group label={value.tags.length ? `Tags · deben tener los ${value.tags.length}` : 'Tags'}>
         {tags.length > 10 && (
           <div className="mb-2 flex">
-            <SearchField value={tagQuery} onChange={setTagQuery} placeholder="Buscar tag" label="Buscar tag" />
+            <SearchField
+              value={tagQuery}
+              onChange={setTagQuery}
+              placeholder="Buscar tag"
+              label="Buscar tag"
+            />
           </div>
         )}
         {tags.length === 0 ? (
-          <p className="text-caption text-milk-soft">Aún no hay tags.</p>
+          <p className="text-caption text-ob-muted">Aún no hay tags.</p>
         ) : (
           <ul className="flex flex-col gap-0.5">
             {shownTags.map((t) => {
@@ -120,17 +145,21 @@ export function ContactFilters({ value, onChange, tags, sources, clients }: Cont
                     role="checkbox"
                     aria-checked={on}
                     onClick={() => toggleTag(t.slug)}
-                    className="flex h-10 w-full items-center gap-2.5 rounded-sm px-2 text-left text-list transition-colors hover:bg-surface-raised"
+                    className="flex h-8 w-full items-center gap-2.5 rounded-sm px-2 text-left text-list transition-colors hover:bg-ob-hover"
                   >
                     <span
-                      className={`grid size-5 shrink-0 place-items-center rounded-full ${
-                        on ? 'bg-apricot text-ink' : 'shadow-[inset_0_0_0_1.5px_var(--color-milk-faint)]'
+                      className={`grid size-5 shrink-0 place-items-center rounded-[4px] ${
+                        on
+                          ? 'bg-ob-accent text-white'
+                          : 'shadow-[inset_0_0_0_1.5px_var(--color-ob-faint)]'
                       }`}
                     >
-                      {on && <Check size={12} strokeWidth={3} />}
+                      {on && <Check size={12} />}
                     </span>
                     <span className="min-w-0 flex-1 truncate">{t.name}</span>
-                    <span className="shrink-0 text-micro font-bold text-milk-soft tabular-nums">{t.contacts}</span>
+                    <span className="shrink-0 text-micro font-medium text-ob-muted tabular-nums">
+                      {t.contacts}
+                    </span>
                   </button>
                 </li>
               )
@@ -142,10 +171,16 @@ export function ContactFilters({ value, onChange, tags, sources, clients }: Cont
   )
 }
 
-function Group({ label, children }: { label: string; children: React.ReactNode }): React.JSX.Element {
+function Group({
+  label,
+  children
+}: {
+  label: string
+  children: React.ReactNode
+}): React.JSX.Element {
   return (
     <section>
-      <h3 className="mb-2 text-micro font-bold text-milk-soft">{label}</h3>
+      <h3 className="mb-2 text-micro font-medium text-ob-muted">{label}</h3>
       {children}
     </section>
   )

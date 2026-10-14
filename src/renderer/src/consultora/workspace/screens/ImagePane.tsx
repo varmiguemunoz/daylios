@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import { Maximize, ZoomIn, ZoomOut } from 'lucide-react'
 import { useLoad } from '../../lib'
 import { itemUrl, ws } from '../lib'
-import { RibbonButton } from '../organisms/ObsidianShell'
+import { RibbonButton } from '../../shell/RibbonButton'
 
 const STEPS = [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4]
 

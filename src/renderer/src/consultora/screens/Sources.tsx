@@ -39,15 +39,15 @@ export function Sources({ go }: { go: Go }): React.JSX.Element {
         <button
           type="button"
           onClick={() => setDraft('')}
-          className="flex h-9 items-center gap-1.5 rounded-full bg-apricot pr-4 pl-3 text-caption font-extrabold text-ink transition-transform active:scale-95"
+          className="flex h-[30px] shrink-0 items-center gap-1.5 rounded-[4px] bg-ob-accent px-3 text-[13px] font-medium text-white transition-colors hover:bg-[#7a4fe0] disabled:pointer-events-none disabled:opacity-40"
         >
-          <Plus size={16} strokeWidth={3} />
+          <Plus size={16} />
           Nueva fuente
         </button>
       }
     >
       {settings && (!settings.hubUrl || !settings.hasHubToken) && (
-        <div className="mt-5 flex items-center justify-between gap-3 rounded-md bg-apricot/10 px-5 py-3 text-caption text-apricot">
+        <div className="mt-5 flex items-center justify-between gap-3 rounded-[6px] border-l-2 border-ob-accent bg-ob-accent/10 px-3 py-2 text-caption text-ob-link">
           <span>Conecta el hub (el Worker de Cloudflare) para que estas URLs funcionen.</span>
           <Button kind="primary" onClick={() => go({ name: 'settings' })}>
             Ir a Ajustes
@@ -70,7 +70,7 @@ export function Sources({ go }: { go: Go }): React.JSX.Element {
             onKeyDown={(e) => e.key === 'Escape' && setDraft(null)}
             placeholder="Nombre de la fuente y Enter · p. ej. Web, Webinar octubre, Zapier"
             aria-label="Nombre de la fuente"
-            className="h-[52px] w-full rounded-lg bg-surface px-5 text-body outline-none placeholder:text-milk-soft focus:shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--color-apricot)_70%,transparent)]"
+            className="h-8 w-full rounded-[4px] border border-ob-border bg-ob-bg px-2.5 text-[14px] text-ob-text outline-none placeholder:text-ob-faint focus:border-ob-accent"
           />
         </form>
       )}
@@ -117,15 +117,18 @@ function SourceCard({
   ].join('\n')
 
   return (
-    <section className="rounded-md bg-surface px-5 py-4" aria-label={`Fuente ${s.name}`}>
+    <section
+      className="rounded-[6px] border border-ob-border px-4 py-3"
+      aria-label={`Fuente ${s.name}`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="truncate text-label font-extrabold">{s.name}</h2>
-          <p className="mt-0.5 text-caption text-milk-soft tabular-nums">
+          <h2 className="truncate text-[15px] font-semibold">{s.name}</h2>
+          <p className="mt-0.5 text-caption text-ob-muted tabular-nums">
             {s.receivedCount === 0
               ? 'Sin leads todavía'
               : `${s.receivedCount} ${s.receivedCount === 1 ? 'lead' : 'leads'} · último ${shortDate(s.lastReceivedAt)}`}
-            {' · '}tag <span className="font-bold text-milk">{sourceTag(s.slug)}</span>
+            {' · '}tag <span className="font-medium text-ob-text">{sourceTag(s.slug)}</span>
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -140,10 +143,10 @@ function SourceCard({
             onBlur={() => setConfirmRotate(false)}
             title="Generar un secreto nuevo (el actual deja de funcionar)"
             aria-label={confirmRotate ? 'Confirmar: secreto nuevo' : 'Secreto nuevo'}
-            className={`flex h-9 items-center justify-center gap-1.5 rounded-full text-caption font-extrabold transition-colors ${
+            className={`flex h-[30px] items-center justify-center gap-1.5 rounded-[4px] text-caption font-semibold transition-colors ${
               confirmRotate
-                ? 'bg-apricot px-4 text-ink'
-                : 'w-9 text-milk-soft hover:bg-hairline hover:text-milk'
+                ? 'bg-ob-accent px-4 text-white'
+                : 'w-9 text-ob-muted hover:bg-ob-border hover:text-ob-text'
             }`}
           >
             {confirmRotate ? '¿Secreto nuevo?' : <KeyRound size={16} />}
@@ -165,7 +168,7 @@ function SourceCard({
             <button
               type="button"
               onClick={() => setShowSecret((v) => !v)}
-              className="h-8 rounded-full px-3 text-caption font-bold text-milk-soft hover:bg-hairline hover:text-milk"
+              className="h-8 rounded-[4px] px-3 text-caption font-medium text-ob-muted hover:bg-ob-border hover:text-ob-text"
             >
               {showSecret ? 'Ocultar' : 'Ver'}
             </button>
@@ -174,7 +177,7 @@ function SourceCard({
       </dl>
 
       <div className="mt-3">
-        <p className="mb-1.5 px-1 text-micro font-bold text-milk-soft">
+        <p className="mb-1.5 px-1 text-micro font-medium text-ob-muted">
           Tags extra para cada lead de esta fuente
         </p>
         <TagEditor
@@ -194,16 +197,16 @@ function SourceCard({
       </div>
 
       <details className="group mt-3">
-        <summary className="cursor-pointer list-none px-1 text-caption font-bold text-milk-soft hover:text-milk">
+        <summary className="cursor-pointer list-none px-1 text-caption font-medium text-ob-muted hover:text-ob-text">
           Cómo enviarle un lead
         </summary>
-        <p className="mt-2 px-1 text-caption text-milk-soft">
-          POST con JSON. Solo <b className="text-milk">email</b> es obligatorio. El secreto va en la
-          cabecera Authorization o, si la herramienta no permite cabeceras, como{' '}
-          <b className="text-milk">?key=</b> en la URL. Envía solo personas que aceptaron recibir
+        <p className="mt-2 px-1 text-caption text-ob-muted">
+          POST con JSON. Solo <b className="text-ob-text">email</b> es obligatorio. El secreto va en
+          la cabecera Authorization o, si la herramienta no permite cabeceras, como{' '}
+          <b className="text-ob-text">?key=</b> en la URL. Envía solo personas que aceptaron recibir
           tus emails.
         </p>
-        <pre className="mt-2 overflow-x-auto rounded-sm bg-night px-4 py-3 font-mono text-micro leading-relaxed text-milk-soft">
+        <pre className="mt-2 overflow-x-auto rounded-[4px] bg-[#2a2a2a] px-3 py-2.5 font-mono text-micro leading-relaxed text-ob-muted">
           {curl}
         </pre>
       </details>
@@ -230,10 +233,10 @@ function CopyRow({
     setTimeout(() => setCopied(false), 1500)
   }
   return (
-    <div className="flex items-center gap-2 rounded-sm bg-night py-1 pr-1 pl-4">
-      <dt className="w-16 shrink-0 text-micro font-bold text-milk-soft">{label}</dt>
+    <div className="flex items-center gap-2 rounded-[4px] bg-[#2a2a2a] py-1 pr-1 pl-3">
+      <dt className="w-16 shrink-0 text-micro font-medium text-ob-muted">{label}</dt>
       <dd
-        className="min-w-0 flex-1 truncate font-mono text-micro text-milk"
+        className="min-w-0 flex-1 truncate font-mono text-micro text-ob-text"
         title={copyValue ?? undefined}
       >
         {value}
@@ -244,9 +247,9 @@ function CopyRow({
         onClick={() => void copy()}
         disabled={!copyValue}
         aria-label={`Copiar ${label.toLowerCase()}`}
-        className="flex h-8 items-center gap-1 rounded-full px-3 text-caption font-bold text-milk-soft hover:bg-hairline hover:text-milk disabled:text-milk-faint disabled:hover:bg-transparent"
+        className="flex h-8 items-center gap-1 rounded-[4px] px-3 text-caption font-medium text-ob-muted hover:bg-ob-border hover:text-ob-text disabled:text-ob-faint disabled:hover:bg-transparent"
       >
-        {copied ? <Check size={14} className="text-mint" /> : <Copy size={14} />}
+        {copied ? <Check size={14} className="text-ob-green" /> : <Copy size={14} />}
         {copied ? 'Copiado' : 'Copiar'}
       </button>
     </div>

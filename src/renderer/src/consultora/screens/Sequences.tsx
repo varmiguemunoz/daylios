@@ -38,7 +38,7 @@ export function Sequences({ go }: { go: Go }): React.JSX.Element {
           href="https://resend.com/automations"
           target="_blank"
           rel="noreferrer"
-          className="flex h-9 items-center gap-1.5 rounded-full bg-surface px-4 text-caption font-extrabold text-milk hover:bg-surface-raised"
+          className="flex h-[30px] items-center gap-1.5 rounded-[4px] bg-ob-active px-3 text-[13px] font-medium text-ob-text hover:bg-[#3f3f3f]"
         >
           <ExternalLink size={15} />
           Abrir Resend
@@ -46,7 +46,7 @@ export function Sequences({ go }: { go: Go }): React.JSX.Element {
       }
     >
       {noKey ? (
-        <div className="mt-6 flex items-center justify-between gap-3 rounded-md bg-apricot/10 px-5 py-3 text-caption text-apricot">
+        <div className="mt-6 flex items-center justify-between gap-3 rounded-[6px] border-l-2 border-ob-accent bg-ob-accent/10 px-3 py-2 text-caption text-ob-link">
           <span>Conecta Resend para ver y crear secuencias.</span>
           <Button kind="primary" onClick={() => go({ name: 'settings' })}>
             Ir a Ajustes
@@ -68,11 +68,12 @@ export function Sequences({ go }: { go: Go }): React.JSX.Element {
             {data.map((s) => (
               <Row key={s.id}>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-list font-bold">{s.name}</span>
-                  <span className="block truncate text-caption text-milk-soft">
+                  <span className="block truncate text-list font-medium">{s.name}</span>
+                  <span className="block truncate text-caption text-ob-muted">
                     {s.event ? (
                       <>
-                        Al recibir <span className="font-mono text-micro text-milk">{s.event}</span>
+                        Al recibir{' '}
+                        <span className="font-mono text-micro text-ob-text">{s.event}</span>
                       </>
                     ) : (
                       'Sin evento'
@@ -96,7 +97,7 @@ export function Sequences({ go }: { go: Go }): React.JSX.Element {
                   rel="noreferrer"
                   aria-label={`Abrir ${s.name} en Resend`}
                   title="Abrir en Resend"
-                  className="grid size-9 shrink-0 place-items-center rounded-full text-milk-soft hover:bg-hairline hover:text-milk"
+                  className="grid size-7 shrink-0 place-items-center rounded-[4px] text-ob-muted hover:bg-ob-border hover:text-ob-text"
                 >
                   <ExternalLink size={15} />
                 </a>

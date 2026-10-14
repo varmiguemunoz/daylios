@@ -13,7 +13,7 @@ type State =
   | { name: 'stopping'; meeting: Meeting; seconds: number }
 
 /**
- * Botón «Grabar» de la barra superior. Grabando: cronómetro + «Detener».
+ * Botón «Grabar» de la franja superior. Grabando: REC con cronómetro y «Detener».
  * Al detener pide título, participantes y asociación (sugerida por el título) y lanza el procesado.
  */
 export function Recorder({
@@ -60,7 +60,8 @@ export function Recorder({
     try {
       streams = await acquire()
     } catch (e) {
-      if (e instanceof PermissionError) setHelp(e.message.startsWith('No hay audio') ? 'microphone' : 'screen')
+      if (e instanceof PermissionError)
+        setHelp(e.message.startsWith('No hay audio') ? 'microphone' : 'screen')
       else setError(errorMessage(e))
       setState({ name: 'idle' })
       return
@@ -73,7 +74,8 @@ export function Recorder({
         (data) => recordingApi.chunk(meeting.id, data),
         () => stopRef.current()
       )
-      if (!capture.hasSystemAudio) setWarning('Sin audio del sistema: solo se graba tu micrófono (no las voces de los demás).')
+      if (!capture.hasSystemAudio)
+        setWarning('Sin audio del sistema: solo se graba tu micrófono (no las voces de los demás).')
       else if (!capture.hasMic) setWarning('Sin micrófono: solo se graba el audio del sistema.')
       const startedAt = Date.now()
       setNow(startedAt)
@@ -102,32 +104,40 @@ export function Recorder({
   return (
     <>
       {state.name === 'recording' ? (
-        <div className="flex items-center gap-2 [-webkit-app-region:no-drag]">
-          <span className="flex h-9 items-center gap-2 rounded-full bg-rose/15 px-4 text-caption font-extrabold text-rose tabular-nums">
-            <span className="size-2 animate-pulse rounded-full bg-rose" aria-hidden />
-            {clock(elapsed)}
+        <div className="flex items-center gap-1">
+          <span className="flex h-6 items-center gap-1.5 px-1.5 text-[12px] font-semibold text-ob-red tabular-nums">
+            <span className="size-1.5 animate-pulse rounded-full bg-ob-red" aria-hidden />
+            REC {clock(elapsed)}
           </span>
-          <Button onClick={() => void stop()}>Detener</Button>
+          <button
+            type="button"
+            onClick={() => void stop()}
+            className="h-6 rounded-[4px] bg-ob-active px-2 text-[12px] text-ob-text transition-colors hover:bg-[#3f3f3f]"
+          >
+            Detener
+          </button>
         </div>
       ) : (
         <button
           type="button"
           disabled={state.name !== 'idle'}
           onClick={() => void start()}
-          title="Graba pantalla, micrófono y audio del sistema"
-          className="flex h-9 items-center gap-2 rounded-full bg-surface pr-4 pl-3.5 text-caption font-extrabold text-milk transition-colors hover:bg-surface-raised disabled:text-milk-faint [-webkit-app-region:no-drag]"
+          title="Grabar reunión: pantalla, micrófono y audio del sistema"
+          className="flex h-6 items-center gap-1.5 rounded-[4px] px-2 text-[12px] text-ob-muted transition-colors hover:bg-ob-hover hover:text-ob-text disabled:text-ob-faint"
         >
-          <span className="size-2.5 rounded-full bg-rose" aria-hidden />
-          {state.name === 'starting' ? 'Preparando…' : 'Grabar reunión'}
+          <span className="size-2 rounded-full bg-ob-red" aria-hidden />
+          {state.name === 'starting' ? 'Preparando…' : 'Grabar'}
         </button>
       )}
 
-      {help && state.name === 'idle' && <PermissionHelp kind={help} onClose={() => setHelp(null)} />}
+      {help && state.name === 'idle' && (
+        <PermissionHelp kind={help} onClose={() => setHelp(null)} />
+      )}
 
       {(error || warning) && state.name !== 'stopping' && !help && (
         <p
           role="alert"
-          className={`absolute top-14 right-6 z-10 max-w-sm rounded-md px-4 py-3 text-caption ${error ? 'bg-coral/15 text-coral' : 'bg-butter/10 text-butter'}`}
+          className={`absolute top-[44px] right-3 z-40 max-w-sm rounded-[6px] border border-ob-border bg-ob-alt px-3 py-2 text-[13px] shadow-float ${error ? 'text-ob-red' : 'text-ob-yellow'}`}
         >
           {error ?? warning}
         </p>
@@ -152,17 +162,27 @@ export function Recorder({
  * Falta un permiso de macOS. Pasos: activar el interruptor en Ajustes del Sistema y reiniciar
  * (macOS solo aplica la Grabación de pantalla después de reiniciar la app).
  */
-function PermissionHelp({ kind, onClose }: { kind: 'screen' | 'microphone'; onClose: () => void }): React.JSX.Element {
+function PermissionHelp({
+  kind,
+  onClose
+}: {
+  kind: 'screen' | 'microphone'
+  onClose: () => void
+}): React.JSX.Element {
   const [restarting, setRestarting] = useState(false)
   const what = kind === 'screen' ? 'Grabación de pantalla y audio del sistema' : 'Micrófono'
   return (
     <div
       role="alert"
-      className="toast-in absolute top-14 right-6 z-10 w-[380px] rounded-lg bg-surface-raised p-5 shadow-[0_10px_30px_-8px_rgb(0_0_0/0.7)] [-webkit-app-region:no-drag]"
+      className="toast-in absolute top-[44px] right-3 z-40 w-[380px] rounded-[8px] border border-ob-border bg-ob-alt p-4 shadow-float"
     >
-      <p className="text-list font-extrabold">Falta el permiso de {what}</p>
-      <ol className="mt-2 list-decimal pl-5 text-caption text-milk-soft">
-        <li>Abre Ajustes del Sistema y activa <span className="font-bold text-milk">daily-os</span>. Si ya estaba activo, desactívalo y vuelve a activarlo.</li>
+      <p className="text-[14px] font-semibold text-ob-text">Falta el permiso de {what}</p>
+      <ol className="mt-2 list-decimal pl-5 text-[13px] text-ob-muted">
+        <li>
+          Abre Ajustes del Sistema y activa{' '}
+          <span className="font-semibold text-ob-text">daily-os</span>. Si ya estaba activo,
+          desactívalo y vuelve a activarlo.
+        </li>
         <li>Reinicia DayliOS: macOS solo aplica el permiso al volver a abrir la app.</li>
       </ol>
       <div className="mt-4 flex flex-wrap gap-2">
@@ -180,7 +200,9 @@ function PermissionHelp({ kind, onClose }: { kind: 'screen' | 'microphone'; onCl
         </Button>
         <Button onClick={onClose}>Cerrar</Button>
       </div>
-      {restarting && <p className="mt-3 text-caption text-milk-soft">Se vuelve a abrir sola en unos segundos.</p>}
+      {restarting && (
+        <p className="mt-3 text-[13px] text-ob-muted">Se vuelve a abrir sola en unos segundos.</p>
+      )}
     </div>
   )
 }
@@ -201,7 +223,9 @@ function StopSheet({
       hint="Al guardar se transcribe y se resume en segundo plano. Te aviso cuando termine."
       defaultTitle={meeting.title}
       submitLabel="Guardar y procesar"
-      onSubmit={async (info) => onDone(await recordingApi.stop(meeting.id, { ...info, durationSec: seconds }))}
+      onSubmit={async (info) =>
+        onDone(await recordingApi.stop(meeting.id, { ...info, durationSec: seconds }))
+      }
     />
   )
 }

@@ -23,7 +23,7 @@ import {
   type SortMode
 } from '../lib'
 import { useWorkspace } from '../context'
-import { RibbonButton } from './ObsidianShell'
+import { RibbonButton } from '../../shell/RibbonButton'
 
 const OPEN_KEY = 'ws.explorer.open-folders'
 const SORT_KEY = 'ws.explorer.sort'
@@ -180,7 +180,7 @@ export function FileExplorer({ activePath }: { activePath: string }): React.JSX.
         >
           <ChevronRight
             size={13}
-            strokeWidth={2.25}
+
             aria-hidden
             className={`shrink-0 text-ob-faint transition-transform duration-150 ${isOpen ? 'rotate-90' : ''}`}
           />

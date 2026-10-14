@@ -85,7 +85,7 @@ export function ConvertToProspectModal({
       <div className="flex flex-col gap-4">
         {pipelines.length > 1 && (
           <label className="flex flex-col gap-1.5">
-            <span className="text-micro font-bold text-milk-soft">Pipeline</span>
+            <span className="text-micro font-medium text-ob-muted">Pipeline</span>
             <Select
               label="Pipeline"
               value={pipeline}
@@ -95,21 +95,28 @@ export function ConvertToProspectModal({
           </label>
         )}
         <div className="flex flex-col gap-1.5">
-          <span className="text-micro font-bold text-milk-soft">Etapa</span>
+          <span className="text-micro font-medium text-ob-muted">Etapa</span>
           <div className="[&>div]:flex-wrap">
-            <Chips label="Etapa" value={stage} options={stages.map((s) => ({ id: s.id, label: s.name }))} onChange={setStage} />
+            <Chips
+              label="Etapa"
+              value={stage}
+              options={stages.map((s) => ({ id: s.id, label: s.name }))}
+              onChange={setStage}
+            />
           </div>
         </div>
         <label className="flex flex-col gap-1.5">
-          <span className="text-micro font-bold text-milk-soft">Nombre del prospecto</span>
+          <span className="text-micro font-medium text-ob-muted">Nombre del prospecto</span>
           <input
             value={company}
             onChange={(e) => setCompany(e.target.value)}
-            className="h-11 rounded-sm bg-night/60 px-4 text-list outline-none focus:shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--color-apricot)_70%,transparent)]"
+            className="h-8 px-2.5 text-[14px] rounded-[4px] border border-ob-border bg-ob-bg text-ob-text outline-none placeholder:text-ob-faint focus:border-ob-accent"
           />
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-micro font-bold text-milk-soft">Valor estimado (USD, opcional)</span>
+          <span className="text-micro font-medium text-ob-muted">
+            Valor estimado (USD, opcional)
+          </span>
           <input
             type="number"
             min={0}
@@ -117,7 +124,7 @@ export function ConvertToProspectModal({
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder="5000"
-            className="h-11 rounded-sm bg-night/60 px-4 text-list tabular-nums outline-none placeholder:text-milk-soft focus:shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--color-apricot)_70%,transparent)]"
+            className="h-8 px-2.5 text-[14px] tabular-nums rounded-[4px] border border-ob-border bg-ob-bg text-ob-text outline-none placeholder:text-ob-faint focus:border-ob-accent"
           />
         </label>
         <ErrorNote message={error} />

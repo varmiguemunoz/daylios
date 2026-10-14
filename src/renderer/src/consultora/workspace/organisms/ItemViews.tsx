@@ -59,14 +59,14 @@ function useDrop(props: ItemViewProps): {
 export function ItemList(props: ItemViewProps): React.JSX.Element {
   const { over, dropProps } = useDrop(props)
   return (
-    <ul className="overflow-hidden rounded-md bg-surface [&>li+li]:shadow-[inset_0_1px_0_var(--color-hairline)]">
+    <ul className="overflow-hidden rounded-[6px] border border-ob-border [&>li+li]:border-t [&>li+li]:border-ob-border">
       {props.items.map((item) => {
         const Icon = KIND_ICON[item.kind]
         return (
           <li
             key={item.id}
-            className={`group flex items-center gap-1 pr-2 transition-colors hover:bg-surface-raised focus-within:bg-surface-raised ${
-              over === item.id ? 'bg-apricot/15' : ''
+            className={`group flex items-center gap-1 pr-2 transition-colors hover:bg-ob-hover focus-within:bg-ob-hover ${
+              over === item.id ? 'bg-ob-accent/15' : ''
             }`}
             onContextMenu={(e) => props.onMenu(item, e)}
             {...dropProps(item)}
@@ -77,12 +77,12 @@ export function ItemList(props: ItemViewProps): React.JSX.Element {
               onKeyDown={keys(item, props)}
               className="flex min-w-0 flex-1 items-center gap-3 px-4 py-2.5 text-left outline-offset-[-2px]"
             >
-              <Icon size={17} strokeWidth={2.25} className="shrink-0 text-milk-soft" aria-hidden />
-              <span className="min-w-0 flex-1 truncate text-list font-bold">{item.name}</span>
-              <span className="hidden shrink-0 text-caption text-milk-soft @xl:inline">
+              <Icon size={17} className="shrink-0 text-ob-muted" aria-hidden />
+              <span className="min-w-0 flex-1 truncate text-list font-medium">{item.name}</span>
+              <span className="hidden shrink-0 text-caption text-ob-muted @xl:inline">
                 {itemMeta(item)}
               </span>
-              <span className="w-24 shrink-0 text-right text-caption text-milk-soft tabular-nums">
+              <span className="w-24 shrink-0 text-right text-caption text-ob-muted tabular-nums">
                 {item.kind === 'folder' ? '' : shortDate(item.updatedAt)}
               </span>
             </button>
@@ -91,7 +91,7 @@ export function ItemList(props: ItemViewProps): React.JSX.Element {
               aria-label={`Acciones de ${item.name}`}
               title="Acciones"
               onClick={(e) => props.onMenu(item, e, e.currentTarget)}
-              className="grid size-8 shrink-0 place-items-center rounded-full text-milk-soft opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 hover:bg-hairline hover:text-milk focus-visible:opacity-100"
+              className="grid size-7 shrink-0 place-items-center rounded-[4px] text-ob-muted opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 hover:bg-ob-border hover:text-ob-text focus-visible:opacity-100"
             >
               <MoreHorizontal size={16} />
             </button>
@@ -114,11 +114,11 @@ export function ItemGrid(props: ItemViewProps): React.JSX.Element {
               type="button"
               onClick={() => props.onOpen(item)}
               onKeyDown={keys(item, props)}
-              className={`flex w-full flex-col overflow-hidden rounded-md bg-surface text-left transition-colors hover:bg-surface-raised focus-visible:bg-surface-raised ${
-                over === item.id ? 'shadow-[inset_0_0_0_2px_var(--color-apricot)]' : ''
+              className={`flex w-full flex-col overflow-hidden rounded-md bg-ob-alt text-left transition-colors hover:bg-ob-hover focus-visible:bg-ob-hover ${
+                over === item.id ? 'shadow-[inset_0_0_0_2px_var(--color-ob-accent)]' : ''
               }`}
             >
-              <span className="grid h-28 place-items-center overflow-hidden bg-night/30">
+              <span className="grid h-28 place-items-center overflow-hidden bg-ob-bg/30">
                 {item.kind === 'image' ? (
                   <img
                     src={itemUrl(item.id, item.updatedAt)}
@@ -128,12 +128,14 @@ export function ItemGrid(props: ItemViewProps): React.JSX.Element {
                     className="size-full object-cover"
                   />
                 ) : (
-                  <Icon size={30} strokeWidth={1.75} className="text-milk-soft" aria-hidden />
+                  <Icon size={30} strokeWidth={1.75} className="text-ob-muted" aria-hidden />
                 )}
               </span>
               <span className="px-3 pt-2 pb-2.5">
-                <span className="block truncate text-caption font-bold text-milk">{item.name}</span>
-                <span className="block truncate text-micro text-milk-soft">{itemMeta(item)}</span>
+                <span className="block truncate text-caption font-medium text-ob-text">
+                  {item.name}
+                </span>
+                <span className="block truncate text-micro text-ob-muted">{itemMeta(item)}</span>
               </span>
             </button>
           </li>

@@ -58,7 +58,9 @@ export async function acquire(): Promise<Streams> {
   let mic: MediaStream | null = null
   try {
     mic = await withTimeout(
-      navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }),
+      navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true }
+      }),
       'macOS no respondió al pedir el micrófono.'
     )
   } catch {
@@ -92,7 +94,10 @@ export function record(
   if (systemAudio.length) context.createMediaStreamSource(new MediaStream(systemAudio)).connect(mix)
   if (streams.mic) context.createMediaStreamSource(streams.mic).connect(mix)
 
-  const stream = new MediaStream([...streams.display.getVideoTracks(), ...mix.stream.getAudioTracks()])
+  const stream = new MediaStream([
+    ...streams.display.getVideoTracks(),
+    ...mix.stream.getAudioTracks()
+  ])
   const recorder = new MediaRecorder(stream, {
     mimeType: MIME_TYPES.find((type) => MediaRecorder.isTypeSupported(type)),
     videoBitsPerSecond: 1_200_000,

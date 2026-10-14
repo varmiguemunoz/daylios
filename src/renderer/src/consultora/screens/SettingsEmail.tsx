@@ -5,7 +5,7 @@ import { api, attempt, dateTime, useLoad } from '../lib'
 import { Button, ErrorNote, Field, Section } from '../ui'
 
 const marketing = window.api.marketing
-const input = 'bg-transparent text-list outline-none placeholder:text-milk-soft'
+const input = 'bg-transparent text-[14px] text-ob-text outline-none placeholder:text-ob-faint'
 
 /**
  * Ajustes del email marketing: Resend (API key y remitente) y estado de la cola.
@@ -42,7 +42,7 @@ export function EmailSettings(): React.JSX.Element {
     setSyncing(false)
   }
 
-  if (!settings) return <Section title="Email (Resend)">{null}</Section>
+  if (!settings) return <Section title="Resend">{null}</Section>
 
   const text = (
     field: keyof Settings & keyof SettingsInput,
@@ -62,7 +62,7 @@ export function EmailSettings(): React.JSX.Element {
   )
 
   return (
-    <Section title="Email (Resend)">
+    <Section title="Resend">
       <div className="flex flex-col gap-2">
         <form
           className="flex items-stretch gap-2"
@@ -107,7 +107,7 @@ export function EmailSettings(): React.JSX.Element {
 
         {test && (
           <p
-            className={`rounded-md px-4 py-3 text-caption ${test.ok ? 'bg-mint/15 text-mint' : 'bg-coral/12 text-coral'}`}
+            className={`rounded-[6px] border-l-2 px-3 py-2 text-[13px] ${test.ok ? 'border-ob-green bg-ob-green/10 text-ob-green' : 'border-ob-red bg-ob-red/10 text-ob-red'}`}
           >
             {test.message}
           </p>
@@ -121,8 +121,8 @@ export function EmailSettings(): React.JSX.Element {
         </div>
 
         {status && (
-          <div className="flex items-center gap-3 rounded-md bg-surface py-2 pr-2 pl-5">
-            <p className="min-w-0 flex-1 text-caption text-milk-soft">
+          <div className="flex items-center gap-3 rounded-[6px] border border-ob-border py-2 pr-2 pl-3">
+            <p className="min-w-0 flex-1 text-caption text-ob-muted">
               {!status.resendConfigured
                 ? 'Sin API key: los cambios esperan en la cola hasta que la pongas.'
                 : status.pending === 0
@@ -141,12 +141,12 @@ export function EmailSettings(): React.JSX.Element {
           </div>
         )}
         {status?.lastError && status.failing > 0 && (
-          <p className="rounded-md bg-coral/12 px-4 py-3 text-caption text-coral">
+          <p className="rounded-[6px] border-l-2 border-ob-red bg-ob-red/10 px-3 py-2 text-caption text-ob-red">
             {status.lastError}
           </p>
         )}
 
-        <p className="px-1 text-caption text-milk-soft">
+        <p className="px-1 text-caption text-ob-muted">
           Crea la key en resend.com → API Keys (acceso completo). Las claves se guardan solo en este
           Mac, en settings.json con permisos de tu usuario.
         </p>

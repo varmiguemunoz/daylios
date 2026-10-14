@@ -64,7 +64,7 @@ export function FolderPicker({ item, onPick, onClose }: FolderPickerProps): Reac
             label="Buscar carpeta"
           />
         </div>
-        <ul className="scroll-area max-h-[50vh] overflow-y-auto rounded-md bg-night/40 py-1">
+        <ul className="scroll-area max-h-[50vh] overflow-y-auto rounded-[6px] border border-ob-border bg-ob-bg py-1">
           {options.map((f) => {
             const current = f.id === item.parentId
             const Icon = f.id ? Folder : Home
@@ -75,22 +75,22 @@ export function FolderPicker({ item, onPick, onClose }: FolderPickerProps): Reac
                   disabled={current}
                   onClick={() => onPick(f.id)}
                   style={{ paddingLeft: 16 + (q ? 0 : f.depth * 16) }}
-                  className="flex h-10 w-full items-center gap-2.5 pr-4 text-left text-list transition-colors hover:bg-surface-raised disabled:text-milk-faint disabled:hover:bg-transparent"
+                  className="flex h-8 w-full items-center gap-2.5 pr-4 text-left text-list transition-colors hover:bg-ob-hover disabled:text-ob-faint disabled:hover:bg-transparent"
                 >
                   <Icon
                     size={15}
-                    strokeWidth={2.5}
-                    className="shrink-0 text-milk-soft"
+
+                    className="shrink-0 text-ob-muted"
                     aria-hidden
                   />
                   <span className="min-w-0 flex-1 truncate">{q && f.path ? f.path : f.name}</span>
-                  {current && <span className="shrink-0 text-micro font-bold">Aquí está</span>}
+                  {current && <span className="shrink-0 text-micro font-medium">Aquí está</span>}
                 </button>
               </li>
             )
           })}
           {options.length === 0 && (
-            <li className="px-4 py-3 text-caption text-milk-soft">Ninguna carpeta coincide.</li>
+            <li className="px-4 py-3 text-caption text-ob-muted">Ninguna carpeta coincide.</li>
           )}
         </ul>
       </div>

@@ -31,17 +31,17 @@ export function Modal({
 
   return createPortal(
     <div className="fixed inset-0 z-50 grid place-items-center p-6 [-webkit-app-region:no-drag]">
-      <div aria-hidden className="absolute inset-0 bg-night/60" onClick={onClose} />
+      <div aria-hidden className="ui-backdrop absolute inset-0 bg-night/60" onClick={onClose} />
       <div
         ref={panel}
         role="dialog"
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className={`toast-in relative flex max-h-[calc(100vh-48px)] w-full ${WIDTH[size]} flex-col rounded-xl bg-surface shadow-[0_10px_30px_-8px_rgb(0_0_0/0.7)] outline-none`}
+        className={`ui-modal toast-in relative flex max-h-[calc(100vh-48px)] w-full ${WIDTH[size]} flex-col rounded-xl bg-surface shadow-[0_10px_30px_-8px_rgb(0_0_0/0.7)] outline-none`}
       >
         <header className="flex items-center justify-between gap-3 px-6 pt-5 pb-2">
-          <h2 className="text-title font-extrabold">{title}</h2>
+          <h2 className="ui-panel-title text-title font-extrabold">{title}</h2>
           <IconButton label="Cerrar" onClick={onClose}>
             <X size={17} />
           </IconButton>

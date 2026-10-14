@@ -1,5 +1,15 @@
 import { useCallback, useState } from 'react'
-import { FilePen, FolderOpen, NotebookPen, Pencil, Plus, Trash2 } from 'lucide-react'
+import {
+  Activity,
+  Building2,
+  CalendarCheck,
+  FilePen,
+  FolderOpen,
+  NotebookPen,
+  Pencil,
+  Plus,
+  Trash2
+} from 'lucide-react'
 import type { ClientInput, DocFile } from '@shared/consultora'
 import { api, attempt, bytes, dateTime, openPath, shortDate, useLoad, type Go } from '../lib'
 import {
@@ -20,6 +30,9 @@ import {
   Select
 } from '../ui'
 import { ContactsSection } from '../ContactsSection'
+import { useScreenTitle } from '../chrome'
+import { InlineField } from '../molecules/InlineField'
+import { Properties, PropertyRow } from '../molecules/Properties'
 import { DeleteClientModal } from '../organisms/DeleteClientModal'
 import { NotePicker } from '../../components/NotePicker'
 import { notesApi } from '../../lib/api'
@@ -28,22 +41,22 @@ import { notesApi } from '../../lib/api'
 const EDITABLE = /\.(md|txt|csv|json)$/i
 
 /**
- * Ficha de cliente: datos, proyectos, reuniones, action items abiertos, notas y documentos.
+ * Ficha de cliente como una nota de Obsidian: propiedades arriba y después proyectos, reuniones,
+ * action items abiertos, contactos, notas y documentos.
  * Desde aquí se borran el cliente y sus proyectos y se renombran, editan o borran documentos.
  */
 export function Client({
   id,
   go,
-  back,
-  backLabel
+  back
 }: {
   id: string
   go: Go
   back: () => void
-  backLabel: string
 }): React.JSX.Element {
   const load = useCallback(() => api.getClient(id), [id])
   const { data: c, error: loadError } = useLoad(load)
+  useScreenTitle(c?.name)
   const [error, setError] = useState<string | null>(null)
   const [newProject, setNewProject] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -64,7 +77,8 @@ export function Client({
 
   const renameDoc = async (doc: DocFile, name: string): Promise<void> => {
     setRenaming(null)
-    if (name.trim() && name.trim() !== doc.name) await run(() => api.renameDocument(id, doc.path, name.trim()))
+    if (name.trim() && name.trim() !== doc.name)
+      await run(() => api.renameDocument(id, doc.path, name.trim()))
   }
 
   const save = async (patch: ClientInput): Promise<void> =>
@@ -82,14 +96,14 @@ export function Client({
 
   if (!c)
     return (
-      <Page back={{ label: backLabel, onClick: back }} title="…">
+      <Page variant="document" title="…">
         <ErrorNote message={loadError} />
       </Page>
     )
 
   return (
     <Page
-      back={{ label: backLabel, onClick: back }}
+      variant="document"
       title={
         <EditableText
           value={c.name}
@@ -97,22 +111,29 @@ export function Client({
           onSave={(name) => void save({ name })}
         />
       }
-      meta={
-        <>
-          <span className="w-56">
-            <EditableText
-              value={c.sector ?? ''}
-              placeholder="Sector o empresa"
-              label="Sector"
-              className="text-caption"
-              onSave={(sector) => void save({ sector })}
-            />
-          </span>
-          <span>Firmado {shortDate(c.signedAt)}</span>
-        </>
-      }
       actions={
         <>
+          <IconButton
+            label="Abrir carpeta en Finder"
+            onClick={() => void openPath(c.folderPath).catch((e) => setError(String(e)))}
+          >
+            <FolderOpen size={16} />
+          </IconButton>
+          <IconButton label="Borrar cliente" tone="danger" onClick={() => setDeleting(true)}>
+            <Trash2 size={16} />
+          </IconButton>
+        </>
+      }
+    >
+      <Properties id="client">
+        <InlineField
+          icon={Building2}
+          label="Sector"
+          value={c.sector}
+          placeholder="Sector o empresa"
+          onSave={(sector) => void save({ sector })}
+        />
+        <PropertyRow icon={Activity} label="Estado">
           <Select
             label="Estado"
             value={c.status}
@@ -122,19 +143,22 @@ export function Client({
             ]}
             onChange={(status) => void save({ status: status as ClientInput['status'] })}
           />
-          <Button
+        </PropertyRow>
+        <PropertyRow icon={CalendarCheck} label="Firmado">
+          <span className="block px-1.5 text-[14px] text-ob-text">{shortDate(c.signedAt)}</span>
+        </PropertyRow>
+        <PropertyRow icon={FolderOpen} label="Carpeta">
+          <button
+            type="button"
+            title="Abrir en Finder"
             onClick={() => void openPath(c.folderPath).catch((e) => setError(String(e)))}
-            title={c.folderPath}
+            className="block h-[26px] max-w-full truncate rounded-[4px] px-1.5 text-left text-[14px] text-ob-link transition-colors hover:bg-ob-hover"
           >
-            <FolderOpen size={15} strokeWidth={2.5} />
-            Carpeta
-          </Button>
-          <IconButton label="Borrar cliente" tone="danger" onClick={() => setDeleting(true)}>
-            <Trash2 size={16} />
-          </IconButton>
-        </>
-      }
-    >
+            {c.folderPath}
+          </button>
+        </PropertyRow>
+      </Properties>
+
       <DeleteClientModal
         open={deleting}
         client={{ id: c.id, name: c.name }}
@@ -150,7 +174,7 @@ export function Client({
         title="Proyectos"
         aside={
           <Button onClick={() => setNewProject('')}>
-            <Plus size={15} strokeWidth={3} />
+            <Plus size={15} />
             Nuevo
           </Button>
         }
@@ -170,7 +194,7 @@ export function Client({
               onKeyDown={(e) => e.key === 'Escape' && setNewProject(null)}
               placeholder="Nombre del proyecto y Enter"
               aria-label="Nombre del proyecto"
-              className="h-12 w-full rounded-md bg-surface px-5 text-list outline-none focus:shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--color-apricot)_70%,transparent)]"
+              className="h-8 w-full rounded-[4px] border border-ob-border bg-ob-bg px-2.5 text-[14px] text-ob-text outline-none placeholder:text-ob-faint focus:border-ob-accent"
             />
           </form>
         )}
@@ -190,9 +214,9 @@ export function Client({
                   />
                 }
               >
-                <span className="min-w-0 flex-1 truncate text-list font-bold">{p.name}</span>
+                <span className="min-w-0 flex-1 truncate text-list font-medium">{p.name}</span>
                 {p.openDeliverables.length > 0 && (
-                  <span className="text-caption text-milk-soft">
+                  <span className="text-caption text-ob-muted">
                     {p.openDeliverables.length}{' '}
                     {p.openDeliverables.length === 1
                       ? 'entregable pendiente'
@@ -219,10 +243,10 @@ export function Client({
                       api.updateActionItem(a.meetingId, a.index, { done: true })
                     ).then(setError)
                   }
-                  className="size-5 shrink-0 rounded-full shadow-[inset_0_0_0_1.5px_var(--color-milk-faint)] transition-shadow hover:shadow-[inset_0_0_0_1.5px_var(--color-apricot)]"
+                  className="size-5 shrink-0 rounded-[4px] shadow-[inset_0_0_0_1.5px_var(--color-ob-faint)] transition-shadow hover:shadow-[inset_0_0_0_1.5px_var(--color-ob-accent)]"
                 />
                 <span className="min-w-0 flex-1 text-list">{a.text}</span>
-                <span className="shrink-0 text-caption text-milk-soft">
+                <span className="shrink-0 text-caption text-ob-muted">
                   {[a.owner, a.due].filter(Boolean).join(' · ')}
                 </span>
               </Row>
@@ -235,15 +259,15 @@ export function Client({
         {c.meetings.length === 0 ? (
           <Empty
             title="Sin reuniones."
-            hint="Graba una con «Grabar» arriba o créala en Reuniones."
+            hint="Graba una con «Grabar» en la franja superior o créala en Reuniones."
           />
         ) : (
           <List>
             {c.meetings.slice(0, 8).map((m) => (
               <Row key={m.id} onClick={() => go({ name: 'meeting', id: m.id })}>
-                <span className="min-w-0 flex-1 truncate text-list font-bold">{m.title}</span>
+                <span className="min-w-0 flex-1 truncate text-list font-medium">{m.title}</span>
                 <MeetingStatusPill status={m.status} />
-                <span className="shrink-0 text-caption text-milk-soft">{dateTime(m.date)}</span>
+                <span className="shrink-0 text-caption text-ob-muted">{dateTime(m.date)}</span>
               </Row>
             ))}
           </List>
@@ -258,14 +282,17 @@ export function Client({
           <div className="flex gap-2">
             <Button onClick={() => setLinking(true)}>Relacionar nota</Button>
             <Button onClick={() => void newNote()}>
-              <Plus size={15} strokeWidth={3} />
+              <Plus size={15} />
               Nueva nota
             </Button>
           </div>
         }
       >
         {c.notes.length === 0 ? (
-          <Empty title="Sin notas relacionadas." hint="Crea una aquí o relaciónala desde la propia nota." />
+          <Empty
+            title="Sin notas relacionadas."
+            hint="Crea una aquí o relaciónala desde la propia nota."
+          />
         ) : (
           <List>
             {c.notes.map((n) => (
@@ -283,12 +310,16 @@ export function Client({
                   </IconButton>
                 }
               >
-                <NotebookPen size={15} className="shrink-0 text-milk-soft" aria-hidden />
+                <NotebookPen size={15} className="shrink-0 text-ob-muted" aria-hidden />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-list font-bold">{n.title}</span>
-                  {n.excerpt && <span className="block truncate text-caption text-milk-soft">{n.excerpt}</span>}
+                  <span className="block truncate text-list font-medium">{n.title}</span>
+                  {n.excerpt && (
+                    <span className="block truncate text-caption text-ob-muted">{n.excerpt}</span>
+                  )}
                 </span>
-                <span className="shrink-0 text-caption text-milk-soft">{shortDate(n.updatedAt)}</span>
+                <span className="shrink-0 text-caption text-ob-muted">
+                  {shortDate(n.updatedAt)}
+                </span>
               </ActionRow>
             ))}
           </List>
@@ -317,18 +348,15 @@ export function Client({
       {/* Texto de contactos de antes de existir la base de contactos: solo si tiene algo */}
       {c.contactsMd.trim() && (
         <Section title="Notas de contactos">
-          <MarkdownField value={c.contactsMd} placeholder="" onSave={(contactsMd) => void save({ contactsMd })} />
+          <MarkdownField
+            value={c.contactsMd}
+            placeholder=""
+            onSave={(contactsMd) => void save({ contactsMd })}
+          />
         </Section>
       )}
 
-      <Section
-        title="Documentos"
-        aside={
-          <span className="truncate text-caption text-milk-soft" title={c.folderPath}>
-            {c.folderPath}
-          </span>
-        }
-      >
+      <Section title="Documentos">
         {c.documents.length === 0 ? (
           <Empty
             title="Carpeta vacía."
@@ -345,7 +373,10 @@ export function Client({
                     aria-label={`Nuevo nombre de ${d.name}`}
                     onFocus={(e) => {
                       const dot = e.currentTarget.value.lastIndexOf('.')
-                      e.currentTarget.setSelectionRange(0, dot > 0 ? dot : e.currentTarget.value.length)
+                      e.currentTarget.setSelectionRange(
+                        0,
+                        dot > 0 ? dot : e.currentTarget.value.length
+                      )
                     }}
                     onBlur={(e) => void renameDoc(d, e.target.value)}
                     onKeyDown={(e) => {
@@ -355,7 +386,7 @@ export function Client({
                         setRenaming(null)
                       }
                     }}
-                    className="h-10 w-full rounded-sm bg-night/60 px-3 text-list outline-none focus:shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--color-apricot)_70%,transparent)]"
+                    className="h-8 w-full px-3 text-[14px] rounded-[4px] border border-ob-border bg-ob-bg text-ob-text outline-none placeholder:text-ob-faint focus:border-ob-accent"
                   />
                 </li>
               ) : (
@@ -375,7 +406,11 @@ export function Client({
                           <FilePen size={15} />
                         </IconButton>
                       )}
-                      <IconButton label={`Renombrar ${d.name}`} size="sm" onClick={() => setRenaming(d.path)}>
+                      <IconButton
+                        label={`Renombrar ${d.name}`}
+                        size="sm"
+                        onClick={() => setRenaming(d.path)}
+                      >
                         <Pencil size={14} />
                       </IconButton>
                       <ConfirmButton
@@ -388,13 +423,13 @@ export function Client({
                   }
                 >
                   <span className="min-w-0 flex-1 truncate text-list">{d.name}</span>
-                  <span className="shrink-0 text-caption text-milk-soft">
+                  <span className="shrink-0 text-caption text-ob-muted">
                     {d.folder === '.' ? '' : d.folder}
                   </span>
-                  <span className="w-20 shrink-0 text-right text-caption text-milk-soft">
+                  <span className="w-20 shrink-0 text-right text-caption text-ob-muted">
                     {bytes(d.size)}
                   </span>
-                  <span className="w-28 shrink-0 text-right text-caption text-milk-soft">
+                  <span className="w-28 shrink-0 text-right text-caption text-ob-muted">
                     {shortDate(d.modifiedAt)}
                   </span>
                 </ActionRow>

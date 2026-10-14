@@ -15,7 +15,11 @@ export function SegmentedToggle<T extends string>({
   onChange
 }: SegmentedToggleProps<T>): React.JSX.Element {
   return (
-    <div role="radiogroup" aria-label={label} className="flex shrink-0 rounded-full bg-surface p-1">
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className="ui-segmented flex shrink-0 rounded-full bg-surface p-1"
+    >
       {options.map(({ id, label: text, icon: Icon }) => {
         const active = value === id
         return (
@@ -25,7 +29,7 @@ export function SegmentedToggle<T extends string>({
             role="radio"
             aria-checked={active}
             onClick={() => onChange(id)}
-            className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-caption font-bold transition-colors ${
+            className={`ui-seg ${active ? 'ui-active' : ''} flex h-8 items-center gap-1.5 rounded-full px-3 text-caption font-bold transition-colors ${
               active ? 'bg-surface-raised text-milk' : 'text-milk-soft hover:text-milk'
             }`}
           >

@@ -51,9 +51,9 @@ export function Rules(): React.JSX.Element {
         <button
           type="button"
           onClick={() => setEditing('new')}
-          className="flex h-9 items-center gap-1.5 rounded-full bg-apricot pr-4 pl-3 text-caption font-extrabold text-ink transition-transform active:scale-95"
+          className="flex h-[30px] shrink-0 items-center gap-1.5 rounded-[4px] bg-ob-accent px-3 text-[13px] font-medium text-white transition-colors hover:bg-[#7a4fe0] disabled:pointer-events-none disabled:opacity-40"
         >
-          <Plus size={16} strokeWidth={3} />
+          <Plus size={16} />
           Nueva regla
         </button>
       }
@@ -137,25 +137,25 @@ function RuleCard({
   return (
     <section
       aria-label={`Regla ${rule.name}`}
-      className={`rounded-md bg-surface px-5 py-4 transition-opacity ${rule.active ? '' : 'opacity-60'}`}
+      className={`rounded-[6px] border border-ob-border px-4 py-3 transition-opacity ${rule.active ? '' : 'opacity-60'}`}
     >
       <div className="flex items-start justify-between gap-3">
-        <h2 className="min-w-0 truncate text-list font-bold">{rule.name}</h2>
+        <h2 className="min-w-0 truncate text-list font-medium">{rule.name}</h2>
         <div className="flex shrink-0 items-center gap-0.5">
-          <label className="mr-2 flex cursor-pointer items-center gap-1.5 text-caption font-bold text-milk-soft">
+          <label className="mr-2 flex cursor-pointer items-center gap-1.5 text-caption font-medium text-ob-muted">
             <input
               type="checkbox"
               checked={rule.active}
               onChange={(e) => onToggle(e.target.checked)}
-              className="size-4 cursor-pointer accent-[var(--color-apricot)]"
+              className="size-4 cursor-pointer accent-[var(--color-ob-accent)]"
             />
             Activa
           </label>
           <IconButton label="Subir" disabled={first} onClick={onUp}>
-            <ArrowUp size={15} strokeWidth={2.5} />
+            <ArrowUp size={15} />
           </IconButton>
           <IconButton label="Bajar" disabled={last} onClick={onDown}>
-            <ArrowDown size={15} strokeWidth={2.5} />
+            <ArrowDown size={15} />
           </IconButton>
           <IconButton label="Editar" onClick={onEdit}>
             <Pencil size={15} />
@@ -163,7 +163,7 @@ function RuleCard({
           <ConfirmButton label="Borrar regla" onConfirm={onRemove} size="sm" />
         </div>
       </div>
-      <p className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-caption text-milk-soft">
+      <p className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-caption text-ob-muted">
         Cuando entra {tag(rule.triggerTag)}
         {rule.actions.map((a, i) => (
           <span key={i} className="flex items-center gap-1.5">
@@ -172,13 +172,13 @@ function RuleCard({
             {a.type === 'remove_tag' && <>quitar {tag(a.tag)}</>}
             {a.type === 'fire_event' && (
               <>
-                disparar <span className="font-mono text-micro text-milk">{a.event}</span>
+                disparar <span className="font-mono text-micro text-ob-text">{a.event}</span>
               </>
             )}
             {a.type === 'promote' && (
               <>
                 pasar a pipeline en{' '}
-                <span className="font-bold text-milk">
+                <span className="font-medium text-ob-text">
                   {stages.find((s) => s.id === a.stage)?.name ?? 'la primera etapa'}
                 </span>
               </>
@@ -220,12 +220,12 @@ function RuleEditor({
         ? { type, stage: '' }
         : { type, tag: '' }
 
-  const input = 'w-full bg-transparent text-list outline-none placeholder:text-milk-soft'
+  const input = 'w-full bg-transparent text-list outline-none placeholder:text-ob-muted'
   const openStages = stages.filter((s) => s.kind === 'open')
 
   return (
     <form
-      className="rounded-md bg-surface px-5 py-4 shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--color-apricot)_40%,transparent)]"
+      className="rounded-[6px] border border-ob-accent/50 px-4 py-3"
       onSubmit={(e) => {
         e.preventDefault()
         setSaving(true)
@@ -258,10 +258,10 @@ function RuleEditor({
         </Field>
       </div>
 
-      <p className="mt-4 mb-1.5 px-1 text-micro font-bold text-milk-soft">Entonces</p>
+      <p className="mt-4 mb-1.5 px-1 text-micro font-medium text-ob-muted">Entonces</p>
       <ul className="flex flex-col gap-1.5">
         {actions.map((a, i) => (
-          <li key={i} className="flex items-center gap-2 rounded-sm bg-night py-1.5 pr-1.5 pl-2">
+          <li key={i} className="flex items-center gap-2 rounded-[4px] bg-ob-alt py-1 pr-1 pl-2">
             <Select
               label="Acción"
               value={a.type}
@@ -306,7 +306,7 @@ function RuleEditor({
               danger
               onClick={() => setActions(actions.filter((_, j) => j !== i))}
             >
-              <X size={15} strokeWidth={2.5} />
+              <X size={15} />
             </IconButton>
           </li>
         ))}
@@ -324,7 +324,7 @@ function RuleEditor({
           onClick={() => setActions([...actions, blank('add_tag')])}
           disabled={actions.length >= 10}
         >
-          <Plus size={15} strokeWidth={3} />
+          <Plus size={15} />
           Añadir acción
         </Button>
         <div className="flex gap-2">
@@ -332,7 +332,7 @@ function RuleEditor({
           <button
             type="submit"
             disabled={saving || !trigger.trim() || actions.length === 0}
-            className="flex h-9 items-center rounded-full bg-apricot px-4 text-caption font-extrabold text-ink transition-transform active:scale-95 disabled:bg-surface-raised disabled:text-milk-faint"
+            className="flex h-[30px] shrink-0 items-center gap-1.5 rounded-[4px] bg-ob-accent px-3 text-[13px] font-medium text-white transition-colors hover:bg-[#7a4fe0] disabled:pointer-events-none disabled:opacity-40"
           >
             {rule ? 'Guardar regla' : 'Crear regla'}
           </button>
@@ -362,10 +362,10 @@ function IconButton({
       title={label}
       disabled={disabled}
       onClick={onClick}
-      className={`grid size-8 shrink-0 place-items-center rounded-full text-milk-soft disabled:text-milk-faint ${
+      className={`grid size-7 shrink-0 place-items-center rounded-[4px] text-ob-muted disabled:text-ob-faint ${
         danger
-          ? 'hover:bg-rose/15 hover:text-rose'
-          : 'hover:bg-hairline hover:text-milk disabled:hover:bg-transparent'
+          ? 'hover:bg-ob-red/15 hover:text-ob-red'
+          : 'hover:bg-ob-border hover:text-ob-text disabled:hover:bg-transparent'
       }`}
     >
       {children}

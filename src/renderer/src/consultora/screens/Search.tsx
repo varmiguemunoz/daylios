@@ -31,11 +31,9 @@ export function Search({ query, go }: { query: string; go: Go }): React.JSX.Elem
               <Row key={`${hit.type}-${hit.id}`} onClick={() => go(target(hit))}>
                 <Pill>{TYPE[hit.type]}</Pill>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-list font-bold">{hit.title}</span>
+                  <span className="block truncate text-list font-medium">{hit.title}</span>
                   {hit.snippet && (
-                    <span className="block truncate text-caption text-milk-soft">
-                      {hit.snippet}
-                    </span>
+                    <span className="block truncate text-caption text-ob-muted">{hit.snippet}</span>
                   )}
                 </span>
               </Row>

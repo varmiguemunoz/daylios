@@ -1,9 +1,20 @@
-import { useEffect, useRef, useState } from 'react'
-import { Search as SearchIcon, Settings as SettingsIcon } from 'lucide-react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { Go, Screen } from './lib'
 import { EMAIL_SECTIONS, SECTIONS, isWorkspaceScreen, rootOf, type Section } from './sections'
 import { ChromeContext, type ConsultoraChrome } from './chrome'
-import { WorkspaceApp, lastWorkspaceScreen, rememberWorkspaceScreen } from './workspace/WorkspaceApp'
+import { isOverlayOpen } from '../ui'
+import { AppShell } from './shell/AppShell'
+import { SectionNav } from './shell/SectionNav'
+import { GlobalSwitcher } from './shell/GlobalSwitcher'
+import { useSidebar } from './shell/useSidebar'
+import {
+  WorkspaceProvider,
+  lastWorkspaceScreen,
+  rememberWorkspaceScreen
+} from './workspace/WorkspaceProvider'
+import { WorkspacePane } from './workspace/WorkspacePane'
+import { useWorkspace } from './workspace/context'
+import { FileExplorer } from './workspace/organisms/FileExplorer'
 import { Recorder } from './Recorder'
 import { Clients } from './screens/Clients'
 import { Client } from './screens/Client'
@@ -24,7 +35,7 @@ import { Tags } from './screens/Tags'
 import { Note } from './screens/Note'
 import { Document } from './screens/Document'
 
-/** Nombre corto de cada pantalla, para el botón «Atrás». */
+/** Nombre corto de cada pantalla, para la ruta de la franja. */
 const LABEL: Record<Screen['name'], string> = {
   workspace: 'Workspace',
   'ws-note': 'Nota',
@@ -75,207 +86,255 @@ const SECTION_OF: Record<Screen['name'], Section | null> = {
   search: null
 }
 
+/** Nombre de cada sección en la ruta de la franja. */
+const SECTION_LABEL: Record<Section, string> = Object.fromEntries(
+  [...SECTIONS, ...EMAIL_SECTIONS, { id: 'settings', label: 'Ajustes' }].map((s) => [s.id, s.label])
+) as Record<Section, string>
+
+const keyOf = (depth: number, s: Screen): string =>
+  `${depth}:${s.name}:${'id' in s ? s.id : 'query' in s ? s.query : ''}`
+
+const typing = (t: EventTarget | null): boolean =>
+  t instanceof HTMLInputElement ||
+  t instanceof HTMLTextAreaElement ||
+  t instanceof HTMLSelectElement ||
+  (t instanceof HTMLElement && t.isContentEditable)
+
 /**
- * Ventana Consultora: barra lateral (secciones), barra superior (buscar + grabar) y la pantalla actual.
- * Navegación = pila de pantallas: abrir algo la apila, «Atrás» (o Esc) la quita, la barra lateral reinicia.
+ * Ventana Consultora con el marco de Obsidian en todas las secciones: franja, cinta, barra lateral
+ * con Secciones y Archivos, y la pantalla actual. Navegación = pila de pantallas con atrás y adelante.
  */
 export function ConsultoraApp(): React.JSX.Element {
-  const [stack, setStack] = useState<Screen[]>([{ name: 'clients' }])
-  const [query, setQuery] = useState('')
-  const [recorder, setRecorder] = useState<'idle' | 'starting' | 'recording' | 'stopping'>('idle')
-  const searchRef = useRef<HTMLInputElement>(null)
+  const [nav, setNav] = useState<{ stack: Screen[]; future: Screen[] }>({
+    stack: [{ name: 'clients' }],
+    future: []
+  })
+  const { stack, future } = nav
+
+  // Toda la ventana usa el tema Obsidian (también los diálogos, que van en <body>).
+  useEffect(() => {
+    document.body.classList.add('theme-obsidian')
+    return () => document.body.classList.remove('theme-obsidian')
+  }, [])
 
   const screen = stack[stack.length - 1]
-  const previous = stack[stack.length - 2]
-  const go: Go = (next) => setStack((s) => [...s, next])
-  const back = (): void => setStack((s) => (s.length > 1 ? s.slice(0, -1) : s))
-  const backLabel = previous ? LABEL[previous.name] : ''
-  const section = SECTION_OF[screen.name]
-  // Workspace a pantalla completa: sin barra lateral ni cabecera (la grabación sigue viva, solo oculta).
-  // Al detener una grabación vuelve el cromo para mostrar la hoja de guardado.
-  const immersive = isWorkspaceScreen(screen) && recorder !== 'stopping'
+
+  const go: Go = useCallback(
+    (next) => setNav((n) => ({ stack: [...n.stack, next], future: [] })),
+    []
+  )
+  const back = useCallback(
+    () =>
+      setNav((n) =>
+        n.stack.length < 2
+          ? n
+          : { stack: n.stack.slice(0, -1), future: [n.stack[n.stack.length - 1], ...n.future] }
+      ),
+    []
+  )
+  const forward = useCallback(
+    () =>
+      setNav((n) =>
+        n.future.length ? { stack: [...n.stack, n.future[0]], future: n.future.slice(1) } : n
+      ),
+    []
+  )
+  const reset = useCallback((screens: Screen[]) => setNav({ stack: screens, future: [] }), [])
 
   useEffect(() => {
     if (isWorkspaceScreen(screen)) rememberWorkspaceScreen(screen)
   }, [screen])
 
-  // Una nota del menubar pidió abrir un cliente.
+  // Una nota del menubar o el atajo global pidieron abrir algo.
   useEffect(
     () =>
       window.api.onConsultoraNavigate((target) => {
-        if (target.workspace) setStack([lastWorkspaceScreen()])
-        else if (target.client) setStack([{ name: 'clients' }, { name: 'client', id: target.client }])
+        if (target.workspace) reset([lastWorkspaceScreen()])
+        else if (target.client) reset([{ name: 'clients' }, { name: 'client', id: target.client }])
       }),
+    [reset]
+  )
+
+  // Nombre que declara la pantalla abierta; solo vale para esa pantalla.
+  const screenKey = useRef('')
+  const currentKey = keyOf(stack.length, screen)
+  useLayoutEffect(() => {
+    screenKey.current = currentKey
+  })
+  const [named, setNamed] = useState<{ key: string; title: string | null }>({
+    key: '',
+    title: null
+  })
+  const setTitle = useCallback(
+    (title: string | null) => setNamed({ key: screenKey.current, title }),
     []
   )
 
-  // ⌘F busca · Esc vuelve atrás (si no se está escribiendo). En el workspace los atajos son suyos
-  // (⌘F y ⌘O buscan en la bóveda, ⌘[ vuelve atrás) y Esc no saca de un archivo, como en Obsidian.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      const typing =
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement ||
-        e.target instanceof HTMLSelectElement
-      const mod = e.metaKey || e.ctrlKey
-      if (immersive) {
-        if (mod && e.key === '[') {
-          e.preventDefault()
-          setStack((s) => (s.length > 1 ? s.slice(0, -1) : s))
-        }
-        return
-      }
-      if (mod && e.key.toLowerCase() === 'f') {
-        e.preventDefault()
-        searchRef.current?.focus()
-      } else if (e.key === 'Escape' && !typing) {
-        setStack((s) => (s.length > 1 ? s.slice(0, -1) : s))
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [immersive])
-
   const chrome: ConsultoraChrome = {
-    recording: recorder === 'recording',
-    openSection: (id: Section) => setStack([rootOf(id)]),
-    reset: setStack
+    openSection: (id: Section) => reset([rootOf(id)]),
+    reset,
+    setTitle
   }
 
   return (
     <ChromeContext.Provider value={chrome}>
-    <div className="flex h-full">
-      {!immersive && (
-      <nav
-        aria-label="Secciones"
-        className="flex w-56 shrink-0 flex-col bg-surface/50 px-3 pt-12 pb-4 [-webkit-app-region:drag]"
-      >
-        <p className="px-3 pb-4 text-label font-extrabold">Consultora</p>
-        <div className="flex flex-col gap-0.5 [-webkit-app-region:no-drag]">
-          {SECTIONS.map(({ id, label, icon: Icon }) => (
-            <SideItem
-              key={id}
-              active={section === id}
-              onClick={() => setStack([rootOf(id)])}
-              icon={<Icon size={16} strokeWidth={2.5} />}
-            >
-              {label}
-            </SideItem>
-          ))}
-        </div>
-        <p className="px-3 pt-6 pb-2 text-micro font-bold text-milk-soft">Email</p>
-        <div className="flex flex-col gap-0.5 [-webkit-app-region:no-drag]">
-          {EMAIL_SECTIONS.map(({ id, label, icon: Icon }) => (
-            <SideItem
-              key={id}
-              active={section === id}
-              onClick={() => setStack([rootOf(id)])}
-              icon={<Icon size={16} strokeWidth={2.5} />}
-            >
-              {label}
-            </SideItem>
-          ))}
-        </div>
-        <div className="mt-auto [-webkit-app-region:no-drag]">
-          <SideItem
-            active={section === 'settings'}
-            onClick={() => setStack([{ name: 'settings' }])}
-            icon={<SettingsIcon size={16} strokeWidth={2.5} />}
-          >
-            Ajustes
-          </SideItem>
-        </div>
-      </nav>
-      )}
-
-      <div className="relative flex min-w-0 flex-1 flex-col">
-        <header
-          className={`h-14 shrink-0 items-center justify-between gap-4 px-6 [-webkit-app-region:drag] ${
-            immersive ? 'hidden' : 'flex'
-          }`}
-        >
-          <form
-            className="flex h-9 w-full max-w-80 min-w-0 items-center gap-2 rounded-full bg-surface px-3.5 [-webkit-app-region:no-drag] focus-within:shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--color-apricot)_70%,transparent)]"
-            onSubmit={(e) => {
-              e.preventDefault()
-              if (query.trim().length >= 2) go({ name: 'search', query: query.trim() })
-            }}
-          >
-            <SearchIcon
-              size={15}
-              strokeWidth={2.5}
-              className="shrink-0 text-milk-soft"
-              aria-hidden
-            />
-            <input
-              ref={searchRef}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar en todo (⌘F)"
-              aria-label="Buscar"
-              className="min-w-0 flex-1 bg-transparent text-caption outline-none"
-            />
-          </form>
-          <Recorder go={go} onStateChange={setRecorder} />
-        </header>
-
-        <main className="min-h-0 flex-1">
-          {isWorkspaceScreen(screen) ? (
-            // Una sola instancia: el explorador no se vuelve a montar al abrir otro archivo.
-            <WorkspaceApp screen={screen} go={go} back={back} canGoBack={stack.length > 1} />
-          ) : (
-            <ScreenView
-              key={stack.length + screen.name}
-              screen={screen}
-              go={go}
-              back={back}
-              backLabel={backLabel}
-            />
-          )}
-        </main>
-      </div>
-    </div>
+      <WorkspaceProvider screen={screen} go={go}>
+        <Frame
+          screen={screen}
+          stackSize={stack.length}
+          canForward={future.length > 0}
+          go={go}
+          back={back}
+          forward={forward}
+          reset={reset}
+          title={named.key === currentKey ? named.title : null}
+        />
+      </WorkspaceProvider>
     </ChromeContext.Provider>
+  )
+}
+
+/** «Clientes» en la lista, «Clientes › Acme» en la ficha. */
+function routeOf(screen: Screen, section: Section | null, title: string | null): string {
+  if (!section) return [LABEL[screen.name], title].filter(Boolean).join(' › ')
+  const isRoot = rootOf(section).name === screen.name
+  return isRoot
+    ? SECTION_LABEL[section]
+    : `${SECTION_LABEL[section]} › ${title ?? LABEL[screen.name]}`
+}
+
+/** El marco con lo que depende del workspace (explorador, archivo abierto, selector). */
+function Frame({
+  screen,
+  stackSize,
+  canForward,
+  go,
+  back,
+  forward,
+  reset,
+  title
+}: {
+  screen: Screen
+  stackSize: number
+  canForward: boolean
+  go: Go
+  back: () => void
+  forward: () => void
+  reset: (screens: Screen[]) => void
+  title: string | null
+}): React.JSX.Element {
+  const workspace = useWorkspace()
+  const inWorkspace = isWorkspaceScreen(screen)
+  const sidebar = useSidebar(inWorkspace ? 'workspace' : 'consultora')
+  const [searching, setSearching] = useState(false)
+  const section = SECTION_OF[screen.name]
+
+  // Atajos de la ventana. ⌘K y ⌘O funcionan siempre; el resto no mientras se escribe o hay un diálogo.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      const mod = e.metaKey || e.ctrlKey
+      const key = e.key.toLowerCase()
+      const run = (fn: () => void): void => {
+        e.preventDefault()
+        fn()
+      }
+      if (mod && key === 'k' && !isOverlayOpen()) return run(() => setSearching(true))
+      if (mod && key === 'o' && !isOverlayOpen()) return run(workspace.openSwitcher)
+      if (isOverlayOpen() || typing(e.target)) return
+      if (mod && key === 'f')
+        return run(inWorkspace ? workspace.openSwitcher : () => setSearching(true))
+      if (mod && key === 'n') return run(() => void workspace.actions.newNote(workspace.folderId))
+      if (mod && key === '\\') return run(sidebar.toggle)
+      if (mod && key === '[') return run(back)
+      if (mod && key === ']') return run(forward)
+      if (mod && key === ',') return run(() => reset([{ name: 'settings' }]))
+      // Esc vuelve atrás fuera del workspace; dentro no saca de un archivo, como en Obsidian.
+      if (e.key === 'Escape' && !inWorkspace) back()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [workspace, inWorkspace, sidebar.toggle, back, forward, reset])
+
+  const path = inWorkspace
+    ? workspace.active
+      ? workspace.active.kind === 'folder'
+        ? `Workspace › ${workspace.active.path}`
+        : workspace.active.path
+      : 'Workspace'
+    : routeOf(screen, section, title)
+
+  return (
+    <>
+      <AppShell
+        title={path}
+        canBack={stackSize > 1}
+        canForward={canForward}
+        onBack={back}
+        onForward={forward}
+        recorder={<Recorder go={go} />}
+        onMore={
+          inWorkspace && workspace.active && workspace.active.kind !== 'folder'
+            ? workspace.openMore
+            : undefined
+        }
+        sidebar={sidebar}
+        sections={<SectionNav current={section} onOpen={(id) => reset([rootOf(id)])} />}
+        files={<FileExplorer activePath={workspace.active?.path ?? ''} />}
+        onSearch={() => setSearching(true)}
+        onNewNote={() => void workspace.actions.newNote(workspace.folderId)}
+        onNewBoard={() => void workspace.actions.newBoard(workspace.folderId)}
+        onSettings={() => reset([{ name: 'settings' }])}
+        settingsActive={section === 'settings'}
+      >
+        {inWorkspace ? (
+          // Una sola instancia mientras se navega por la bóveda.
+          <WorkspacePane screen={screen} back={back} />
+        ) : (
+          <div className="min-h-0 flex-1">
+            <ScreenView key={stackSize + screen.name} screen={screen} go={go} back={back} />
+          </div>
+        )}
+      </AppShell>
+      {searching && <GlobalSwitcher go={go} onClose={() => setSearching(false)} />}
+    </>
   )
 }
 
 function ScreenView({
   screen,
   go,
-  back,
-  backLabel
+  back
 }: {
   screen: Screen
   go: Go
   back: () => void
-  backLabel: string
 }): React.JSX.Element {
   switch (screen.name) {
     case 'workspace':
     case 'ws-note':
     case 'ws-board':
     case 'ws-image':
-      return <WorkspaceApp screen={screen} go={go} back={back} canGoBack />
+      return <WorkspacePane screen={screen} back={back} />
     case 'clients':
       return <Clients go={go} />
     case 'client':
-      return <Client id={screen.id} go={go} back={back} backLabel={backLabel} />
+      return <Client id={screen.id} go={go} back={back} />
     case 'project':
-      return <Project id={screen.id} go={go} back={back} backLabel={backLabel} />
+      return <Project id={screen.id} go={go} back={back} />
     case 'meetings':
       return <Meetings go={go} />
     case 'meeting':
-      return <Meeting id={screen.id} back={back} backLabel={backLabel} />
+      return <Meeting id={screen.id} back={back} />
     case 'pipeline':
       return <Pipeline go={go} />
     case 'prospect':
-      return <Prospect id={screen.id} go={go} back={back} backLabel={backLabel} />
+      return <Prospect id={screen.id} go={go} back={back} />
     case 'tags':
       return <Tags />
     case 'contacts':
       return <Contacts go={go} />
     case 'contact':
-      return <Contact id={screen.id} go={go} back={back} backLabel={backLabel} />
+      return <Contact id={screen.id} go={go} back={back} />
     case 'sources':
       return <Sources go={go} />
     case 'rules':
@@ -285,40 +344,12 @@ function ScreenView({
     case 'newsletters':
       return <Newsletters />
     case 'note':
-      return <Note id={screen.id} go={go} back={back} backLabel={backLabel} />
+      return <Note id={screen.id} go={go} back={back} />
     case 'document':
-      return (
-        <Document client={screen.client} path={screen.path} back={back} backLabel={backLabel} />
-      )
+      return <Document client={screen.client} path={screen.path} back={back} />
     case 'settings':
       return <Settings />
     case 'search':
       return <Search query={screen.query} go={go} />
   }
-}
-
-function SideItem({
-  active,
-  onClick,
-  icon,
-  children
-}: {
-  active: boolean
-  onClick: () => void
-  icon: React.ReactNode
-  children: React.ReactNode
-}): React.JSX.Element {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-current={active ? 'page' : undefined}
-      className={`flex h-10 w-full items-center gap-2.5 rounded-full px-3 text-caption font-bold transition-colors ${
-        active ? 'bg-surface-raised text-milk' : 'text-milk-soft hover:text-milk'
-      }`}
-    >
-      <span className={active ? 'text-apricot' : ''}>{icon}</span>
-      {children}
-    </button>
-  )
 }

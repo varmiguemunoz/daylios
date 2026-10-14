@@ -19,7 +19,7 @@ export function SearchField({
   onEnter
 }: SearchFieldProps): React.JSX.Element {
   return (
-    <label className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full bg-surface px-4 focus-within:shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--color-apricot)_70%,transparent)]">
+    <label className="ui-search flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full bg-surface px-4 focus-within:shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--color-apricot)_70%,transparent)]">
       <Search size={15} strokeWidth={2.5} className="shrink-0 text-milk-soft" aria-hidden />
       <input
         value={value}
@@ -35,7 +35,7 @@ export function SearchField({
           type="button"
           onClick={() => onChange('')}
           aria-label="Vaciar búsqueda"
-          className="grid size-6 shrink-0 place-items-center rounded-full text-milk-soft hover:bg-surface-raised hover:text-milk"
+          className="ui-icon-btn grid size-6 shrink-0 place-items-center rounded-full text-milk-soft hover:bg-surface-raised hover:text-milk"
         >
           <X size={13} strokeWidth={2.5} />
         </button>

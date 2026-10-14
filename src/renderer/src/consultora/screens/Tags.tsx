@@ -4,7 +4,17 @@ import { normalizeName } from '@shared/consultora'
 import type { TagSummary } from '@shared/marketing'
 import type { TaskTagSummary } from '@shared/tasks'
 import { attempt, useLoad } from '../lib'
-import { ConfirmButton, EditableText, Empty, ErrorNote, List, Page, Row, SearchField, Section } from '../ui'
+import {
+  ConfirmButton,
+  EditableText,
+  Empty,
+  ErrorNote,
+  List,
+  Page,
+  Row,
+  SearchField,
+  Section
+} from '../ui'
 import { TagPill } from '../marketing-ui'
 
 const marketing = window.api.marketing
@@ -51,7 +61,12 @@ export function Tags(): React.JSX.Element {
       }
     >
       <div className="mt-5 flex">
-        <SearchField value={query} onChange={setQuery} placeholder="Buscar tag" label="Buscar tag" />
+        <SearchField
+          value={query}
+          onChange={setQuery}
+          placeholder="Buscar tag"
+          label="Buscar tag"
+        />
       </div>
       <ErrorNote message={error ?? contactError ?? taskError} />
 
@@ -71,7 +86,7 @@ export function Tags(): React.JSX.Element {
             ))}
           </List>
         )}
-        <p className="mt-2 px-1 text-micro font-semibold text-milk-soft">
+        <p className="mt-2 px-2 text-[12px] text-ob-faint">
           Audiencia = tiene Segment en Resend y puede recibir newsletters. Tu plan de Resend limita
           cuántos Segments puedes tener.
         </p>
@@ -111,23 +126,34 @@ function ContactTagRow({
   return (
     <Row>
       <span className="w-48 shrink-0">
-        <EditableText value={tag.name} label={`Nombre del tag ${tag.slug}`} onSave={onRename} className="text-list font-bold" />
+        <EditableText
+          value={tag.name}
+          label={`Nombre del tag ${tag.slug}`}
+          onSave={onRename}
+          className="text-list font-medium"
+        />
       </span>
-      <span className="min-w-0 flex-1 truncate text-caption text-milk-soft">
+      <span className="min-w-0 flex-1 truncate text-caption text-ob-muted">
         {tag.contacts === 0 ? 'Sin uso' : `${tag.contacts} contactos · ${tag.subscribed} suscritos`}
-        <span className="ml-2 font-mono text-micro text-milk-faint">{tag.slug}</span>
+        <span className="ml-2 font-mono text-micro text-ob-faint">{tag.slug}</span>
       </span>
       <button
         type="button"
         role="switch"
         aria-checked={tag.audience}
         onClick={() => onAudience(!tag.audience)}
-        title={tag.audience ? 'Quitar audiencia (borra su Segment)' : 'Marcar como audiencia (crea su Segment)'}
-        className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-micro font-bold transition-colors ${
-          tag.audience ? 'bg-surface-raised text-milk' : 'text-milk-soft hover:bg-surface-raised hover:text-milk'
+        title={
+          tag.audience
+            ? 'Quitar audiencia (borra su Segment)'
+            : 'Marcar como audiencia (crea su Segment)'
+        }
+        className={`flex h-8 shrink-0 items-center gap-1.5 rounded-[4px] px-3 text-micro font-medium transition-colors ${
+          tag.audience
+            ? 'bg-ob-hover text-ob-text'
+            : 'text-ob-muted hover:bg-ob-hover hover:text-ob-text'
         }`}
       >
-        <Radio size={14} strokeWidth={2.5} className={tag.audience ? 'text-apricot' : ''} />
+        <Radio size={14} className={tag.audience ? 'text-ob-link' : ''} />
         Audiencia
       </button>
       <ConfirmButton
@@ -152,9 +178,14 @@ function TaskTagRow({
   return (
     <Row>
       <span className="w-48 shrink-0">
-        <EditableText value={tag.tag} label={`Renombrar #${tag.tag}`} onSave={onRename} className="text-list font-bold" />
+        <EditableText
+          value={tag.tag}
+          label={`Renombrar #${tag.tag}`}
+          onSave={onRename}
+          className="text-list font-medium"
+        />
       </span>
-      <span className="min-w-0 flex-1 truncate text-caption text-milk-soft">
+      <span className="min-w-0 flex-1 truncate text-caption text-ob-muted">
         {tag.tasks} {tag.tasks === 1 ? 'tarea' : 'tareas'}
       </span>
       <TagPill tag={{ slug: tag.tag, name: `#${tag.tag}` }} />

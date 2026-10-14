@@ -154,18 +154,18 @@ function Editor({
       }
     >
       <label className="block">
-        <span className="text-micro font-bold text-milk-soft">Nombre</span>
+        <span className="text-micro font-medium text-ob-muted">Nombre</span>
         <input
           autoFocus
           value={name}
           onChange={(e) => setName(e.target.value)}
           maxLength={60}
           placeholder="Outbound, Inbound, Oferta contratistas…"
-          className="mt-1.5 h-11 w-full rounded-sm bg-night/60 px-4 text-list outline-none focus:shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--color-apricot)_70%,transparent)]"
+          className="mt-1.5 h-8 w-full px-2.5 text-[14px] rounded-[4px] border border-ob-border bg-ob-bg text-ob-text outline-none placeholder:text-ob-faint focus:border-ob-accent"
         />
       </label>
 
-      <h3 className="mt-5 mb-2 text-micro font-bold text-milk-soft">
+      <h3 className="mt-5 mb-2 text-micro font-medium text-ob-muted">
         Columnas · arrastra para ordenar
       </h3>
       <ul className="flex flex-col gap-1" {...drag.zone('stages', stages.length)}>
@@ -180,14 +180,14 @@ function Editor({
                 item.onDragEnd?.(e)
                 setGrab(null)
               }}
-              className={`flex items-center gap-2 rounded-sm bg-night/40 py-1.5 pr-1.5 pl-1 ${drag.dragging === s.key ? 'opacity-40' : ''} ${
+              className={`flex items-center gap-2 rounded-[4px] border border-ob-border bg-ob-bg py-1 pr-1 pl-1 ${drag.dragging === s.key ? 'opacity-40' : ''} ${
                 drag.target?.index === i && drag.dragging
-                  ? 'shadow-[0_-3px_0_0_var(--color-apricot)]'
+                  ? 'shadow-[0_-3px_0_0_var(--color-ob-accent)]'
                   : ''
               }`}
             >
               <span
-                className="grid h-9 w-6 shrink-0 cursor-grab place-items-center text-milk-soft hover:text-milk"
+                className="grid h-[30px] w-6 shrink-0 cursor-grab place-items-center text-ob-muted hover:text-ob-text"
                 onPointerDown={() => setGrab(s.key)}
                 onPointerUp={() => setGrab(null)}
                 aria-hidden
@@ -199,12 +199,12 @@ function Editor({
                 onChange={(e) => patch(s.key, { name: e.target.value })}
                 maxLength={60}
                 aria-label={`Nombre de la columna ${i + 1}`}
-                className="h-9 min-w-0 flex-1 rounded-sm bg-transparent px-2 text-list outline-none hover:bg-surface focus:bg-surface"
+                className="h-[30px] min-w-0 flex-1 rounded-sm bg-transparent px-2 text-list outline-none hover:bg-ob-alt focus:bg-ob-alt"
               />
               <div
                 role="radiogroup"
                 aria-label="Tipo"
-                className="flex shrink-0 rounded-full bg-surface p-0.5"
+                className="flex shrink-0 rounded-[4px] bg-ob-alt p-0.5"
               >
                 {STAGE_KINDS.map((k) => (
                   <button
@@ -213,12 +213,12 @@ function Editor({
                     role="radio"
                     aria-checked={s.kind === k}
                     onClick={() => patch(s.key, { kind: k })}
-                    className={`h-7 rounded-full px-2.5 text-micro font-bold transition-colors ${
+                    className={`h-7 rounded-[4px] px-2.5 text-micro font-medium transition-colors ${
                       s.kind === k
                         ? k === 'won'
-                          ? 'bg-mint/20 text-mint'
-                          : 'bg-surface-raised text-milk'
-                        : 'text-milk-soft hover:text-milk'
+                          ? 'bg-ob-green/20 text-ob-green'
+                          : 'bg-ob-hover text-ob-text'
+                        : 'text-ob-muted hover:text-ob-text'
                     }`}
                   >
                     {KIND_LABEL[k]}
@@ -226,7 +226,7 @@ function Editor({
                 ))}
               </div>
               <span
-                className="w-8 shrink-0 text-center text-micro font-bold text-milk-soft tabular-nums"
+                className="w-8 shrink-0 text-center text-micro font-medium text-ob-muted tabular-nums"
                 title="Prospectos"
               >
                 {s.count || ''}
@@ -251,14 +251,14 @@ function Editor({
             { id: '', key: key(), name: 'Nueva columna', kind: 'open', count: 0 }
           ])
         }
-        className="mt-2 flex h-9 items-center gap-1.5 rounded-full px-3 text-caption font-bold text-milk-soft transition-colors hover:bg-surface-raised hover:text-milk"
+        className="mt-2 flex h-[30px] items-center gap-1.5 rounded-[4px] px-3 text-caption font-medium text-ob-muted transition-colors hover:bg-ob-hover hover:text-ob-text"
       >
-        <Plus size={15} strokeWidth={2.75} className="text-apricot" />
+        <Plus size={15} className="text-ob-link" />
         Añadir columna
       </button>
 
       {removed.length > 0 && (
-        <div className="mt-4 flex flex-col gap-2 rounded-md bg-apricot/10 px-4 py-3">
+        <div className="mt-4 flex flex-col gap-2 rounded-[6px] border-l-2 border-ob-accent bg-ob-accent/10 px-3 py-2">
           {removed.map((s) => (
             <label
               key={s.id}
@@ -270,7 +270,7 @@ function Editor({
               <select
                 value={moves[s.id] ?? ''}
                 onChange={(e) => setMoves((m) => ({ ...m, [s.id]: e.target.value }))}
-                className="h-8 rounded-full bg-surface px-3 text-micro font-bold text-milk outline-none"
+                className="h-8 rounded-[4px] bg-ob-active px-3 text-micro font-medium text-ob-text outline-none"
               >
                 <option value="">Elige columna</option>
                 {keptExisting.map((k) => (
@@ -287,7 +287,7 @@ function Editor({
       <ErrorNote message={error} />
 
       {pipeline && pipelines.length > 1 && (
-        <div className="mt-6 flex items-center justify-between gap-3 rounded-md bg-rose/10 px-4 py-3 text-caption">
+        <div className="mt-6 flex items-center justify-between gap-3 rounded-[6px] border-l-2 border-ob-red bg-ob-red/10 px-3 py-2 text-caption">
           <span className="min-w-0">
             Borrar este pipeline
             {total > 0 && (
@@ -297,7 +297,7 @@ function Editor({
                 <select
                   value={moveTo}
                   onChange={(e) => setMoveTo(e.target.value)}
-                  className="h-8 rounded-full bg-surface px-3 text-micro font-bold text-milk outline-none"
+                  className="h-8 rounded-[4px] bg-ob-active px-3 text-micro font-medium text-ob-text outline-none"
                 >
                   {pipelines
                     .filter((p) => p.id !== pipeline.pipeline.id)

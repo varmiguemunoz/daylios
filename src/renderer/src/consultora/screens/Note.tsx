@@ -1,26 +1,25 @@
 import { useEffect, useState } from 'react'
 import { todayKey } from '@shared/tasks'
-import type { Note as NoteModel } from '@shared/notes'
+import { noteTitle, type Note as NoteModel } from '@shared/notes'
 import type { Go } from '../lib'
 import { ErrorNote } from '../ui'
-import { BackButton } from '../../components/BackButton'
+import { useScreenTitle } from '../chrome'
 import { NoteEditor } from '../../components/NoteEditor'
 import { errorMessage, notesApi } from '../../lib/api'
 
-/** Una nota dentro de Consultora: el mismo editor que el menubar, con sus relaciones. */
+/** Una nota dentro de Consultora: el mismo editor que el workspace, columna de lectura de Obsidian. */
 export function Note({
   id,
   go,
-  back,
-  backLabel
+  back
 }: {
   id: string
   go: Go
   back: () => void
-  backLabel: string
 }): React.JSX.Element {
   const [note, setNote] = useState<NoteModel | null>(null)
   const [error, setError] = useState<string | null>(null)
+  useScreenTitle(note ? noteTitle(note.body) : null)
 
   useEffect(() => {
     notesApi
@@ -31,18 +30,17 @@ export function Note({
 
   if (!note)
     return (
-      <div className="px-10 pt-6">
-        <BackButton label={backLabel} onClick={back} />
+      <div className="mx-auto max-w-[808px] px-6 pt-10">
         <ErrorNote message={error} />
       </div>
     )
   return (
-    <div className="mx-auto h-full max-w-[920px] pl-4">
+    <div className="h-full min-h-0 overflow-hidden">
       <NoteEditor
         key={note.id}
         note={note}
         today={todayKey()}
-        backLabel={backLabel}
+        variant="document"
         onBack={back}
         onOpenNote={(noteId) => go({ name: 'note', id: noteId })}
         onOpenClient={(clientId) => go({ name: 'client', id: clientId })}

@@ -59,7 +59,12 @@ export function SubtaskList({
     <section aria-label="Subtareas">
       <div className="mb-2 flex items-center justify-between gap-3">
         <h2 className="text-caption font-extrabold text-milk-soft">
-          Subtareas{subtasks.length > 0 && <span className="ml-1.5 tabular-nums">{done}/{subtasks.length}</span>}
+          Subtareas
+          {subtasks.length > 0 && (
+            <span className="ml-1.5 tabular-nums">
+              {done}/{subtasks.length}
+            </span>
+          )}
         </h2>
         {parentDone && pending > 0 && (
           <button
@@ -97,7 +102,10 @@ export function SubtaskList({
             className="min-w-0 flex-1 bg-transparent text-list outline-none placeholder:text-milk-soft"
           />
           {draft.trim() && (
-            <span className="grid size-7 place-items-center rounded-full bg-apricot text-ink" aria-hidden>
+            <span
+              className="grid size-7 place-items-center rounded-full bg-apricot text-ink"
+              aria-hidden
+            >
               <CornerDownLeft size={13} strokeWidth={2.75} />
             </span>
           )}

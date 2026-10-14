@@ -368,13 +368,19 @@ The day's ceiling, drawn. Eight equal pill segments in a row.
 
 - Same skeleton as History: headline title, day headings, surface cards with hairline dividers, pager. An apricot pill «Nueva» sits opposite the title. Each item: list type bold title, micro time at right, caption milk-soft excerpt.
 
-### Consultora Window
+### Consultora Window (Obsidian theme)
 
-- **Shell:** 1100×760, hidden-inset title bar. A 224px sidebar on a 50% surface wash (section items reuse the tab-switcher item look, apricot icon when active; Ajustes pinned at the bottom). A 56px top bar holds the search pill (left) and the record control (right).
-- **Pages:** max 880px content, headline title editable in place, caption meta line, quiet actions at the right. Sections are label-weight headings over surface cards with hairline dividers (the History pattern).
-- **Markdown fields:** read rendered on surface; double-click or the pencil edits on a surface textarea that grows with content; checklist boxes toggle without editing.
-- **Pipeline:** horizontal columns (240px) on a 50% surface wash, cards on surface; overdue next steps in butter; the won column title in mint.
-- **Recording:** idle «Grabar reunión» quiet pill with a rose dot; live state is a rose 15% pill with a pulsing dot and tabular timer plus «Detener». Stopping opens a centered sheet (surface, xl radius, toast float shadow) for title, participants and association.
+Since W6 the whole Consultora window uses the Obsidian theme described under Workspace. The DayliOS look above (night, pastels, Nunito, pills) now belongs to the menubar only.
+
+- **Shell:** one frame for every section. A 38px draggable strip with back and forward, the route in the center («Clientes › Acme»), the record control and the «…» menu. A 44px ribbon: sidebar toggle, global search (⌘K), new note, new board, Ajustes at the bottom. A docked sidebar, 180 to 480px, with two tabs: Secciones (Consultora and Email groups, 30px rows) and Archivos (the vault explorer, mounted once). Each context remembers its tab.
+- **Shortcuts:** ⌘K global switcher over clients, projects, meetings, prospects, contacts and vault files; ⌘O vault switcher; ⌘F searches the current context; ⌘N new note; ⌘\ sidebar; ⌘[ and ⌘] back and forward; ⌘, Ajustes; Esc goes back outside the workspace.
+- **Pages:** three variants. Table pages use the full width with 24px gutters, a 20px semibold title and Obsidian Bases style tables: 28px muted header, 32px rows, 1px dividers, hover row. Document pages are a 760px reading column with a 28px bold inline title, a collapsible Properties block (icon, 140px muted name, value edited in place, links in the accent) and sections as 16px semibold headings over a 1px line. Board pages give the content the whole pane.
+- **Controls:** buttons 30px, 4px radius, weight 500: accent solid for the screen's main action, `#363636` for the rest, red text for danger. Inputs 32px with a 1px border on the document background and an accent border on focus. Selects are grey 30px. Tags and states are round 20px labels tinted 15% with the color's text, using the Obsidian palette.
+- **Feedback:** callouts with a 2px left border in the color over a 10% tint (accent info, green success, yellow warning, red error). Empty states are centered faint text, no cards.
+- **Pipeline:** Kanban plugin look. 280px columns on `#262626` with an 8px radius and a 1px border that turns accent when dropping; cards on the document background with a 1px border and 6px radius, no shadow.
+- **Ajustes:** a 200px category list on the left (General, Email, Hub de leads, Nota de voz, Atajos) and setting rows: name 15px and description 13px on the left, control on the right, 1px separators. Switches are round, accent when on.
+- **Recording:** in the strip. Idle is a quiet «Grabar» with a red dot; recording shows «REC» with a pulsing dot and timer plus «Detener». The stop sheet is an Obsidian modal.
+- **Shared pieces:** components shared with the menubar get `ui-*` hook classes (`ui-btn`, `ui-icon-btn`, `ui-menu`, `ui-modal`, `ui-drawer`, `ui-search`, `ui-seg`, `ui-list`…). They have no style outside the theme, so the menubar does not change; under `body.theme-obsidian` unlayered rules give them the Obsidian shape.
 
 ### Tags, Effort and Drag
 
@@ -451,7 +457,7 @@ All motion uses the expo ease-out curve and runs only in response to a state cha
 
 ### Workspace (Obsidian theme)
 
-The workspace is the one place where DayliOS stops looking like DayliOS. Entering it puts `theme-obsidian` on `body`, which redefines the app tokens, so shared components, dialogs and menus re-theme without their own code.
+The Consultora window puts `theme-obsidian` on `body` while it is open (since W6 for every section, not only the workspace). It redefines the app tokens, so shared components, dialogs and menus re-theme without their own code.
 
 - **Tokens:** background `#1e1e1e`, secondary `#262626`, hover `#2f2f2f`, active and borders `#363636`, text `#dadada`, muted `#999`, faint `#666`, accent `#8a5cf5`. System font stack. Sizes 16 body, 14 lists, 13 captions. Radii 4, 6, 8, 10. Thin scrollbars, accent selection.
 - **Shell:** no Consultora sidebar and no header. A 38px draggable top strip with the open file path, REC and a «…» menu. A 44px ribbon on the left: explorer, search, new note, new board, Consultora navigation. The explorer is resizable from 180 to 480px and remembers its width.

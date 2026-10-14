@@ -34,7 +34,7 @@ export function Breadcrumbs({ items, onSelect, onDropOn }: BreadcrumbsProps): Re
             {last ? (
               <span
                 aria-current="page"
-                className="truncate px-1.5 text-caption font-extrabold text-milk"
+                className="ui-crumb-current truncate px-1.5 text-caption font-extrabold text-milk"
               >
                 {c.name}
               </span>
@@ -44,7 +44,7 @@ export function Breadcrumbs({ items, onSelect, onDropOn }: BreadcrumbsProps): Re
                 onClick={() => onSelect(c.id)}
                 onDragOver={onDropOn ? (e) => e.preventDefault() : undefined}
                 onDrop={onDropOn ? (e) => onDropOn(c.id, e) : undefined}
-                className="max-w-40 truncate rounded-full px-1.5 py-0.5 text-caption font-bold text-milk-soft transition-colors hover:bg-surface hover:text-milk"
+                className="ui-crumb max-w-40 truncate rounded-full px-1.5 py-0.5 text-caption font-bold text-milk-soft transition-colors hover:bg-surface hover:text-milk"
               >
                 {c.name}
               </button>

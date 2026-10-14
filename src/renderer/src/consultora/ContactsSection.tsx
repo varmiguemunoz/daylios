@@ -35,7 +35,7 @@ export function ContactsSection({
       title="Contactos"
       aside={
         <Button onClick={() => setName('')}>
-          <Plus size={15} strokeWidth={3} />
+          <Plus size={15} />
           Añadir
         </Button>
       }
@@ -55,7 +55,7 @@ export function ContactsSection({
             onKeyDown={(e) => e.key === 'Escape' && setName(null)}
             placeholder="Nombre y Enter"
             aria-label="Nombre del contacto"
-            className="h-12 w-full rounded-md bg-surface px-5 text-list outline-none focus:shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--color-apricot)_70%,transparent)]"
+            className="h-8 w-full px-2.5 text-[14px] rounded-[4px] border border-ob-border bg-ob-bg text-ob-text outline-none placeholder:text-ob-faint focus:border-ob-accent"
           />
         </form>
       )}
@@ -67,12 +67,12 @@ export function ContactsSection({
           {contacts.map((c) => (
             <Row key={c.id} onClick={() => go({ name: 'contact', id: c.id })}>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-list font-bold">{contactLabel(c)}</span>
+                <span className="block truncate text-list font-medium">{contactLabel(c)}</span>
                 {c.role && (
-                  <span className="block truncate text-caption text-milk-soft">{c.role}</span>
+                  <span className="block truncate text-caption text-ob-muted">{c.role}</span>
                 )}
               </span>
-              <span className="shrink-0 truncate text-caption text-milk-soft">
+              <span className="shrink-0 truncate text-caption text-ob-muted">
                 {c.email ?? c.phone ?? ''}
               </span>
             </Row>

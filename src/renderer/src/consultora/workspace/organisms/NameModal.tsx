@@ -50,7 +50,7 @@ export function NameModal({
       }
     >
       <label className="block">
-        <span className="text-micro font-bold text-milk-soft">{label}</span>
+        <span className="text-micro font-medium text-ob-muted">{label}</span>
         <input
           autoFocus
           value={name}
@@ -62,7 +62,7 @@ export function NameModal({
             e.currentTarget.setSelectionRange(0, dot > 0 ? dot : e.currentTarget.value.length)
           }}
           onKeyDown={(e) => e.key === 'Enter' && void submit()}
-          className="mt-1.5 h-11 w-full rounded-sm bg-night/60 px-4 text-list outline-none focus:shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--color-apricot)_70%,transparent)]"
+          className="mt-1.5 h-8 w-full px-2.5 text-[14px] rounded-[4px] border border-ob-border bg-ob-bg text-ob-text outline-none placeholder:text-ob-faint focus:border-ob-accent"
         />
       </label>
       <ErrorNote message={error} />

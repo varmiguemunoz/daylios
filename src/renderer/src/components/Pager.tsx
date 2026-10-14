@@ -11,7 +11,7 @@ export function Pager({ page, totalPages, onPage }: PagerProps): React.JSX.Eleme
   if (totalPages <= 1) return null
 
   const button =
-    'grid size-9 place-items-center rounded-full bg-surface text-milk hover:bg-surface-raised disabled:text-milk-faint disabled:hover:bg-surface'
+    'ui-icon-btn grid size-9 place-items-center rounded-full bg-surface text-milk hover:bg-surface-raised disabled:text-milk-faint disabled:hover:bg-surface'
 
   return (
     <nav

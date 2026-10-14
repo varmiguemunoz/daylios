@@ -97,11 +97,15 @@ function ContextMenu({
         onKeyDown={move}
         onMouseDown={(e) => e.stopPropagation()}
         style={pos}
-        className="toast-in fixed min-w-48 rounded-md bg-surface-raised p-1 shadow-[0_10px_30px_-8px_rgb(0_0_0/0.7)] outline-none"
+        className="ui-menu toast-in fixed min-w-48 rounded-md bg-surface-raised p-1 shadow-[0_10px_30px_-8px_rgb(0_0_0/0.7)] outline-none"
       >
         {items.map((item, i) =>
           item === null ? (
-            <div key={`sep-${i}`} role="separator" className="mx-2 my-1 h-px bg-hairline" />
+            <div
+              key={`sep-${i}`}
+              role="separator"
+              className="ui-menu-sep mx-2 my-1 h-px bg-hairline"
+            />
           ) : (
             <button
               key={item.label}
@@ -112,7 +116,7 @@ function ContextMenu({
                 onClose()
                 item.onSelect()
               }}
-              className={`flex h-9 w-full items-center gap-2.5 rounded-sm px-3 text-left text-caption font-bold transition-colors outline-none disabled:text-milk-faint ${
+              className={`ui-menu-item ${item.danger ? 'ui-danger' : ''} flex h-9 w-full items-center gap-2.5 rounded-sm px-3 text-left text-caption font-bold transition-colors outline-none disabled:text-milk-faint ${
                 item.danger
                   ? 'text-rose hover:bg-rose/15 focus-visible:bg-rose/15'
                   : 'text-milk hover:bg-hairline focus-visible:bg-hairline'

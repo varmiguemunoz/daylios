@@ -1,8 +1,10 @@
 import { useCallback, useState } from 'react'
 import { Plus } from 'lucide-react'
-import type { ClientStatus } from '@shared/consultora'
+import type { Client, ClientStatus } from '@shared/consultora'
 import { api, attempt, shortDate, useLoad, type Go } from '../lib'
-import { Empty, ErrorNote, List, Page, Pill, Row } from '../ui'
+import { Button, Empty, ErrorNote, INPUT, Page, Pill } from '../ui'
+import { Chips } from '../marketing-ui'
+import { Table, type Column } from '../molecules/Table'
 
 const FILTERS: { id: ClientStatus | 'all'; label: string }[] = [
   { id: 'activo', label: 'Activos' },
@@ -10,7 +12,47 @@ const FILTERS: { id: ClientStatus | 'all'; label: string }[] = [
   { id: 'all', label: 'Todos' }
 ]
 
-/** Lista de clientes + alta rápida (nombre + Enter). */
+type ClientRow = Client & { activeProjects: number; lastMeetingDate: string | null }
+
+const COLUMNS: Column<ClientRow>[] = [
+  {
+    key: 'name',
+    label: 'Nombre',
+    width: '38%',
+    render: (c) => (
+      <span className="flex min-w-0 items-center gap-2">
+        <span className="truncate">{c.name}</span>
+        {c.status === 'historico' && <Pill>Histórico</Pill>}
+      </span>
+    )
+  },
+  { key: 'sector', label: 'Sector', hideBelow: 'md', render: (c) => c.sector || '' },
+  {
+    key: 'projects',
+    label: 'Proyectos activos',
+    width: '150px',
+    render: (c) =>
+      c.activeProjects > 0 ? (
+        <Pill tone="apricot">{c.activeProjects}</Pill>
+      ) : (
+        <span className="text-ob-faint">0</span>
+      )
+  },
+  {
+    key: 'meeting',
+    label: 'Última reunión',
+    width: '140px',
+    align: 'right',
+    render: (c) =>
+      c.lastMeetingDate ? (
+        shortDate(c.lastMeetingDate)
+      ) : (
+        <span className="text-ob-faint">sin reuniones</span>
+      )
+  }
+]
+
+/** Clientes como una tabla de Obsidian, con alta rápida (nombre y Enter). */
 export function Clients({ go }: { go: Go }): React.JSX.Element {
   const [filter, setFilter] = useState<ClientStatus | 'all'>('activo')
   const [name, setName] = useState<string | null>(null) // null = formulario cerrado
@@ -35,39 +77,27 @@ export function Clients({ go }: { go: Go }): React.JSX.Element {
   return (
     <Page
       title="Clientes"
+      meta={
+        data && (
+          <span>
+            {data.length} {data.length === 1 ? 'cliente' : 'clientes'}
+          </span>
+        )
+      }
       actions={
-        <button
-          type="button"
-          onClick={() => setName('')}
-          className="flex h-9 items-center gap-1.5 rounded-full bg-apricot pr-4 pl-3 text-caption font-extrabold text-ink transition-transform active:scale-95"
-        >
-          <Plus size={16} strokeWidth={3} />
+        <Button kind="primary" onClick={() => setName('')}>
+          <Plus size={15} />
           Nuevo cliente
-        </button>
+        </Button>
       }
     >
-      <div role="radiogroup" aria-label="Estado" className="mt-5 flex gap-1">
-        {FILTERS.map((f) => (
-          <button
-            key={f.id}
-            type="button"
-            role="radio"
-            aria-checked={filter === f.id}
-            onClick={() => setFilter(f.id)}
-            className={`h-9 rounded-full px-3.5 text-caption font-bold transition-colors ${
-              filter === f.id
-                ? 'bg-apricot text-ink'
-                : 'bg-surface text-milk-soft hover:bg-surface-raised hover:text-milk'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
+      <div className="mt-4">
+        <Chips label="Estado" value={filter} options={FILTERS} onChange={setFilter} />
       </div>
 
       {name !== null && (
         <form
-          className="mt-5"
+          className="mt-3"
           onSubmit={(e) => {
             e.preventDefault()
             void create()
@@ -80,14 +110,14 @@ export function Clients({ go }: { go: Go }): React.JSX.Element {
             onKeyDown={(e) => e.key === 'Escape' && setName(null)}
             placeholder="Nombre del cliente y Enter · se crea su carpeta de documentos"
             aria-label="Nombre del cliente"
-            className="h-[52px] w-full rounded-lg bg-surface px-5 text-body outline-none focus:shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--color-apricot)_70%,transparent)]"
+            className={INPUT}
           />
         </form>
       )}
 
       <ErrorNote message={error ?? loadError} />
 
-      <div className="mt-6">
+      <div className="mt-4">
         {data && data.length === 0 && (
           <Empty
             title={filter === 'historico' ? 'Sin clientes históricos.' : 'Aún no hay clientes.'}
@@ -95,28 +125,13 @@ export function Clients({ go }: { go: Go }): React.JSX.Element {
           />
         )}
         {data && data.length > 0 && (
-          <List>
-            {data.map((c) => (
-              <Row key={c.id} onClick={() => go({ name: 'client', id: c.id })}>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-list font-bold">{c.name}</span>
-                  {c.sector && (
-                    <span className="block truncate text-caption text-milk-soft">{c.sector}</span>
-                  )}
-                </span>
-                {c.activeProjects > 0 && (
-                  <Pill tone="apricot">
-                    {c.activeProjects}{' '}
-                    {c.activeProjects === 1 ? 'proyecto activo' : 'proyectos activos'}
-                  </Pill>
-                )}
-                {c.status === 'historico' && <Pill>Histórico</Pill>}
-                <span className="w-28 shrink-0 text-right text-caption text-milk-soft">
-                  {c.lastMeetingDate ? shortDate(c.lastMeetingDate) : 'sin reuniones'}
-                </span>
-              </Row>
-            ))}
-          </List>
+          <Table
+            label="Clientes"
+            columns={COLUMNS}
+            rows={data}
+            rowKey={(c) => c.id}
+            onOpen={(c) => go({ name: 'client', id: c.id })}
+          />
         )}
       </div>
     </Page>

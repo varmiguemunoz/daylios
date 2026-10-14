@@ -60,7 +60,7 @@ export function DeleteItemModal({
             type="button"
             onClick={() => void confirm()}
             disabled={busy || !impact}
-            className="flex h-9 items-center rounded-full bg-rose px-4 text-caption font-extrabold text-ink transition-transform active:scale-95 disabled:bg-surface-raised disabled:text-milk-faint"
+            className="flex h-[30px] items-center rounded-[4px] bg-ob-red px-3 text-[13px] font-medium text-white transition-colors hover:bg-[#e03a40] disabled:pointer-events-none disabled:opacity-40"
           >
             {busy ? 'Moviendo…' : 'Mover a la Papelera'}
           </button>
@@ -78,12 +78,12 @@ export function DeleteItemModal({
           </p>
         )}
         {impact && impact.referencedBy > 0 && (
-          <p className="rounded-md bg-butter/10 px-4 py-3 text-caption text-butter">
+          <p className="rounded-[6px] border-l-2 border-ob-yellow bg-ob-yellow/10 px-3 py-2 text-caption text-ob-yellow">
             {plural(impact.referencedBy, 'nota o board la usa', 'notas o boards la usan')}: sus
             enlaces quedarán rotos.
           </p>
         )}
-        <p className="text-caption text-milk-soft">
+        <p className="text-caption text-ob-muted">
           Va a la Papelera de macOS: puedes recuperarlo desde Finder.
         </p>
       </div>

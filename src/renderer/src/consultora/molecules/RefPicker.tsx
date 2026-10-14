@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, type LucideIcon } from 'lucide-react'
 import { normalizeName } from '@shared/consultora'
 import { Modal, SearchField } from '../ui'
+import { PropertyRow } from './Properties'
 
 export interface RefOption {
   id: string
@@ -19,18 +20,31 @@ interface RefPickerProps {
   onOpen?: (id: string) => void
   disabled?: boolean
   disabledHint?: string
+  icon?: LucideIcon
 }
 
 /**
- * Relación con búsqueda, en lugar de un desplegable largo: la fila muestra el vínculo (clic lo abre)
- * y «Cambiar» abre un buscador con «Quitar».
+ * Propiedad que enlaza a otra ficha, con buscador en lugar de un desplegable largo: el valor es un
+ * enlace violeta como en Obsidian (clic lo abre) y «Cambiar» abre el buscador con «Quitar».
  */
-export function RefPicker({ label, value, options, onChange, onOpen, disabled, disabledHint }: RefPickerProps): React.JSX.Element {
+export function RefPicker({
+  label,
+  value,
+  options,
+  onChange,
+  onOpen,
+  disabled,
+  disabledHint,
+  icon
+}: RefPickerProps): React.JSX.Element {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const q = normalizeName(query)
   const shown = useMemo(
-    () => options.filter((o) => !q || normalizeName(`${o.label} ${o.hint ?? ''}`).includes(q)).slice(0, 40),
+    () =>
+      options
+        .filter((o) => !q || normalizeName(`${o.label} ${o.hint ?? ''}`).includes(q))
+        .slice(0, 40),
     [options, q]
   )
 
@@ -41,32 +55,41 @@ export function RefPicker({ label, value, options, onChange, onOpen, disabled, d
   }
 
   return (
-    <div className="flex min-h-11 items-center gap-2 rounded-sm px-3 py-1.5 transition-colors hover:bg-surface">
-      <span className="min-w-0 flex-1">
-        <span className="block text-micro font-bold text-milk-soft">{label}</span>
-        {value ? (
-          <button
-            type="button"
-            onClick={() => onOpen?.(value.id)}
-            disabled={!onOpen}
-            className="block max-w-full truncate text-left text-list font-bold text-milk hover:text-apricot disabled:hover:text-milk"
-          >
-            {value.label}
-            {value.hint && <span className="ml-1.5 font-normal text-milk-soft">{value.hint}</span>}
-          </button>
-        ) : (
-          <span className="block truncate text-list text-milk-soft">{disabled ? disabledHint : 'Sin asignar'}</span>
-        )}
-      </span>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        disabled={disabled}
-        className="flex h-8 shrink-0 items-center gap-0.5 rounded-full px-2.5 text-micro font-bold text-milk-soft transition-colors hover:bg-surface-raised hover:text-milk disabled:text-milk-faint disabled:hover:bg-transparent"
-      >
-        {value ? 'Cambiar' : 'Asignar'}
-        <ChevronRight size={13} strokeWidth={2.5} />
-      </button>
+    <PropertyRow
+      icon={icon}
+      label={label}
+      action={
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          disabled={disabled}
+          className="flex h-[26px] shrink-0 items-center gap-0.5 rounded-[4px] px-2 text-[12px] text-ob-muted opacity-0 transition-[opacity,background-color,color] group-hover/prop:opacity-100 focus-visible:opacity-100 hover:bg-ob-hover hover:text-ob-text disabled:hidden"
+        >
+          {value ? 'Cambiar' : 'Asignar'}
+          <ChevronRight size={13} />
+        </button>
+      }
+    >
+      {value ? (
+        <button
+          type="button"
+          onClick={() => onOpen?.(value.id)}
+          disabled={!onOpen}
+          className="block h-[26px] max-w-full truncate rounded-[4px] px-1.5 text-left text-[14px] text-ob-link transition-colors hover:bg-ob-hover disabled:text-ob-text disabled:hover:bg-transparent"
+        >
+          {value.label}
+          {value.hint && <span className="ml-1.5 text-ob-muted">{value.hint}</span>}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          disabled={disabled}
+          className="block h-[26px] max-w-full truncate rounded-[4px] px-1.5 text-left text-[14px] text-ob-faint transition-colors hover:bg-ob-hover disabled:hover:bg-transparent"
+        >
+          {disabled ? disabledHint : 'Sin asignar'}
+        </button>
+      )}
 
       <Modal open={open} title={`${label}`} onClose={() => setOpen(false)} size="sm">
         <div className="flex flex-col gap-3">
@@ -79,37 +102,41 @@ export function RefPicker({ label, value, options, onChange, onOpen, disabled, d
               onEnter={() => shown[0] && pick(shown[0].id)}
             />
           </div>
-          <ul className="overflow-hidden rounded-md bg-night/40 [&>li+li]:shadow-[inset_0_1px_0_var(--color-hairline)]">
+          <ul className="overflow-hidden rounded-[6px] border border-ob-border">
             {value && (
               <li>
                 <button
                   type="button"
                   onClick={() => pick('')}
-                  className="w-full px-4 py-2.5 text-left text-list text-rose transition-colors hover:bg-rose/10"
+                  className="w-full px-3 py-2 text-left text-[14px] text-ob-red transition-colors hover:bg-ob-red/10"
                 >
                   Quitar {label.toLowerCase()}
                 </button>
               </li>
             )}
-            {shown.length === 0 && <li className="px-4 py-3 text-caption text-milk-soft">Nada coincide.</li>}
+            {shown.length === 0 && (
+              <li className="px-3 py-3 text-[13px] text-ob-faint">Nada coincide.</li>
+            )}
             {shown.map((o) => (
               <li key={o.id}>
                 <button
                   type="button"
                   onClick={() => pick(o.id)}
                   aria-current={o.id === value?.id ? 'true' : undefined}
-                  className={`w-full px-4 py-2.5 text-left transition-colors hover:bg-surface-raised ${
-                    o.id === value?.id ? 'bg-surface-raised' : ''
+                  className={`w-full border-t border-ob-border px-3 py-1.5 text-left transition-colors first:border-t-0 hover:bg-ob-hover ${
+                    o.id === value?.id ? 'bg-ob-active' : ''
                   }`}
                 >
-                  <span className="block truncate text-list font-bold">{o.label}</span>
-                  {o.hint && <span className="block truncate text-caption text-milk-soft">{o.hint}</span>}
+                  <span className="block truncate text-[14px] text-ob-text">{o.label}</span>
+                  {o.hint && (
+                    <span className="block truncate text-[12px] text-ob-faint">{o.hint}</span>
+                  )}
                 </button>
               </li>
             ))}
           </ul>
         </div>
       </Modal>
-    </div>
+    </PropertyRow>
   )
 }

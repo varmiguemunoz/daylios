@@ -21,7 +21,10 @@ export function IconButton({
   disabled,
   className = ''
 }: IconButtonProps): React.JSX.Element {
-  const hover = tone === 'danger' ? 'hover:bg-rose/15 hover:text-rose' : 'hover:bg-surface-raised hover:text-milk'
+  const hover =
+    tone === 'danger'
+      ? 'hover:bg-rose/15 hover:text-rose'
+      : 'hover:bg-surface-raised hover:text-milk'
   return (
     <button
       type="button"
@@ -29,7 +32,7 @@ export function IconButton({
       disabled={disabled}
       aria-label={label}
       title={label}
-      className={`grid shrink-0 place-items-center rounded-full text-milk-soft transition-colors disabled:text-milk-faint ${
+      className={`ui-icon-btn ${tone === 'danger' ? 'ui-danger' : ''} grid shrink-0 place-items-center rounded-full text-milk-soft transition-colors disabled:text-milk-faint ${
         size === 'sm' ? 'size-8' : 'size-9'
       } ${hover} ${className}`}
     >

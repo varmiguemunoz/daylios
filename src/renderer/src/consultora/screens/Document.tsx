@@ -3,7 +3,7 @@ import { isOverlayOpen } from '../../ui'
 import type { DocContent } from '@shared/consultora'
 import { api } from '../lib'
 import { ErrorNote } from '../ui'
-import { BackButton } from '../../components/BackButton'
+import { useScreenTitle } from '../chrome'
 import { MarkdownEditor, fromMarkdownEditor } from '../../components/MarkdownEditor'
 import { useAutosave } from '../../lib/useAutosave'
 import { errorMessage } from '../../lib/api'
@@ -12,16 +12,15 @@ import { errorMessage } from '../../lib/api'
 export function Document({
   client,
   path,
-  back,
-  backLabel
+  back
 }: {
   client: string
   path: string
   back: () => void
-  backLabel: string
 }): React.JSX.Element {
   const [doc, setDoc] = useState<DocContent | null>(null)
   const [error, setError] = useState<string | null>(null)
+  useScreenTitle(doc?.name)
 
   useEffect(() => {
     api
@@ -32,24 +31,22 @@ export function Document({
 
   if (!doc)
     return (
-      <div className="px-10 pt-6">
-        <BackButton label={backLabel} onClick={back} />
+      <div className="mx-auto max-w-[808px] px-6 pt-10">
         <ErrorNote message={error} />
       </div>
     )
-  return <DocumentEditor client={client} doc={doc} back={back} backLabel={backLabel} />
+  return <DocumentEditor client={client} doc={doc} back={back} />
 }
 
+/** Como una nota de Obsidian: título en línea, ruta tenue y el texto en la columna de 760 px. */
 function DocumentEditor({
   client,
   doc,
-  back,
-  backLabel
+  back
 }: {
   client: string
   doc: DocContent
   back: () => void
-  backLabel: string
 }): React.JSX.Element {
   const [content, setContent] = useState(doc.content)
   const [error, setError] = useState<string | null>(null)
@@ -70,41 +67,42 @@ function DocumentEditor({
   )
   const { status, flush } = useAutosave(content, save)
 
-  const leave = useCallback(async (): Promise<void> => {
-    await flush()
-    back()
-  }, [flush, back])
+  // Al salir por la franja (atrás) o por Esc se guarda lo pendiente.
+  const flushRef = useRef(flush)
+  useEffect(() => {
+    flushRef.current = flush
+  }, [flush])
+  useEffect(() => () => void flushRef.current(), [])
 
   // Esc guarda y vuelve (en captura: la ventana no debe procesar el mismo Esc).
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (e.key !== 'Escape' || isOverlayOpen() || fromMarkdownEditor(e)) return
       e.stopPropagation()
-      void leave()
+      void flush().then(back)
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [leave])
+  }, [flush, back])
 
   return (
-    <div className="flex h-full flex-col pl-10">
-      <header className="flex items-center justify-between gap-3 pt-6 pr-6">
-        <BackButton label={backLabel} onClick={() => void leave()} />
-      </header>
-      <div className="pt-4 pr-6">
-        <h1 className="truncate text-headline font-extrabold">{doc.name}</h1>
-        <p className="mt-1 truncate text-caption text-milk-soft">{doc.path}</p>
+    <div className="h-full min-h-0 overflow-y-auto">
+      <div className="mx-auto flex min-h-full max-w-[808px] flex-col px-6 pt-10 pb-24">
+        <h1 className="truncate text-[28px] leading-tight font-bold tracking-[-0.015em] text-ob-text">
+          {doc.name}
+        </h1>
+        <p className="mt-1 truncate text-[13px] text-ob-faint">{doc.path}</p>
         <ErrorNote message={error} />
-      </div>
-      <div className="mt-4 -ml-4 flex min-h-0 flex-1 flex-col">
-        <MarkdownEditor
-          value={content}
-          onChange={setContent}
-          status={status}
-          placeholder="Escribe…"
-          emptyHint="Documento vacío. Clic para escribir."
-          onCommit={flush}
-        />
+        <div className="mt-4 flex min-h-0 flex-1 flex-col">
+          <MarkdownEditor
+            value={content}
+            onChange={setContent}
+            status={status}
+            placeholder="Escribe…"
+            emptyHint="Documento vacío. Doble clic para escribir."
+            onCommit={flush}
+          />
+        </div>
       </div>
     </div>
   )

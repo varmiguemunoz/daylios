@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { Activity, Briefcase, ListChecks } from 'lucide-react'
 import type { ProjectInput, ProjectStatus } from '@shared/consultora'
 import { api, attempt, dateTime, useLoad, type Go } from '../lib'
 import {
@@ -14,21 +15,22 @@ import {
   Section,
   Select
 } from '../ui'
+import { useScreenTitle } from '../chrome'
+import { Properties, PropertyRow } from '../molecules/Properties'
 
 /** Proyecto: estado, objetivo, entregables (casillas marcables), notas y reuniones. */
 export function Project({
   id,
   go,
-  back,
-  backLabel
+  back
 }: {
   id: string
   go: Go
   back: () => void
-  backLabel: string
 }): React.JSX.Element {
   const load = useCallback(() => api.getProject(id), [id])
   const { data: p, error: loadError } = useLoad(load)
+  useScreenTitle(p?.name)
   const [error, setError] = useState<string | null>(null)
 
   const save = async (patch: ProjectInput): Promise<void> =>
@@ -36,7 +38,7 @@ export function Project({
 
   if (!p)
     return (
-      <Page back={{ label: backLabel, onClick: back }} title="…">
+      <Page variant="document" title="…">
         <ErrorNote message={loadError} />
       </Page>
     )
@@ -45,7 +47,7 @@ export function Project({
 
   return (
     <Page
-      back={{ label: backLabel, onClick: back }}
+      variant="document"
       title={
         <EditableText
           value={p.name}
@@ -53,23 +55,32 @@ export function Project({
           onSave={(name) => void save({ name })}
         />
       }
-      meta={
+      actions={
         <>
+          <ConfirmButton
+            label="Borrar proyecto (sus reuniones se quedan en el cliente)"
+            onConfirm={() =>
+              void attempt(() => api.removeProject(id)).then((failed) =>
+                failed ? setError(failed) : back()
+              )
+            }
+          />
+        </>
+      }
+    >
+      <ErrorNote message={error ?? loadError} />
+
+      <Properties id="project">
+        <PropertyRow icon={Briefcase} label="Cliente">
           <button
             type="button"
             onClick={() => go({ name: 'client', id: p.client.id })}
-            className="font-bold text-milk hover:text-apricot"
+            className="block h-[26px] max-w-full truncate rounded-[4px] px-1.5 text-left text-[14px] text-ob-link transition-colors hover:bg-ob-hover"
           >
             {p.client.name}
           </button>
-          <span>·</span>
-          <span>
-            {pending ? `${pending} entregables pendientes` : 'Sin entregables pendientes'}
-          </span>
-        </>
-      }
-      actions={
-        <>
+        </PropertyRow>
+        <PropertyRow icon={Activity} label="Estado">
           <Select
             label="Estado"
             value={p.status}
@@ -80,16 +91,13 @@ export function Project({
             ]}
             onChange={(status) => void save({ status: status as ProjectStatus })}
           />
-          <ConfirmButton
-            label="Borrar proyecto (sus reuniones se quedan en el cliente)"
-            onConfirm={() =>
-              void attempt(() => api.removeProject(id)).then((failed) => (failed ? setError(failed) : back()))
-            }
-          />
-        </>
-      }
-    >
-      <ErrorNote message={error ?? loadError} />
+        </PropertyRow>
+        <PropertyRow icon={ListChecks} label="Entregables">
+          <span className="block px-1.5 text-[14px] text-ob-text">
+            {pending ? `${pending} pendientes` : 'Sin pendientes'}
+          </span>
+        </PropertyRow>
+      </Properties>
 
       <Section title="Objetivo">
         <MarkdownField
@@ -125,9 +133,9 @@ export function Project({
           <List>
             {p.meetings.map((m) => (
               <Row key={m.id} onClick={() => go({ name: 'meeting', id: m.id })}>
-                <span className="min-w-0 flex-1 truncate text-list font-bold">{m.title}</span>
+                <span className="min-w-0 flex-1 truncate text-list font-medium">{m.title}</span>
                 <MeetingStatusPill status={m.status} />
-                <span className="shrink-0 text-caption text-milk-soft">{dateTime(m.date)}</span>
+                <span className="shrink-0 text-caption text-ob-muted">{dateTime(m.date)}</span>
               </Row>
             ))}
           </List>

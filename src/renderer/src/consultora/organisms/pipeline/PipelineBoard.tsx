@@ -7,8 +7,8 @@ import { finalIndex, useReorder } from '../../../lib/useReorder'
 import { useBoardNav } from '../../../lib/useBoardNav'
 import { ProspectCardView } from './ProspectCardView'
 
-const COLUMN = 260
-const GAP = 12
+const COLUMN = 280
+const GAP = 10
 
 interface PipelineBoardProps {
   data: Pipeline
@@ -21,10 +21,18 @@ interface PipelineBoardProps {
 }
 
 /**
- * Tablero de columnas (estilo Apollo): cabecera con nombre, conteo y valor; «+» para crear ahí;
+ * Tablero de columnas como el plugin Kanban de Obsidian: columnas grises con nombre, conteo y valor;
+ * «+» para crear ahí;
  * arrastrar tarjetas entre columnas; ←/→ o mantener pulsado el fondo para moverse en horizontal.
  */
-export function PipelineBoard({ data, visible, today, onOpen, onMove, onCreate }: PipelineBoardProps): React.JSX.Element {
+export function PipelineBoard({
+  data,
+  visible,
+  today,
+  onOpen,
+  onMove,
+  onCreate
+}: PipelineBoardProps): React.JSX.Element {
   const scroller = useRef<HTMLDivElement>(null)
   const { panning } = useBoardNav(scroller, COLUMN + GAP)
   const [adding, setAdding] = useState<string | null>(null)
@@ -50,8 +58,8 @@ export function PipelineBoard({ data, visible, today, onOpen, onMove, onCreate }
   const dropLine = (stageId: string, i: number, count: number): string => {
     const t = drag.target
     if (!drag.dragging || !t || t.group !== stageId) return ''
-    if (t.index === i) return 'shadow-[0_-3px_0_0_var(--color-apricot)]'
-    if (i === count - 1 && t.index === count) return 'shadow-[0_3px_0_0_var(--color-apricot)]'
+    if (t.index === i) return 'shadow-[0_-3px_0_0_var(--color-ob-accent)]'
+    if (i === count - 1 && t.index === count) return 'shadow-[0_3px_0_0_var(--color-ob-accent)]'
     return ''
   }
 
@@ -66,22 +74,35 @@ export function PipelineBoard({ data, visible, today, onOpen, onMove, onCreate }
   return (
     <div
       ref={scroller}
-      className={`no-scrollbar flex min-h-0 flex-1 gap-3 overflow-x-auto pr-6 pb-4 ${
-        panning ? 'cursor-grabbing rounded-md shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--color-apricot)_40%,transparent)] select-none' : ''
+      className={`no-scrollbar flex min-h-0 flex-1 gap-2.5 overflow-x-auto pr-6 pb-4 ${
+        panning
+          ? 'cursor-grabbing rounded-md shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--color-ob-accent)_40%,transparent)] select-none'
+          : ''
       }`}
       aria-label={`Pipeline ${data.pipeline.name}. Flechas para moverte entre columnas.`}
     >
       {columns.map(({ stage, shown }) => (
-        <section key={stage.id} className="flex shrink-0 flex-col" style={{ width: COLUMN }} aria-label={stage.name}>
-          <div className="mb-2 flex items-center justify-between gap-2 px-1">
+        <section
+          key={stage.id}
+          className={`flex shrink-0 flex-col rounded-[8px] border bg-ob-alt transition-colors ${
+            drag.dragging && drag.target?.group === stage.id
+              ? 'border-ob-accent/60'
+              : 'border-ob-border'
+          }`}
+          style={{ width: COLUMN }}
+          aria-label={stage.name}
+        >
+          <div className="flex h-10 shrink-0 items-center justify-between gap-2 pr-1.5 pl-3">
             <span className="flex min-w-0 items-center gap-1.5">
+              {stage.kind !== 'open' && (
+                <span
+                  aria-hidden
+                  className={`size-2 shrink-0 rounded-full ${stage.kind === 'won' ? 'bg-ob-green' : 'bg-ob-faint'}`}
+                />
+              )}
               <span
-                className={`inline-flex h-7 min-w-0 items-center truncate rounded-full px-3 text-caption font-extrabold ${
-                  stage.kind === 'won'
-                    ? 'bg-mint/15 text-mint'
-                    : stage.kind === 'lost'
-                      ? 'bg-surface text-milk-soft'
-                      : 'bg-surface text-milk'
+                className={`min-w-0 truncate text-[13px] font-semibold ${
+                  stage.kind === 'lost' ? 'text-ob-muted' : 'text-ob-text'
                 }`}
               >
                 {stage.name}
@@ -90,7 +111,9 @@ export function PipelineBoard({ data, visible, today, onOpen, onMove, onCreate }
             </span>
             <span className="flex items-center gap-1">
               {stage.valueUsd > 0 && (
-                <span className="text-micro font-bold text-milk-soft tabular-nums">{money(stage.valueUsd)}</span>
+                <span className="text-[12px] text-ob-muted tabular-nums">
+                  {money(stage.valueUsd)}
+                </span>
               )}
               <button
                 type="button"
@@ -100,16 +123,14 @@ export function PipelineBoard({ data, visible, today, onOpen, onMove, onCreate }
                 }}
                 aria-label={`Nuevo prospecto en ${stage.name}`}
                 title="Nuevo prospecto aquí"
-                className="grid size-7 place-items-center rounded-full text-milk-soft transition-colors hover:bg-surface hover:text-milk"
+                className="grid size-7 place-items-center rounded-[4px] text-ob-muted transition-colors hover:bg-ob-hover hover:text-ob-text"
               >
-                <Plus size={15} strokeWidth={2.75} />
+                <Plus size={15} />
               </button>
             </span>
           </div>
           <div
-            className={`flex min-h-24 flex-1 flex-col gap-1.5 overflow-y-auto rounded-md p-1.5 transition-colors ${
-              drag.dragging && drag.target?.group === stage.id ? 'bg-surface' : 'bg-surface/50'
-            }`}
+            className="flex min-h-24 flex-1 flex-col gap-1.5 overflow-y-auto px-1.5 pb-1.5"
             {...drag.zone(stage.id, shown.length)}
           >
             {adding === stage.id && (
@@ -132,7 +153,7 @@ export function PipelineBoard({ data, visible, today, onOpen, onMove, onCreate }
                   }}
                   placeholder="Empresa o persona y Enter"
                   aria-label={`Nuevo prospecto en ${stage.name}`}
-                  className="h-11 w-full rounded-sm bg-surface-raised px-3.5 text-list outline-none focus:shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--color-apricot)_70%,transparent)]"
+                  className="h-8 w-full rounded-[4px] border border-ob-accent bg-ob-bg px-2.5 text-[14px] text-ob-text outline-none placeholder:text-ob-faint"
                 />
               </form>
             )}
@@ -148,7 +169,7 @@ export function PipelineBoard({ data, visible, today, onOpen, onMove, onCreate }
               />
             ))}
             {shown.length === 0 && adding !== stage.id && (
-              <p className="px-2 py-3 text-micro font-semibold text-milk-soft/60">Suelta aquí</p>
+              <p className="px-2 py-3 text-[12px] text-ob-faint">Suelta aquí</p>
             )}
           </div>
         </section>

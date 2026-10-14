@@ -52,6 +52,9 @@
 
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
+  /* Sombra de lo que flota (menús, avisos). El tema Obsidian la suaviza. */
+  --shadow-float: 0 10px 30px -8px rgb(0 0 0 / 0.7);
+
   /* Workspace · tema Obsidian (oscuro por defecto). Solo se usan dentro de .theme-obsidian. */
   --color-ob-bg: #1e1e1e;
   --color-ob-alt: #262626;
@@ -62,6 +65,8 @@
   --color-ob-muted: #999999;
   --color-ob-faint: #666666;
   --color-ob-accent: #8a5cf5;
+  /* Acento para texto sobre fondo oscuro (enlaces, etiquetas): más claro, contraste AA. */
+  --color-ob-link: #a68af9;
   --color-ob-red: #fb464c;
   --color-ob-orange: #e9973f;
   --color-ob-yellow: #e0de71;
@@ -725,6 +730,9 @@ body.theme-obsidian {
   --radius-md: 6px;
   --radius-lg: 8px;
   --radius-xl: 10px;
+  --shadow-float: 0 6px 20px -8px rgb(0 0 0 / 0.6);
+  --font-weight-extrabold: 600;
+  --font-weight-bold: 600;
   font-size: 13px;
   -webkit-font-smoothing: antialiased;
   letter-spacing: 0;
@@ -762,7 +770,7 @@ body.theme-obsidian .md h3 {
   font-weight: 600;
 }
 body.theme-obsidian .md a {
-  color: var(--color-ob-accent);
+  color: var(--color-ob-link);
   text-decoration-color: color-mix(in srgb, var(--color-ob-accent) 45%, transparent);
 }
 body.theme-obsidian .md code {
@@ -777,4 +785,235 @@ body.theme-obsidian .md blockquote {
 }
 body.theme-obsidian .md img {
   border-radius: 4px;
+}
+
+/* ======================================================================
+   Piezas compartidas con el menubar, bajo el tema Obsidian
+   Las clases `ui-*` no tienen estilo fuera del tema: el menubar no cambia. Estas reglas no van en
+   una capa, así que ganan a las utilidades de Tailwind del mismo elemento.
+   ====================================================================== */
+body.theme-obsidian .ui-icon-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  color: var(--color-ob-muted);
+}
+body.theme-obsidian .ui-icon-btn:hover:not(:disabled) {
+  background: var(--color-ob-hover);
+  color: var(--color-ob-text);
+}
+body.theme-obsidian .ui-icon-btn.ui-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-ob-red) 15%, transparent);
+  color: var(--color-ob-red);
+}
+body.theme-obsidian .ui-icon-btn:disabled {
+  color: var(--color-ob-faint);
+}
+
+body.theme-obsidian .ui-btn {
+  height: 30px;
+  gap: 6px;
+  padding: 0 12px;
+  border-radius: 4px;
+  background: var(--color-ob-active);
+  color: var(--color-ob-text);
+  font-size: 13px;
+  font-weight: 500;
+}
+body.theme-obsidian .ui-btn:hover {
+  background: #3f3f3f;
+}
+
+body.theme-obsidian .ui-kbd {
+  height: 18px;
+  min-width: 18px;
+  border-radius: 3px;
+  background: var(--color-ob-active);
+  color: var(--color-ob-muted);
+  font-family: var(--font-ob);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+body.theme-obsidian .ui-badge {
+  height: 18px;
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--color-ob-active);
+  color: var(--color-ob-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+body.theme-obsidian .ui-badge.ui-accent {
+  background: var(--color-ob-accent);
+  color: #fff;
+}
+
+body.theme-obsidian .ui-confirm {
+  height: 28px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+}
+body.theme-obsidian .ui-confirm:not(.ui-armed) {
+  width: 28px;
+}
+body.theme-obsidian .ui-confirm.ui-armed {
+  padding: 0 10px;
+  background: var(--color-ob-red);
+  color: #fff;
+}
+
+body.theme-obsidian .ui-search {
+  height: 30px;
+  padding: 0 8px;
+  gap: 6px;
+  border: 1px solid var(--color-ob-border);
+  border-radius: 4px;
+  background: var(--color-ob-bg);
+  box-shadow: none;
+}
+body.theme-obsidian .ui-search:focus-within {
+  border-color: var(--color-ob-accent);
+}
+body.theme-obsidian .ui-search input {
+  font-size: 13px;
+}
+body.theme-obsidian .ui-search input::placeholder {
+  color: var(--color-ob-faint);
+}
+body.theme-obsidian .ui-search .ui-icon-btn {
+  width: 20px;
+  height: 20px;
+}
+
+body.theme-obsidian .ui-segmented {
+  padding: 2px;
+  gap: 2px;
+  border: 1px solid var(--color-ob-border);
+  border-radius: 6px;
+  background: var(--color-ob-bg);
+}
+body.theme-obsidian .ui-seg {
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 4px;
+  color: var(--color-ob-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+body.theme-obsidian .ui-seg:hover {
+  color: var(--color-ob-text);
+}
+body.theme-obsidian .ui-seg.ui-active {
+  background: var(--color-ob-active);
+  color: var(--color-ob-text);
+}
+body.theme-obsidian .ui-seg svg {
+  color: inherit;
+}
+
+body.theme-obsidian .ui-menu {
+  padding: 4px;
+  border: 1px solid var(--color-ob-border);
+  border-radius: 6px;
+  background: var(--color-ob-alt);
+  box-shadow: var(--shadow-float);
+}
+body.theme-obsidian .ui-menu-item {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 4px;
+  color: var(--color-ob-text);
+  font-size: 13px;
+  font-weight: 400;
+}
+body.theme-obsidian .ui-menu-item:hover,
+body.theme-obsidian .ui-menu-item:focus-visible {
+  background: var(--color-ob-hover);
+}
+body.theme-obsidian .ui-menu-item.ui-danger {
+  color: var(--color-ob-red);
+}
+body.theme-obsidian .ui-menu-sep {
+  background: var(--color-ob-border);
+}
+
+body.theme-obsidian .ui-row:hover,
+body.theme-obsidian .ui-row:focus-within {
+  background: var(--color-ob-hover);
+}
+body.theme-obsidian .ui-row-main {
+  padding: 6px 12px;
+}
+
+body.theme-obsidian .ui-crumb {
+  border-radius: 4px;
+  font-weight: 400;
+}
+body.theme-obsidian .ui-crumb-current {
+  font-weight: 500;
+}
+
+body.theme-obsidian .ui-backdrop {
+  background: rgb(0 0 0 / 0.5);
+}
+body.theme-obsidian .ui-modal {
+  border: 1px solid var(--color-ob-border);
+  border-radius: 8px;
+  background: var(--color-ob-alt);
+  box-shadow: 0 16px 48px -12px rgb(0 0 0 / 0.8);
+}
+body.theme-obsidian .ui-drawer {
+  border-left: 1px solid var(--color-ob-border);
+  border-radius: 0;
+  background: var(--color-ob-alt);
+  box-shadow: var(--shadow-float);
+}
+body.theme-obsidian .ui-panel-title {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+body.theme-obsidian .ui-panel-footer {
+  box-shadow: none;
+  border-top: 1px solid var(--color-ob-border);
+}
+
+body.theme-obsidian .ui-heading {
+  font-size: 16px;
+  font-weight: 600;
+}
+body.theme-obsidian .ui-heading-sm {
+  font-size: 13px;
+  font-weight: 500;
+}
+body.theme-obsidian .ui-chip {
+  height: 22px;
+  padding: 0 8px;
+  background: color-mix(in srgb, var(--color-ob-accent) 15%, transparent);
+  color: var(--color-ob-link);
+  font-size: 12px;
+  font-weight: 400;
+}
+body.theme-obsidian .ui-chip:hover {
+  background: color-mix(in srgb, var(--color-ob-accent) 25%, transparent);
+  color: var(--color-ob-link);
+}
+body.theme-obsidian .ui-list {
+  border: 1px solid var(--color-ob-border);
+  border-radius: 6px;
+  background: var(--color-ob-bg);
+}
+body.theme-obsidian .ui-list > li + li {
+  box-shadow: none;
+  border-top: 1px solid var(--color-ob-border);
+}
+body.theme-obsidian .ui-list-item {
+  padding: 6px 12px;
+}
+body.theme-obsidian .ui-list-item:hover,
+body.theme-obsidian .ui-list-item:focus-visible {
+  background: var(--color-ob-hover);
 }

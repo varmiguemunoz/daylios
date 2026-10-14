@@ -62,7 +62,7 @@ app; si cambias algo fuera, la app lo ve en menos de 2 s.
 
 - **Atajo global**: ⌥⌘W abre el workspace en la última nota desde cualquier app; otra vez lo oculta. Se cambia en
   Ajustes. Dentro no hay barra lateral ni cabecera de Consultora; la cinta de la izquierda abre la navegación.
-- **Atajos dentro**: ⌘O, ⌘F o ⌘K buscar y abrir, ⌘N nota nueva, ⌘\ mostrar u ocultar el explorador.
+- **Atajos dentro**: ⌘O o ⌘F buscar y abrir, ⌘K buscar en todo, ⌘N nota nueva, ⌘\ mostrar u ocultar la barra lateral.
 - **Explorador**: un árbol de carpetas y archivos. Arrastra para mover, suelta archivos de Finder para subirlos
   (50 MB máximo), clic derecho para el menú. Borrar manda a la Papelera.
 - **Notas**: archivos `.md`. El primer título de la nota es el nombre del archivo. Doble clic para escribir; al
@@ -77,6 +77,10 @@ app; si cambias algo fuera, la app lo ve en menos de 2 s.
 ## Consultora (clientes, proyectos, reuniones, pipeline)
 
 Ventana aparte para el contexto de la consultora: clic derecho en el icono del menubar → **Abrir Consultora**, o el botón del maletín junto a las pestañas.
+
+Toda la ventana tiene el aspecto de Obsidian: franja superior con atrás, adelante y la ruta; cinta de iconos; barra
+lateral con las pestañas **Secciones** y **Archivos**. Atajos: ⌘K buscar en todo, ⌘O abrir un archivo de la bóveda,
+⌘N nota nueva, ⌘\ barra lateral, ⌘[ y ⌘] atrás y adelante, ⌘, Ajustes.
 
 - **Clientes**: crear uno crea su carpeta en `CLIENTS_DOCS_PATH/<Nombre>/` con `Contratos/`, `Entregables/`, `Documentación técnica/`, `Reuniones/`. Los documentos se leen en vivo de esa carpeta.
 - **Proyectos**: objetivo, entregables (casillas `- [ ]` marcables), notas y reuniones.

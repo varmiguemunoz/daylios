@@ -1,7 +1,13 @@
 import { useCallback, useMemo, useState } from 'react'
 import {
   ArrowRightLeft,
+  AtSign,
+  BadgeCheck,
+  Briefcase,
   CalendarClock,
+  FolderKanban,
+  Phone,
+  SquareKanban,
   CircleAlert,
   ExternalLink,
   BriefcaseBusiness as Linkedin,
@@ -30,27 +36,27 @@ import {
 import { ContactStatusPill, TagEditor } from '../marketing-ui'
 import { InlineField } from '../molecules/InlineField'
 import { RefPicker } from '../molecules/RefPicker'
-import { Initials } from '../molecules/Initials'
+import { Properties, PropertyRow } from '../molecules/Properties'
+import { useScreenTitle } from '../chrome'
 import { ConvertToProspectModal } from '../organisms/ConvertToProspectModal'
 
 /**
- * Ficha de contacto (impeccable · Operate): quién es y qué sigue, en una mirada.
- * Principal: notas y actividad. Lateral: datos, relaciones (cliente, proyecto, prospecto), tags,
- * email marketing y formulario. Una sola acción primaria: convertir en prospecto (o verlo).
+ * Ficha de contacto como una nota de Obsidian (impeccable · Operate): propiedades con datos,
+ * relaciones y tags; después notas, email marketing, formulario y actividad. Una sola acción
+ * primaria: convertir en prospecto (o verlo).
  */
 export function Contact({
   id,
   go,
-  back,
-  backLabel
+  back
 }: {
   id: string
   go: Go
   back: () => void
-  backLabel: string
 }): React.JSX.Element {
   const load = useCallback(() => api.getContact(id), [id])
   const { data: c, error: loadError } = useLoad(load)
+  useScreenTitle(c ? contactLabel(c) : null)
   const refsLoad = useCallback(() => api.refs(), [])
   const { data: refs } = useLoad(refsLoad)
   const tagsLoad = useCallback(() => window.api.marketing.listTags(), [])
@@ -65,14 +71,14 @@ export function Contact({
 
   if (loadError?.includes('No existe ese contacto')) {
     return (
-      <Page back={{ label: backLabel, onClick: back }} title="Contacto no disponible">
-        <p className="mt-4 text-caption text-milk-soft">Este contacto ya no existe.</p>
+      <Page variant="document" title="Contacto no disponible">
+        <p className="mt-4 text-caption text-ob-muted">Este contacto ya no existe.</p>
       </Page>
     )
   }
   if (!c)
     return (
-      <Page back={{ label: backLabel, onClick: back }} title="…">
+      <Page variant="document" title="…">
         <ErrorNote message={loadError} />
       </Page>
     )
@@ -101,19 +107,14 @@ export function Contact({
 
   return (
     <Page
-      back={{ label: backLabel, onClick: back }}
+      variant="document"
       title={
-        <span className="flex items-center gap-4">
-          <Initials name={contactLabel(c)} size={48} />
-          <span className="min-w-0 flex-1">
-            <EditableText
-              value={c.name ?? ''}
-              placeholder={c.email ?? 'Sin nombre'}
-              label="Nombre"
-              onSave={(name) => void save({ name })}
-            />
-          </span>
-        </span>
+        <EditableText
+          value={c.name ?? ''}
+          placeholder={c.email ?? 'Sin nombre'}
+          label="Nombre"
+          onSave={(name) => void save({ name })}
+        />
       }
       meta={
         <>
@@ -170,169 +171,145 @@ export function Contact({
       )}
       <ErrorNote message={error} />
 
-      <div className="mt-6 grid gap-8 @2xl:grid-cols-[minmax(0,1fr)_300px]">
-        <div className="min-w-0">
-          <Section title="Notas">
-            <MarkdownField
-              value={c.notesMd}
-              placeholder="Cómo prefiere comunicarse, qué le importa, historia con nosotros…"
-              onSave={(notesMd) => void save({ notesMd })}
-            />
-          </Section>
-          <Timeline contact={c} go={go} />
-        </div>
+      <Properties id="contact">
+        <InlineField
+          icon={BadgeCheck}
+          label="Rol"
+          value={c.role}
+          placeholder="CTO, dueño, compras…"
+          onSave={(role) => void save({ role })}
+        />
+        <InlineField
+          icon={AtSign}
+          label="Email"
+          type="email"
+          value={c.email}
+          placeholder="nombre@empresa.com"
+          onSave={(email) => void save({ email })}
+        />
+        <InlineField
+          icon={Phone}
+          label="Teléfono"
+          type="tel"
+          value={c.phone}
+          placeholder="+1 …"
+          onSave={(phone) => void save({ phone })}
+        />
+        <InlineField
+          icon={Linkedin}
+          label="LinkedIn"
+          type="url"
+          value={c.linkedin}
+          placeholder="linkedin.com/in/…"
+          onSave={(linkedin) => void save({ linkedin })}
+        />
+        <RefPicker
+          icon={Briefcase}
+          label="Cliente"
+          value={c.clientId ? { id: c.clientId, label: clientName } : null}
+          options={(refs?.clients ?? []).map((x) => ({
+            id: x.id,
+            label: x.name,
+            hint: x.status === 'historico' ? 'Histórico' : undefined
+          }))}
+          onChange={(client) => void save({ client })}
+          onOpen={(clientId) => go({ name: 'client', id: clientId })}
+        />
+        <RefPicker
+          icon={FolderKanban}
+          label="Proyecto"
+          value={c.project ? { id: c.project.id, label: c.project.name } : null}
+          options={projects.map((p) => ({ id: p.id, label: p.name }))}
+          onChange={(project) => void save({ project })}
+          onOpen={(projectId) => go({ name: 'project', id: projectId })}
+          disabled={!c.clientId}
+          disabledHint="Asigna antes un cliente"
+        />
+        <RefPicker
+          icon={SquareKanban}
+          label="Prospecto"
+          value={
+            c.prospect
+              ? {
+                  id: c.prospect.id,
+                  label: c.prospect.company,
+                  hint: `${c.prospect.pipeline} · ${c.prospect.stage}`
+                }
+              : null
+          }
+          options={(refs?.prospects ?? []).map((p) => ({ id: p.id, label: p.company }))}
+          onChange={(prospect) => void save({ prospect })}
+          onOpen={(prospectId) => go({ name: 'prospect', id: prospectId })}
+        />
+        <PropertyRow icon={TagIcon} label="Tags">
+          <TagEditor
+            tags={c.tags}
+            suggestions={allTags ?? []}
+            onAdd={(tag) => void run(() => api.tagContact(id, { add: [tag] }))}
+            onRemove={(slug) => void run(() => api.tagContact(id, { remove: [slug] }))}
+          />
+        </PropertyRow>
+      </Properties>
 
-        <aside className="flex min-w-0 flex-col gap-5 @2xl:pt-9" aria-label="Datos del contacto">
-          <SideGroup title="Datos">
-            <InlineField
-              label="Rol"
-              value={c.role}
-              placeholder="CTO, dueño, compras…"
-              onSave={(role) => void save({ role })}
-            />
-            <InlineField
-              label="Email"
-              type="email"
-              value={c.email}
-              placeholder="nombre@empresa.com"
-              onSave={(email) => void save({ email })}
-            />
-            <InlineField
-              label="Teléfono"
-              type="tel"
-              value={c.phone}
-              placeholder="+1 …"
-              onSave={(phone) => void save({ phone })}
-            />
-            <InlineField
-              label="LinkedIn"
-              type="url"
-              value={c.linkedin}
-              placeholder="linkedin.com/in/…"
-              onSave={(linkedin) => void save({ linkedin })}
-            />
-          </SideGroup>
+      <Section title="Notas">
+        <MarkdownField
+          value={c.notesMd}
+          placeholder="Cómo prefiere comunicarse, qué le importa, historia con nosotros…"
+          onSave={(notesMd) => void save({ notesMd })}
+        />
+      </Section>
 
-          <SideGroup title="Relaciones">
-            <RefPicker
-              label="Cliente"
-              value={c.clientId ? { id: c.clientId, label: clientName } : null}
-              options={(refs?.clients ?? []).map((x) => ({
-                id: x.id,
-                label: x.name,
-                hint: x.status === 'historico' ? 'Histórico' : undefined
-              }))}
-              onChange={(client) => void save({ client })}
-              onOpen={(clientId) => go({ name: 'client', id: clientId })}
-            />
-            <RefPicker
-              label="Proyecto"
-              value={c.project ? { id: c.project.id, label: c.project.name } : null}
-              options={projects.map((p) => ({ id: p.id, label: p.name }))}
-              onChange={(project) => void save({ project })}
-              onOpen={(projectId) => go({ name: 'project', id: projectId })}
-              disabled={!c.clientId}
-              disabledHint="Asigna antes un cliente"
-            />
-            <RefPicker
-              label="Prospecto"
-              value={
-                c.prospect
-                  ? {
-                      id: c.prospect.id,
-                      label: c.prospect.company,
-                      hint: `${c.prospect.pipeline} · ${c.prospect.stage}`
-                    }
-                  : null
-              }
-              options={(refs?.prospects ?? []).map((p) => ({ id: p.id, label: p.company }))}
-              onChange={(prospect) => void save({ prospect })}
-              onOpen={(prospectId) => go({ name: 'prospect', id: prospectId })}
-            />
-          </SideGroup>
-
-          <SideGroup title="Tags">
-            <TagEditor
-              tags={c.tags}
-              suggestions={allTags ?? []}
-              onAdd={(tag) => void run(() => api.tagContact(id, { add: [tag] }))}
-              onRemove={(slug) => void run(() => api.tagContact(id, { remove: [slug] }))}
-            />
-          </SideGroup>
-
-          <SideGroup title="Email marketing">
-            <div className="px-3">
-              <p className="text-list font-bold">{STATUS_LABELS[c.status]}</p>
-              <p className="mt-0.5 text-caption text-milk-soft">{consentLine(c)}</p>
-              <div className="mt-2">
-                {c.status === 'subscribed' && (
-                  <Button onClick={() => void run(() => api.unsubscribeContact(id))}>
-                    <MailX size={15} />
-                    Dar de baja
-                  </Button>
-                )}
-                {canSubscribe && (
-                  <button
-                    type="button"
-                    onClick={() => void subscribe()}
-                    onMouseLeave={() => setConfirmSubscribe(false)}
-                    onBlur={() => setConfirmSubscribe(false)}
-                    disabled={!c.email}
-                    title={c.email ? undefined : 'Añade un email primero'}
-                    className="flex h-9 items-center gap-1.5 rounded-full bg-surface px-4 text-caption font-extrabold text-milk transition-colors hover:bg-surface-raised disabled:text-milk-faint"
-                  >
-                    <Mail size={15} className="text-apricot" />
-                    {confirmSubscribe ? '¿Te dio su permiso? Suscribir' : 'Suscribir'}
-                  </button>
-                )}
-              </div>
-              {c.syncError && (
-                <p role="alert" className="mt-2 flex items-start gap-2 text-caption text-coral">
-                  <CircleAlert size={15} className="mt-px shrink-0" aria-hidden />
-                  No se pudo sincronizar con Resend: {c.syncError}. Se reintenta solo.
-                </p>
-              )}
-            </div>
-          </SideGroup>
-
-          {fields.length > 0 && (
-            <SideGroup title="Formulario">
-              <details className="group px-3">
-                <summary className="cursor-pointer list-none text-caption font-bold text-milk-soft hover:text-milk">
-                  {fields.length} {fields.length === 1 ? 'campo' : 'campos'} · ver
-                </summary>
-                <dl className="mt-2 flex flex-col gap-1.5">
-                  {fields.map(([key, value]) => (
-                    <div key={key}>
-                      <dt className="text-micro font-bold text-milk-soft">{key}</dt>
-                      <dd className="text-list break-words">
-                        {value === null ? '—' : String(value)}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              </details>
-            </SideGroup>
+      <Section title="Email marketing">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[14px] text-ob-text">{STATUS_LABELS[c.status]}</p>
+            <p className="mt-0.5 text-[13px] text-ob-muted">{consentLine(c)}</p>
+          </div>
+          {c.status === 'subscribed' && (
+            <Button onClick={() => void run(() => api.unsubscribeContact(id))}>
+              <MailX size={15} />
+              Dar de baja
+            </Button>
           )}
-        </aside>
-      </div>
-    </Page>
-  )
-}
+          {canSubscribe && (
+            <button
+              type="button"
+              onClick={() => void subscribe()}
+              onMouseLeave={() => setConfirmSubscribe(false)}
+              onBlur={() => setConfirmSubscribe(false)}
+              disabled={!c.email}
+              title={c.email ? undefined : 'Añade un email primero'}
+              className="flex h-[30px] items-center gap-1.5 rounded-[4px] bg-ob-active px-3 text-[13px] font-medium text-ob-text transition-colors hover:bg-[#3f3f3f] disabled:opacity-40"
+            >
+              <Mail size={15} className="text-ob-link" />
+              {confirmSubscribe ? '¿Te dio su permiso? Suscribir' : 'Suscribir'}
+            </button>
+          )}
+        </div>
+        {c.syncError && (
+          <p role="alert" className="mt-2 flex items-start gap-2 text-[13px] text-ob-red">
+            <CircleAlert size={15} className="mt-px shrink-0" aria-hidden />
+            No se pudo sincronizar con Resend: {c.syncError}. Se reintenta solo.
+          </p>
+        )}
+      </Section>
 
-/** Grupo del lateral: etiqueta micro y contenido, sin tarjeta. */
-function SideGroup({
-  title,
-  children
-}: {
-  title: string
-  children: React.ReactNode
-}): React.JSX.Element {
-  return (
-    <section>
-      <h2 className="mb-1 px-3 text-micro font-bold text-milk-soft">{title}</h2>
-      <div className="flex flex-col">{children}</div>
-    </section>
+      {fields.length > 0 && (
+        <Section title="Formulario">
+          <dl className="flex flex-col">
+            {fields.map(([key, value]) => (
+              <PropertyRow key={key} label={key}>
+                <span className="block px-1.5 text-[14px] break-words text-ob-text">
+                  {value === null ? '—' : String(value)}
+                </span>
+              </PropertyRow>
+            ))}
+          </dl>
+        </Section>
+      )}
+
+      <Timeline contact={c} go={go} />
+    </Page>
   )
 }
 
@@ -355,10 +332,10 @@ function Timeline({ contact, go }: { contact: ContactDetail; go: Go }): React.JS
             const m = item.meeting
             return (
               <Row key={`m-${m.id}`} onClick={() => go({ name: 'meeting', id: m.id })}>
-                <CalendarClock size={15} className="shrink-0 text-apricot" aria-hidden />
-                <span className="min-w-0 flex-1 truncate text-list font-bold">{m.title}</span>
+                <CalendarClock size={15} className="shrink-0 text-ob-link" aria-hidden />
+                <span className="min-w-0 flex-1 truncate text-list font-medium">{m.title}</span>
                 <MeetingStatusPill status={m.status} />
-                <span className="shrink-0 text-caption text-milk-soft tabular-nums">
+                <span className="shrink-0 text-caption text-ob-muted tabular-nums">
                   {dateTime(m.date)}
                 </span>
               </Row>
@@ -369,7 +346,7 @@ function Timeline({ contact, go }: { contact: ContactDetail; go: Go }): React.JS
             <Row key={item.event.id}>
               <Icon size={15} className={`shrink-0 ${tone}`} aria-hidden />
               <span className="min-w-0 flex-1 truncate text-list">{line}</span>
-              <span className="shrink-0 text-caption text-milk-soft tabular-nums">
+              <span className="shrink-0 text-caption text-ob-muted tabular-nums">
                 {dateTime(item.at)}
               </span>
             </Row>
@@ -404,7 +381,7 @@ function consentLine(c: {
     .join(' · ')
 }
 
-const SOFT = 'text-milk-soft'
+const SOFT = 'text-ob-muted'
 
 function describe(e: ContactEvent): { icon: typeof Mail; text: string; tone: string } {
   const d = e.detail
@@ -413,10 +390,10 @@ function describe(e: ContactEvent): { icon: typeof Mail; text: string; tone: str
       return {
         icon: Waypoints,
         text: `Entró por ${d.source ?? 'una fuente'}`,
-        tone: 'text-apricot'
+        tone: 'text-ob-link'
       }
     case 'subscribed':
-      return { icon: Mail, text: 'Suscrito a los emails', tone: 'text-mint' }
+      return { icon: Mail, text: 'Suscrito a los emails', tone: 'text-ob-green' }
     case 'status': {
       const bad = d.status === 'bounced' || d.status === 'complained'
       const label = {
@@ -427,7 +404,7 @@ function describe(e: ContactEvent): { icon: typeof Mail; text: string; tone: str
       return {
         icon: bad ? CircleAlert : MailX,
         text: label ?? `Estado: ${d.status}`,
-        tone: bad ? 'text-coral' : SOFT
+        tone: bad ? 'text-ob-red' : SOFT
       }
     }
     case 'tag_added':
@@ -435,8 +412,8 @@ function describe(e: ContactEvent): { icon: typeof Mail; text: string; tone: str
     case 'tag_removed':
       return { icon: TagIcon, text: `Tag quitado: ${d.tag}`, tone: SOFT }
     case 'promoted':
-      return { icon: UserPlus, text: `Pasó a pipeline como ${d.company}`, tone: 'text-apricot' }
+      return { icon: UserPlus, text: `Pasó a pipeline como ${d.company}`, tone: 'text-ob-link' }
     case 'sync_error':
-      return { icon: CircleAlert, text: `Error con Resend: ${d.error}`, tone: 'text-coral' }
+      return { icon: CircleAlert, text: `Error con Resend: ${d.error}`, tone: 'text-ob-red' }
   }
 }

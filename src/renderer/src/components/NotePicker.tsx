@@ -36,7 +36,10 @@ export function NotePicker({
   useEffect(() => {
     if (!open || kind !== 'note') return
     const t = setTimeout(() => {
-      notesApi.search(query, 30).then(setNotes).catch(() => setNotes([]))
+      notesApi
+        .search(query, 30)
+        .then(setNotes)
+        .catch(() => setNotes([]))
     }, 150)
     return () => clearTimeout(t)
   }, [open, kind, query])
@@ -52,9 +55,14 @@ export function NotePicker({
   const skip = useMemo(() => new Set([noteId, ...exclude]), [noteId, exclude])
   const items =
     kind === 'note'
-      ? notes.filter((n) => !skip.has(n.id)).map((n) => ({ id: n.id, title: n.title, hint: n.excerpt }))
+      ? notes
+          .filter((n) => !skip.has(n.id))
+          .map((n) => ({ id: n.id, title: n.title, hint: n.excerpt }))
       : clients
-          .filter((c) => !skip.has(c.id) && (!query || normalizeName(c.name).includes(normalizeName(query))))
+          .filter(
+            (c) =>
+              !skip.has(c.id) && (!query || normalizeName(c.name).includes(normalizeName(query)))
+          )
           .map((c) => ({ id: c.id, title: c.name, hint: '' }))
 
   const pick = (id: string): void => {
@@ -63,7 +71,12 @@ export function NotePicker({
   }
 
   return (
-    <Modal open={open} title={notesOnly ? 'Relacionar nota' : 'Relacionar'} onClose={onClose} size="sm">
+    <Modal
+      open={open}
+      title={notesOnly ? 'Relacionar nota' : 'Relacionar'}
+      onClose={onClose}
+      size="sm"
+    >
       <div className="flex flex-col gap-3">
         {!notesOnly && (
           <SegmentedToggle
@@ -85,7 +98,7 @@ export function NotePicker({
             onEnter={() => items[0] && pick(items[0].id)}
           />
         </div>
-        <ul className="overflow-hidden rounded-md bg-night/40 [&>li+li]:shadow-[inset_0_1px_0_var(--color-hairline)]">
+        <ul className="ui-list overflow-hidden rounded-md bg-night/40 [&>li+li]:shadow-[inset_0_1px_0_var(--color-hairline)]">
           {items.length === 0 && (
             <li className="px-4 py-3 text-caption text-milk-soft">
               {kind === 'note' ? 'Ninguna nota coincide.' : 'Ningún cliente coincide.'}
@@ -96,10 +109,12 @@ export function NotePicker({
               <button
                 type="button"
                 onClick={() => pick(item.id)}
-                className="w-full px-4 py-2.5 text-left transition-colors hover:bg-surface-raised focus-visible:bg-surface-raised"
+                className="ui-list-item w-full px-4 py-2.5 text-left transition-colors hover:bg-surface-raised focus-visible:bg-surface-raised"
               >
                 <span className="block truncate text-list font-bold">{item.title}</span>
-                {item.hint && <span className="block truncate text-caption text-milk-soft">{item.hint}</span>}
+                {item.hint && (
+                  <span className="block truncate text-caption text-milk-soft">{item.hint}</span>
+                )}
               </button>
             </li>
           ))}

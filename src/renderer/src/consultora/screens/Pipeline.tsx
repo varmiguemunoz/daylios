@@ -10,7 +10,7 @@ import {
   type PipelineFilters
 } from '@shared/pipeline-filters'
 import { api, attempt, money, useLoad, type Go } from '../lib'
-import { Button, Drawer, ErrorNote, FilterButton, SegmentedToggle } from '../ui'
+import { Button, Drawer, ErrorNote, FilterButton, INPUT, SegmentedToggle } from '../ui'
 import { PipelineBoard } from '../organisms/pipeline/PipelineBoard'
 import { PipelineTable } from '../organisms/pipeline/PipelineTable'
 import { PipelineFiltersPanel } from '../organisms/pipeline/PipelineFiltersPanel'
@@ -121,14 +121,14 @@ export function Pipeline({ go }: { go: Go }): React.JSX.Element {
   const current = data?.pipeline.id ?? ''
 
   return (
-    <div className="@container flex h-full min-h-0 flex-col pt-6 pl-10">
+    <div className="@container flex h-full min-h-0 flex-col pt-4 pl-6">
       <header className="flex flex-wrap items-center gap-2 pr-6">
         <h1 className="sr-only">Pipeline</h1>
         <select
           value={current}
           onChange={(e) => choose(e.target.value)}
           aria-label="Pipeline"
-          className="h-11 max-w-64 cursor-pointer truncate rounded-full bg-surface pr-3 pl-4 text-label font-extrabold text-milk outline-none hover:bg-surface-raised"
+          className="h-8 max-w-64 cursor-pointer truncate rounded-[4px] bg-transparent pr-2 pl-1.5 text-[20px] font-semibold text-ob-text outline-none hover:bg-ob-hover"
         >
           {(pipelines ?? []).map((p) => (
             <option key={p.id} value={p.id}>
@@ -141,7 +141,7 @@ export function Pipeline({ go }: { go: Go }): React.JSX.Element {
           <option value={NEW}>+ Nuevo pipeline</option>
         </select>
         {data && (
-          <span className="px-2 text-caption text-milk-soft">
+          <span className="px-2 text-[13px] text-ob-muted">
             {money(data.openValueUsd)} abiertos
           </span>
         )}
@@ -157,26 +157,26 @@ export function Pipeline({ go }: { go: Go }): React.JSX.Element {
           />
           <FilterButton count={count} onClick={() => setPanel(true)} />
           <Button onClick={() => setEditor('edit')} disabled={!data}>
-            <Pencil size={14} strokeWidth={2.5} />
+            <Pencil size={14} />
             Editar<span className="hidden @3xl:inline">&nbsp;pipeline</span>
           </Button>
           <button
             type="button"
             onClick={() => setCompany('')}
-            className="flex h-9 items-center gap-1.5 rounded-full bg-apricot pr-4 pl-3 text-caption font-extrabold text-ink transition-transform active:scale-95"
+            className="flex h-[30px] shrink-0 items-center gap-1.5 rounded-[4px] bg-ob-accent px-3 text-[13px] font-medium text-white transition-colors hover:bg-[#7a4fe0] disabled:pointer-events-none disabled:opacity-40"
           >
-            <Plus size={16} strokeWidth={3} />
+            <Plus size={16} />
             Nuevo<span className="hidden @3xl:inline">&nbsp;prospecto</span>
           </button>
         </div>
       </header>
 
       {filters.query && (
-        <p className="mt-3 pr-6 text-caption text-milk-soft">
+        <p className="mt-3 pr-6 text-[13px] text-ob-muted">
           Buscando «{filters.query}» ·{' '}
           <button
             type="button"
-            className="font-bold text-milk hover:text-apricot"
+            className="font-medium text-ob-text hover:text-ob-link"
             onClick={() => setFilters({ ...filters, query: '' })}
           >
             Quitar
@@ -204,18 +204,20 @@ export function Pipeline({ go }: { go: Go }): React.JSX.Element {
             }}
             placeholder="Empresa o persona y Enter (va a la primera columna abierta)"
             aria-label="Empresa del prospecto"
-            className="h-[52px] w-full rounded-lg bg-surface px-5 text-body outline-none focus:shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--color-apricot)_70%,transparent)]"
+            className={INPUT}
           />
         </form>
       )}
       {notice && (
-        <p className="mt-4 mr-6 rounded-md bg-mint/15 px-4 py-3 text-caption text-mint">{notice}</p>
+        <p className="mt-4 mr-6 rounded-[6px] border-l-2 border-ob-green bg-ob-green/10 px-3 py-2 text-[13px] text-ob-green">
+          {notice}
+        </p>
       )}
       <div className="pr-6">
         <ErrorNote message={error ?? loadError} />
       </div>
 
-      <div className="mt-5 flex min-h-0 flex-1 flex-col">
+      <div className="mt-4 flex min-h-0 flex-1 flex-col">
         {data && view === 'board' && (
           <PipelineBoard
             data={data}
@@ -248,7 +250,7 @@ export function Pipeline({ go }: { go: Go }): React.JSX.Element {
             type="button"
             onClick={() => setFilters(EMPTY_PIPELINE_FILTERS)}
             disabled={!count && !filters.query}
-            className="h-9 rounded-full px-4 text-caption font-bold text-milk-soft transition-colors hover:bg-surface-raised hover:text-milk disabled:text-milk-faint"
+            className="h-[30px] rounded-[4px] px-3 text-[13px] text-ob-muted transition-colors hover:bg-ob-hover hover:text-ob-text disabled:text-ob-faint"
           >
             Limpiar filtros
           </button>

@@ -11,7 +11,11 @@ export const isOverlayOpen = (): boolean => stack.length > 0
  * Capa abierta: registra Esc (en captura, antes que los atajos de la ventana),
  * enfoca el primer control y devuelve el foco al cerrar.
  */
-export function useOverlay(open: boolean, onClose: () => void, panel: React.RefObject<HTMLElement | null>): void {
+export function useOverlay(
+  open: boolean,
+  onClose: () => void,
+  panel: React.RefObject<HTMLElement | null>
+): void {
   const close = useRef(onClose)
   useEffect(() => {
     close.current = onClose

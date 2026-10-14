@@ -3,7 +3,7 @@ import type { SettingsInput } from '@shared/consultora'
 import { api, attempt, useLoad } from '../lib'
 import { Button, ErrorNote, Field, Section } from '../ui'
 
-const input = 'bg-transparent text-list outline-none placeholder:text-milk-soft'
+const input = 'bg-transparent text-[14px] text-ob-text outline-none placeholder:text-ob-faint'
 
 /** Hub: el Worker de Cloudflare que recibe leads con el Mac apagado. URL y token de administración. */
 export function HubSettings(): React.JSX.Element {
@@ -21,10 +21,10 @@ export function HubSettings(): React.JSX.Element {
   }
   const probe = async (): Promise<void> => setTest(await window.api.marketing.testHub())
 
-  if (!settings) return <Section title="Hub de leads">{null}</Section>
+  if (!settings) return <Section title="Conexión">{null}</Section>
 
   return (
-    <Section title="Hub de leads">
+    <Section title="Conexión">
       <div className="flex flex-col gap-2">
         <div className="grid grid-cols-2 gap-2">
           <Field label="URL del Worker">
@@ -83,12 +83,12 @@ export function HubSettings(): React.JSX.Element {
         </div>
         {test && (
           <p
-            className={`rounded-md px-4 py-3 text-caption ${test.ok ? 'bg-mint/15 text-mint' : 'bg-coral/12 text-coral'}`}
+            className={`rounded-[6px] border-l-2 px-3 py-2 text-[13px] ${test.ok ? 'border-ob-green bg-ob-green/10 text-ob-green' : 'border-ob-red bg-ob-red/10 text-ob-red'}`}
           >
             {test.message}
           </p>
         )}
-        <p className="px-1 text-caption text-milk-soft">
+        <p className="px-1 text-caption text-ob-muted">
           El hub recibe los leads aunque este Mac esté apagado; la app los descarga cada minuto
           mientras está abierta. Cómo desplegarlo: workers/leads-hub en el README.
         </p>

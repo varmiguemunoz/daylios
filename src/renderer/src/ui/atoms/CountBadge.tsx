@@ -8,7 +8,7 @@ export function CountBadge({
 }): React.JSX.Element {
   return (
     <span
-      className={`inline-grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-micro font-extrabold tabular-nums ${
+      className={`ui-badge ${tone === 'apricot' ? 'ui-accent' : ''} inline-grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-micro font-extrabold tabular-nums ${
         tone === 'apricot' ? 'bg-apricot text-ink' : 'bg-surface-raised text-milk-soft'
       }`}
     >

@@ -11,7 +11,7 @@ export function Initials({ name, size = 32 }: { name: string; size?: number }): 
     <span
       aria-hidden
       style={{ width: size, height: size }}
-      className="grid shrink-0 place-items-center rounded-full bg-surface-raised text-micro font-extrabold text-milk-soft"
+      className="grid shrink-0 place-items-center rounded-full bg-ob-active text-[11px] font-semibold text-ob-muted"
     >
       {letters || '·'}
     </span>

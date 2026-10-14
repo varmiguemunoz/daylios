@@ -50,8 +50,10 @@ export function Newsletters(): React.JSX.Element {
             type="button"
             onClick={() => void togglePause()}
             aria-pressed={ctx.paused}
-            className={`flex h-9 items-center gap-1.5 rounded-full px-4 text-caption font-extrabold transition-[background-color,transform] active:scale-95 ${
-              ctx.paused ? 'bg-apricot text-ink' : 'bg-surface text-milk hover:bg-surface-raised'
+            className={`flex h-[30px] items-center gap-1.5 rounded-[4px] px-3 text-[13px] font-medium transition-colors ${
+              ctx.paused
+                ? 'bg-ob-accent text-white hover:bg-[#7a4fe0]'
+                : 'bg-ob-active text-ob-text hover:bg-[#3f3f3f]'
             }`}
           >
             {ctx.paused ? <Play size={15} /> : <Pause size={15} />}
@@ -74,10 +76,10 @@ export function Newsletters(): React.JSX.Element {
               <span
                 key={t.slug}
                 title={t.slug}
-                className="inline-flex h-8 items-center gap-1.5 rounded-full bg-surface px-3 text-caption font-bold"
+                className="inline-flex h-8 items-center gap-1.5 rounded-[4px] bg-ob-active px-3 text-[13px]"
               >
                 {t.name}
-                <span className="text-milk-soft tabular-nums">{t.subscribed}</span>
+                <span className="text-ob-muted tabular-nums">{t.subscribed}</span>
               </span>
             ))}
           </div>
@@ -99,14 +101,14 @@ export function Newsletters(): React.JSX.Element {
                   type="button"
                   onClick={() => setOpen(open === n.id ? null : n.id)}
                   aria-expanded={open === n.id}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors outline-offset-[-2px] hover:bg-surface-raised focus-visible:bg-surface-raised"
+                  className="flex min-h-8 w-full items-center gap-3 px-2 py-1.5 text-left transition-colors outline-offset-[-2px] hover:bg-ob-hover focus-visible:bg-ob-hover"
                 >
-                  <span className="w-24 shrink-0 text-caption text-milk-soft tabular-nums">
+                  <span className="w-24 shrink-0 text-caption text-ob-muted tabular-nums">
                     {shortDate(n.day)}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-list font-bold">{n.subject}</span>
-                    <span className="block truncate text-caption text-milk-soft">
+                    <span className="block truncate text-list font-medium">{n.subject}</span>
+                    <span className="block truncate text-caption text-ob-muted">
                       {n.tag}
                       {n.scheduledAt && ` · programado: ${n.scheduledAt}`}
                     </span>
@@ -132,12 +134,12 @@ function Preview({ id }: { id: string }): React.JSX.Element {
       <ErrorNote message={error ?? (n?.error ? `Resend: ${n.error}` : null)} />
       {n && (
         <>
-          <p className="mt-2 mb-2 text-caption text-milk-soft">Creado {dateTime(n.createdAt)}</p>
+          <p className="mt-2 mb-2 text-caption text-ob-muted">Creado {dateTime(n.createdAt)}</p>
           <iframe
             title={`Vista previa: ${n.subject}`}
             sandbox=""
             srcDoc={n.html}
-            className="h-[480px] w-full rounded-sm bg-milk"
+            className="h-[480px] w-full rounded-sm bg-ob-text"
           />
         </>
       )}
