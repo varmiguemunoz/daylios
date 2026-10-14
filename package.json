@@ -20,7 +20,9 @@
     "build:mac": "npm run build && electron-builder --mac",
     "postinstall": "electron-builder install-app-deps",
     "service:install": "bash scripts/install.sh",
-    "service:uninstall": "bash scripts/uninstall.sh"
+    "service:uninstall": "bash scripts/uninstall.sh",
+    "migration:list": "npx supabase --workdir services/cloud migration list",
+    "migration:push": "npx supabase --workdir services/cloud db push"
   },
   "dependencies": {
     "@electron-toolkit/utils": "^4.0.0",

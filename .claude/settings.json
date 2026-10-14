@@ -1,0 +1,6 @@
+{
+  "enabledPlugins": {
+    "terraform@claude-plugins-official": true,
+    "atlassian@claude-plugins-official": true
+  }
+}
