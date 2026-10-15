@@ -1,8 +1,11 @@
+import type { DataSource } from 'typeorm'
 import { fromApp } from './vault-guard'
+import { moveClientFolders } from './services/client-folders.migration'
 import {
   app,
   BrowserWindow,
   dialog,
+  Menu,
   ipcMain,
   net,
   Notification,
@@ -11,7 +14,14 @@ import {
   safeStorage,
   shell
 } from 'electron'
+import { join } from 'path'
 import { pathToFileURL } from 'url'
+import { APP_ID, APP_NAME, DATA_DIR } from '@shared/app'
+import { isWindows } from './platform'
+import { protocolUrlIn } from './protocol'
+import { Updater } from './updater'
+import { broadcastUpdate, registerAppIpc } from './ipc.app'
+import { initLoginItem } from './login-item'
 import { optimizer } from '@electron-toolkit/utils'
 import { openDatabase } from './db/data-source'
 import { AutomationEngine } from './automations/engine'
@@ -42,6 +52,7 @@ import {
   dataRoot,
   deviceId,
   loadConfig,
+  platformDefaults,
   orgPaths,
   saveActiveOrg,
   saveEdition,
@@ -80,6 +91,9 @@ import { WorkspaceService } from './services/workspace.service'
 import { WorkspaceWatcher } from './services/workspace-watcher'
 import { registerWorkspaceIpc } from './ipc.workspace'
 
+app.setPath('userData', join(app.getPath('appData'), DATA_DIR))
+if (isWindows) app.setAppUserModelId(APP_ID)
+
 // Audio del sistema al grabar pantalla en macOS (ScreenCaptureKit). Debe ir antes de `ready`.
 app.commandLine.appendSwitch(
   'enable-features',
@@ -96,12 +110,15 @@ protocol.registerSchemesAsPrivileged([
 
 let account: Account | null = null
 let orgs: Organizations | null = null
-let pendingUrl: string | null = null
-app.on('open-url', (event, url) => {
-  event.preventDefault()
+let pendingUrl: string | null = protocolUrlIn(process.argv)
+function handleProtocolUrl(url: string): void {
   if (account?.handleUrl(url)) return
   if (orgs) orgs.handleUrl(url)
   else pendingUrl = url
+}
+app.on('open-url', (event, url) => {
+  event.preventDefault()
+  handleProtocolUrl(url)
 })
 
 // Una sola instancia: un segundo arranque abre la ventana existente.
@@ -112,9 +129,26 @@ async function start(): Promise<void> {
   // App de menubar: sin icono en el Dock.
   // El arranque al iniciar sesión lo gestiona el servicio de launchd (scripts/install.sh).
   app.dock?.hide()
+  if (isWindows) Menu.setApplicationMenu(null)
 
   const dataDir = app.getPath('userData')
-  loadConfig(dataDir)
+  loadConfig(dataDir, platformDefaults(process.platform, app.getPath('desktop')))
+  initLoginItem(dataDir)
+  const updater = new Updater({
+    enabled: app.isPackaged,
+    onState: broadcastUpdate,
+    onReady: (version) => {
+      if (!Notification.isSupported()) return
+      const n = new Notification({
+        title: APP_NAME,
+        body: `La versión ${version} está lista. Haz clic para reiniciar y actualizar.`
+      })
+      n.on('click', () => updater.install())
+      n.show()
+    }
+  })
+  registerAppIpc(updater)
+  updater.start()
   // Estado de la interfaz (ui-state.json): antes de crear las ventanas, que lo leen.
   const ui = initUiState(dataDir)
   app.on('before-quit', () => ui.flush())
@@ -182,7 +216,7 @@ async function start(): Promise<void> {
     db,
     account,
     dataRoot: dataRoot(dataDir),
-    docsPath: config.docsPath,
+    workspacePath: config.workspacePath,
     activeOrg: config.activeOrg,
     deviceId,
     notify: (changes) => {
@@ -209,7 +243,7 @@ async function start(): Promise<void> {
     },
     alert: (entry, text) => {
       if (!Notification.isSupported()) return
-      const n = new Notification({ title: 'DayliOS', body: text })
+      const n = new Notification({ title: APP_NAME, body: text })
       n.on('click', () => openConsultoraAt({ open: { entity: entry.entity, id: entry.entityId } }))
       n.show()
     },
@@ -251,6 +285,8 @@ async function start(): Promise<void> {
     resetConsultoraBounds()
     win.webContents.reload()
   })
+
+  await migrateClientFolders(db)
 
   // Workspace: bóveda en disco + índice. Se sincroniza al arrancar y vigila cambios de Finder o Claude.
   const workspace = new WorkspaceService(db, new Vault(config.workspacePath), notify)
@@ -323,7 +359,11 @@ async function start(): Promise<void> {
     if (target?.client || target?.workspace) openConsultoraAt(target)
     else showConsultora()
   })
-  app.on('second-instance', show)
+  app.on('second-instance', (_event, argv) => {
+    const url = protocolUrlIn(argv)
+    if (url) handleProtocolUrl(url)
+    else show()
+  })
 
   // En desarrollo, abrir la ventana al arrancar para iterar más rápido.
   if (!app.isPackaged) win.once('ready-to-show', show)
@@ -365,3 +405,27 @@ function serveVault(workspace: WorkspaceService): void {
 
 // La app vive en el menubar: cerrar la ventana no la termina.
 app.on('window-all-closed', () => {})
+
+async function migrateClientFolders(db: DataSource): Promise<void> {
+  const result = await moveClientFolders({
+    db,
+    docsRoot: config.docsPath(),
+    workspaceRoot: config.workspacePath()
+  }).catch((error) => {
+    console.error('[clientes] carpetas', error)
+    return null
+  })
+  if (!result) return
+  if (result.moved.length) console.log('[clientes] carpetas movidas al Workspace:', result.moved)
+  if (!result.failed.length) return
+  void dialog.showMessageBox({
+    type: 'warning',
+    message: 'Algunas carpetas de clientes no se pudieron mover al Workspace.',
+    detail: [
+      ...result.failed.map((f) => `${f.name}: ${f.error}`),
+      result.backup ? `Copia de seguridad: ${result.backup}` : ''
+    ]
+      .filter(Boolean)
+      .join('\n')
+  })
+}

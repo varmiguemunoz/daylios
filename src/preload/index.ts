@@ -11,6 +11,7 @@ import {
 import type { WorkspaceApi } from '../shared/workspace'
 import type { DashboardApi } from '../shared/metrics'
 import type { EditionApi } from '../shared/edition'
+import type { AppApi, UpdateState } from '../shared/app'
 import type { AccountApi, AccountState } from '../shared/account'
 import type { OrgsApi, OrgsState } from '../shared/organizations'
 import type { SyncApi, SyncStatus } from '../shared/sync-protocol'
@@ -46,6 +47,19 @@ const dashboard: DashboardApi = {
   dashboard: () => ipcRenderer.invoke('dashboard:get'),
   saveDashboard: (layout) => ipcRenderer.invoke('dashboard:save', layout),
   resetDashboard: () => ipcRenderer.invoke('dashboard:reset')
+}
+
+const appApi: AppApi = {
+  info: () => ipcRenderer.invoke('app:info'),
+  setOpenAtLogin: (on) => ipcRenderer.invoke('app:setOpenAtLogin', on),
+  connectClaude: () => ipcRenderer.invoke('app:connectClaude'),
+  checkUpdates: () => ipcRenderer.invoke('app:checkUpdates'),
+  installUpdate: () => ipcRenderer.invoke('app:installUpdate'),
+  onUpdate: (cb) => {
+    const listener = (_e: IpcRendererEvent, state: UpdateState): void => cb(state)
+    ipcRenderer.on('app:update', listener)
+    return () => ipcRenderer.removeListener('app:update', listener)
+  }
 }
 
 const edition: EditionApi = {
@@ -347,6 +361,7 @@ const automations = {
 } as AutomationsBridge
 
 contextBridge.exposeInMainWorld('api', {
+  app: appApi,
   ui,
   tasks,
   dashboard,
@@ -376,6 +391,8 @@ contextBridge.exposeInMainWorld('api', {
     return () => ipcRenderer.removeListener('consultora:navigate', listener)
   },
   openPath: (path: string) => ipcRenderer.invoke('shell:open', path),
+  revealPath: (path: string) => ipcRenderer.invoke('shell:reveal', path),
+  platform: process.platform,
 
   pathForFile: (file: File) => webUtils.getPathForFile(file),
   onWindowShown: (cb: () => void) => on('window:shown', cb),

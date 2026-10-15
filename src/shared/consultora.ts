@@ -1,5 +1,5 @@
 import type { ContactEvent, ContactFields, ContactStatus, TagRef } from './marketing'
-import type { NoteBrief } from './notes'
+import type { ClientNote } from './notes'
 
 export type ClientStatus = 'activo' | 'historico'
 export type ProjectStatus = 'activo' | 'pausa' | 'cerrado'
@@ -297,7 +297,9 @@ export interface ClientDetail extends Client {
   openActionItems: OpenActionItem[]
   documents: DocFile[]
 
-  notes: NoteBrief[]
+  notes: ClientNote[]
+
+  folder: string | null
 }
 
 export interface ClientImpact {

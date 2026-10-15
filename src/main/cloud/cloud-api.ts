@@ -22,7 +22,7 @@ export class CloudApi {
         signal: AbortSignal.timeout(15_000)
       })
     } catch {
-      throw new Error('No hay conexión con la nube de DayliOS.')
+      throw new Error('No hay conexión con la nube de Alisuite.')
     }
     const text = await res.text()
     const data: unknown = text ? JSON.parse(text) : null

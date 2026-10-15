@@ -5,6 +5,7 @@ import type { SearchHit, WorkspaceItem } from '@shared/workspace'
 import { SwitcherFrame, type SwitcherOption } from '../../shell/SwitcherFrame'
 import { KIND_ICON, flattenExplorer, fuzzyScore, openItem, ws } from '../lib'
 import { useWorkspace } from '../context'
+import { kbd } from '../../../lib/platform'
 
 interface Result {
   item: WorkspaceItem
@@ -114,7 +115,7 @@ export function QuickSwitcher({ onClose }: { onClose: () => void }): React.JSX.E
       onIndex={setIndex}
       onChoose={(i, alt) => void choose(alt && canCreate ? results.length : i)}
       empty="No hay archivos todavía."
-      hints={['↑↓ navegar', '↵ abrir', '⇧↵ crear', 'esc cerrar']}
+      hints={['↑↓ navegar', kbd('↵ abrir'), kbd('⇧↵ crear'), 'esc cerrar']}
       onClose={onClose}
     />
   )

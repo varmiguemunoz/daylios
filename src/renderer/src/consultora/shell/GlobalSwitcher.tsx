@@ -5,6 +5,7 @@ import type { WorkspaceItem } from '@shared/workspace'
 import { api, type Go, type Screen } from '../lib'
 import { KIND_ICON, flattenExplorer, fuzzyScore, openItem, ws } from '../workspace/lib'
 import { SwitcherFrame, type SwitcherOption } from './SwitcherFrame'
+import { kbd } from '../../lib/platform'
 
 const TYPE: Record<SearchHit['type'], { label: string; Icon: typeof User }> = {
   client: { label: 'Cliente', Icon: Briefcase },
@@ -114,7 +115,7 @@ export function GlobalSwitcher({
       onIndex={setIndex}
       onChoose={choose}
       empty={q.length < 2 ? 'Escribe al menos 2 letras.' : 'Sin resultados.'}
-      hints={['↑↓ navegar', '↵ abrir', '⌘↵ ver todos', 'esc cerrar']}
+      hints={['↑↓ navegar', kbd('↵ abrir'), kbd('⌘↵ ver todos'), 'esc cerrar']}
       onClose={onClose}
     />
   )

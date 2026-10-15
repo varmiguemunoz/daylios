@@ -20,7 +20,9 @@ export function register(server: McpServer): void {
     {
       description:
         'Ficha completa de un cliente: datos, contactos, notas, proyectos (con entregables pendientes), reuniones, ' +
-        'action items abiertos y lista de documentos de su carpeta. Para "¿en qué está el cliente X?".',
+        'action items abiertos y lista de documentos de su carpeta. Para "¿en qué está el cliente X?". ' +
+        'folder es la ruta de su carpeta en el Workspace, úsala con workspace_list o workspace_write_note. ' +
+        'Las notas con origin folder viven dentro de esa carpeta.',
       inputSchema: { client: ref('del cliente') }
     },
     ({ client }) => tool(() => api('GET', `/consultora/clients/${enc(client)}`))

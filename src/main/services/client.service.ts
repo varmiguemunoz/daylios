@@ -1,6 +1,8 @@
 import { randomUUID } from 'crypto'
+import { existsSync } from 'fs'
+import { rename } from 'fs/promises'
+import { basename, dirname, join, relative, sep } from 'path'
 import { emit } from '../automations/events'
-import { join } from 'path'
 import type { DataSource, EntityManager } from 'typeorm'
 import {
   CLIENT_STATUSES,
@@ -26,7 +28,14 @@ import { config } from '../config'
 import { AppError } from './app.error'
 import { findByRef } from './ref'
 import { markdown, now, oneOf, optionalDay, optionalText, requiredText } from './fields'
-import { ensureClientFolder, listDocuments, safeFolderName } from './documents'
+import {
+  CLIENTS_FOLDER,
+  clientFolderFor,
+  ensureClientFolder,
+  isInside,
+  listDocuments
+} from './documents'
+import { withoutChangeLog } from '../db/author'
 import { brief, openActionItems } from './meeting.helpers'
 import { unlinkTasks } from './task.service'
 
@@ -57,6 +66,7 @@ export class ClientService {
 
   async get(ref: unknown): Promise<ClientDetail> {
     const client = await this.find(ref)
+    const folder = workspaceFolderOf(client.folderPath)
     const projects = await this.db
       .getRepository(ProjectModel)
       .find({ where: { clientId: client.id }, order: { updatedAt: 'DESC' } })
@@ -76,7 +86,8 @@ export class ClientService {
       prospects,
       openActionItems: openActionItems(meetings),
       documents: await listDocuments(client.folderPath),
-      notes: await notesOfClient(this.db.manager, client.id)
+      notes: await notesOfClient(this.db.manager, client.id, folder),
+      folder
     }
   }
 
@@ -121,11 +132,33 @@ export class ClientService {
     return transactionGuard(this.db, (manager) => insertClient(manager, input))
   }
 
-  update(ref: unknown, patch: ClientInput): Promise<Client> {
+  async update(ref: unknown, patch: ClientInput): Promise<Client> {
+    const current = await this.find(ref)
+    const renamed =
+      patch.name !== undefined && patch.folderPath === undefined
+        ? await renameClientFolder(current, requiredText(patch.name, 'El nombre'))
+        : null
+    try {
+      return await this.save(current.id, patch, renamed)
+    } catch (error) {
+      if (renamed) await moveFolder(renamed.to, renamed.from).catch(() => undefined)
+      throw error
+    }
+  }
+
+  private save(
+    id: string,
+    patch: ClientInput,
+    renamed: { from: string; to: string } | null
+  ): Promise<Client> {
     return transactionGuard(this.db, async (manager) => {
       const clients = manager.getRepository(ClientModel)
-      const client = await findByRef(clients, ref, 'name', 'el cliente')
+      const client = await findByRef(clients, id, 'name', 'el cliente')
       if (patch.name !== undefined) client.name = requiredText(patch.name, 'El nombre')
+      if (renamed) {
+        client.folderPath = renamed.to
+        await repointRecordings(manager, renamed.from, renamed.to)
+      }
       if (patch.sector !== undefined) client.sector = optionalText(patch.sector, 'El sector')
       if (patch.status !== undefined)
         client.status = oneOf(patch.status, CLIENT_STATUSES, 'El estado')
@@ -142,6 +175,51 @@ export class ClientService {
       return clients.save(client)
     })
   }
+}
+
+function workspaceFolderOf(folderPath: string): string | null {
+  const workspace = config.workspacePath()
+  if (!isInside(workspace, folderPath)) return null
+  return relative(workspace, folderPath).split(sep).join('/')
+}
+
+async function moveFolder(from: string, to: string): Promise<void> {
+  if (from.toLowerCase() === to.toLowerCase()) {
+    const step = `${to}.renombrando`
+    await rename(from, step)
+    await rename(step, to)
+  } else await rename(from, to)
+}
+
+async function renameClientFolder(
+  client: Client,
+  name: string
+): Promise<{ from: string; to: string } | null> {
+  const workspace = config.workspacePath()
+  const root = join(workspace, CLIENTS_FOLDER)
+  const from = client.folderPath
+  if (dirname(from) !== root || !existsSync(from)) return null
+  const to = clientFolderFor(workspace, name)
+  if (to === from) return null
+  if (existsSync(to) && to.toLowerCase() !== from.toLowerCase())
+    throw new AppError('invalid', `Ya existe una carpeta «${basename(to)}» en Clientes.`)
+  await moveFolder(from, to)
+  return { from, to }
+}
+
+async function repointRecordings(manager: EntityManager, from: string, to: string): Promise<void> {
+  const rows: { id: string; recording_path: string }[] = await manager.query(
+    'SELECT id, recording_path FROM meetings WHERE recording_path IS NOT NULL'
+  )
+  await withoutChangeLog(async () => {
+    for (const row of rows) {
+      if (!row.recording_path.startsWith(from + sep)) continue
+      await manager.query('UPDATE meetings SET recording_path = ? WHERE id = ?', [
+        to + row.recording_path.slice(from.length),
+        row.id
+      ])
+    }
+  })
 }
 
 export async function insertClient(manager: EntityManager, input: ClientInput): Promise<Client> {
@@ -162,7 +240,7 @@ export async function insertClient(manager: EntityManager, input: ClientInput): 
     contactsMd: markdown(input.contactsMd, 'Contactos'),
     notesMd: markdown(input.notesMd, 'Las notas'),
     signedAt: optionalDay(input.signedAt, 'La fecha de firma') ?? stamp.slice(0, 10),
-    folderPath: input.folderPath?.trim() || join(config.docsPath(), safeFolderName(name)),
+    folderPath: input.folderPath?.trim() || clientFolderFor(config.workspacePath(), name),
     createdAt: stamp,
     updatedAt: stamp
   }

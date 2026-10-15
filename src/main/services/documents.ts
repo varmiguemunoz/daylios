@@ -1,6 +1,6 @@
 import { existsSync } from 'fs'
 import { mkdir, readdir, readFile, rename, stat, writeFile } from 'fs/promises'
-import { basename, dirname, extname, join, relative, resolve, sep } from 'path'
+import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'path'
 import type { DocFile } from '@shared/consultora'
 import { AppError } from './app.error'
 import { moveToTrash } from './trash'
@@ -8,14 +8,32 @@ import { moveToTrash } from './trash'
 export const CLIENT_SUBFOLDERS = ['Contratos', 'Entregables', 'Documentación técnica', 'Reuniones']
 
 const TEXT_EXTENSIONS = ['.md', '.txt', '.csv', '.json']
+
+const toSlash = (path: string): string => path.split(sep).join('/')
 const MAX_READ = 200_000
 const MAX_DEPTH = 3
 
+const RESERVED = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i
+
 export function safeFolderName(name: string): string {
-  return name
-    .replace(/[/:\\*?"<>|]/g, '-')
+  const clean = name
+    // eslint-disable-next-line no-control-regex
+    .replace(/[/:\\*?"<>|\u0000-\u001f]/g, '-')
     .replace(/\s+/g, ' ')
     .trim()
+    .replace(/[. ]+$/, '')
+  const stem = clean.split('.')[0]
+  return RESERVED.test(stem) ? `${stem}_${clean.slice(stem.length)}` : clean
+}
+
+export const CLIENTS_FOLDER = 'Clientes'
+
+export const clientFolderFor = (workspaceRoot: string, name: string): string =>
+  join(workspaceRoot, CLIENTS_FOLDER, safeFolderName(name) || 'Cliente')
+
+export const isInside = (parent: string, child: string): boolean => {
+  const rel = relative(resolve(parent), resolve(child))
+  return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel)
 }
 
 export async function ensureClientFolder(folder: string): Promise<void> {
@@ -34,11 +52,11 @@ export async function listDocuments(folder: string): Promise<DocFile[]> {
         if (depth < MAX_DEPTH) await walk(full, depth + 1)
       } else if (entry.isFile()) {
         const info = await stat(full)
-        const path = relative(folder, full)
+        const path = toSlash(relative(folder, full))
         files.push({
           path,
           name: entry.name,
-          folder: relative(folder, dir) || '.',
+          folder: toSlash(relative(folder, dir)) || '.',
           size: info.size,
           modifiedAt: info.mtime.toISOString()
         })
@@ -91,10 +109,10 @@ export async function renameDocument(folder: string, path: string, name: string)
   if (!existsSync(from)) throw new AppError('not_found', 'No existe ese archivo.')
   const to = join(dirname(from), clean)
   safePath(folder, relative(folder, to))
-  if (to === from) return relative(folder, from)
+  if (to === from) return toSlash(relative(folder, from))
   if (existsSync(to)) throw new AppError('invalid', `Ya existe «${clean}» en esa carpeta.`)
   await rename(from, to)
-  return relative(folder, to)
+  return toSlash(relative(folder, to))
 }
 
 export async function trashDocument(folder: string, path: string): Promise<void> {
@@ -129,7 +147,10 @@ export async function writeDocument(
   }
   await mkdir(dirname(full), { recursive: true })
   await writeFile(full, content, 'utf8')
-  return { path: relative(folder, full), modifiedAt: (await stat(full)).mtime.toISOString() }
+  return {
+    path: toSlash(relative(folder, full)),
+    modifiedAt: (await stat(full)).mtime.toISOString()
+  }
 }
 
 export async function openDocument(
@@ -144,7 +165,7 @@ export async function openDocument(
   if (info.size > MAX_WRITE)
     throw new AppError('invalid', 'Es demasiado grande para editarlo aquí. Ábrelo con su app.')
   return {
-    path: relative(folder, full),
+    path: toSlash(relative(folder, full)),
     name: basename(full),
     content: await readFile(full, 'utf8'),
     modifiedAt: info.mtime.toISOString()

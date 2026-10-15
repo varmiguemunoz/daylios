@@ -71,16 +71,28 @@ const DEFAULTS: StoredSettings = {
   presenceHidden: false
 }
 
+export type PlatformDefaults = Pick<StoredSettings, 'docsPath' | 'voiceShortcut'>
+
+export const platformDefaults = (platform: string, desktop: string): PlatformDefaults =>
+  platform === 'win32'
+    ? { docsPath: join(desktop, 'alimunozadvisory'), voiceShortcut: 'CommandOrControl+Shift+Space' }
+    : { docsPath: DEFAULTS.docsPath, voiceShortcut: DEFAULTS.voiceShortcut }
+
 let file = ''
+let defaults: StoredSettings = { ...DEFAULTS }
 let current: StoredSettings = { ...DEFAULTS }
 
-export function loadConfig(dataDir: string): void {
+export function loadConfig(dataDir: string, overrides: Partial<PlatformDefaults> = {}): void {
+  defaults = { ...DEFAULTS, ...overrides }
   file = join(dataDir, 'settings.json')
-  if (!existsSync(file)) return
+  if (!existsSync(file)) {
+    current = { ...defaults }
+    return
+  }
   try {
-    current = { ...DEFAULTS, ...JSON.parse(readFileSync(file, 'utf8')) }
+    current = { ...defaults, ...JSON.parse(readFileSync(file, 'utf8')) }
   } catch {
-    current = { ...DEFAULTS } // archivo dañado: se reescribe en el próximo guardado
+    current = { ...defaults } // archivo dañado: se reescribe en el próximo guardado
   }
 }
 
@@ -200,7 +212,7 @@ export function saveSettings(input: SettingsInput): Settings {
     next.workspaceShortcut = clean(input.workspaceShortcut, 'El atajo del workspace', 60)
   }
   if (input.voiceShortcut !== undefined) {
-    next.voiceShortcut = clean(input.voiceShortcut, 'El atajo', 60) || DEFAULTS.voiceShortcut
+    next.voiceShortcut = clean(input.voiceShortcut, 'El atajo', 60) || defaults.voiceShortcut
   }
   if (input.voiceEnabled !== undefined) next.voiceEnabled = input.voiceEnabled === true
 

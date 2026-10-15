@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { RibbonButton } from './RibbonButton'
 import type { Sidebar, SidebarTab } from './useSidebar'
+import { isMac, kbd } from '../../lib/platform'
 
 interface AppShellProps {
   title: string
@@ -89,12 +90,14 @@ export function AppShell({
 
   return (
     <div className="flex h-full flex-col bg-ob-bg font-ob text-ob-text">
-      <header className="relative z-20 flex h-[38px] shrink-0 items-center gap-0.5 border-b border-ob-border bg-ob-alt pr-2 pl-[80px] [-webkit-app-region:drag]">
+      <header
+        className={`relative z-20 flex h-[38px] shrink-0 items-center gap-0.5 border-b border-ob-border bg-ob-alt [-webkit-app-region:drag] ${isMac() ? 'pr-2 pl-[80px]' : 'pr-[140px] pl-2'}`}
+      >
         <div className="flex items-center gap-0.5 [-webkit-app-region:no-drag]">
-          <RibbonButton label="Atrás (⌘[)" onClick={onBack} disabled={!canBack}>
+          <RibbonButton label={kbd('Atrás (⌘[)')} onClick={onBack} disabled={!canBack}>
             <ChevronLeft size={17} />
           </RibbonButton>
-          <RibbonButton label="Adelante (⌘])" onClick={onForward} disabled={!canForward}>
+          <RibbonButton label={kbd('Adelante (⌘])')} onClick={onForward} disabled={!canForward}>
             <ChevronRight size={17} />
           </RibbonButton>
         </div>
@@ -118,16 +121,16 @@ export function AppShell({
           className="flex w-11 shrink-0 flex-col items-center gap-1 border-r border-ob-border bg-ob-alt py-2"
         >
           <RibbonButton
-            label="Barra lateral (⌘\)"
+            label={kbd('Barra lateral (⌘\\)')}
             onClick={sidebar.toggle}
             active={sidebar.visible}
           >
             <PanelLeft size={17} />
           </RibbonButton>
-          <RibbonButton label="Buscar en todo (⌘K)" onClick={onSearch}>
+          <RibbonButton label={kbd('Buscar en todo (⌘K)')} onClick={onSearch}>
             <Search size={17} />
           </RibbonButton>
-          <RibbonButton label="Nueva nota (⌘N)" onClick={onNewNote}>
+          <RibbonButton label={kbd('Nueva nota (⌘N)')} onClick={onNewNote}>
             <FilePlus2 size={17} />
           </RibbonButton>
           <RibbonButton label="Nuevo board" onClick={onNewBoard}>
@@ -135,7 +138,7 @@ export function AppShell({
           </RibbonButton>
           <div className="mt-auto flex flex-col items-center gap-1">
             {org}
-            <RibbonButton label="Ajustes (⌘,)" onClick={onSettings} active={settingsActive}>
+            <RibbonButton label={kbd('Ajustes (⌘,)')} onClick={onSettings} active={settingsActive}>
               <Settings size={17} />
             </RibbonButton>
           </div>

@@ -35,11 +35,13 @@ import { useGoneRedirect, useScreenTitle } from '../chrome'
 import { InlineField } from '../molecules/InlineField'
 import { Properties, PropertyRow } from '../molecules/Properties'
 import { DeleteClientModal } from '../organisms/DeleteClientModal'
+import { ClientFiles } from '../organisms/ClientFiles'
 import { NotePicker } from '../../components/NotePicker'
 import { notesApi } from '../../lib/api'
 import { Authorship } from '../organisms/orgs/Authorship'
 import { AutomationsSection } from '../organisms/automation/AutomationsSection'
 import { EntityActivity } from '../organisms/activity/EntityActivity'
+import { fileManager } from '../../lib/platform'
 
 const EDITABLE = /\.(md|txt|csv|json)$/i
 
@@ -112,7 +114,7 @@ export function Client({
       actions={
         <>
           <IconButton
-            label="Abrir carpeta en Finder"
+            label={`Abrir carpeta en ${fileManager()}`}
             onClick={() => void openPath(c.folderPath).catch((e) => setError(String(e)))}
           >
             <FolderOpen size={16} />
@@ -148,7 +150,7 @@ export function Client({
         <PropertyRow icon={FolderOpen} label="Carpeta">
           <button
             type="button"
-            title="Abrir en Finder"
+            title={`Abrir en ${fileManager()}`}
             onClick={() => void openPath(c.folderPath).catch((e) => setError(String(e)))}
             className="block h-[26px] max-w-full truncate rounded-[4px] px-1.5 text-left text-[14px] text-ob-link transition-colors hover:bg-ob-hover"
           >
@@ -301,14 +303,16 @@ export function Client({
                 key={n.id}
                 onClick={() => go({ name: 'note', id: n.id })}
                 actions={
-                  <IconButton
-                    label={`Quitar relación con ${n.title}`}
-                    size="sm"
-                    tone="danger"
-                    onClick={() => void run(() => notesApi.unlink(n.id, { type: 'client', id }))}
-                  >
-                    <Trash2 size={14} />
-                  </IconButton>
+                  n.origin === 'manual' ? (
+                    <IconButton
+                      label={`Quitar relación con ${n.title}`}
+                      size="sm"
+                      tone="danger"
+                      onClick={() => void run(() => notesApi.unlink(n.id, { type: 'client', id }))}
+                    >
+                      <Trash2 size={14} />
+                    </IconButton>
+                  ) : undefined
                 }
               >
                 <NotebookPen size={15} className="shrink-0 text-ob-muted" aria-hidden />
@@ -318,6 +322,9 @@ export function Client({
                     <span className="block truncate text-caption text-ob-muted">{n.excerpt}</span>
                   )}
                 </span>
+                {n.origin === 'folder' && (
+                  <span className="shrink-0 text-caption text-ob-muted">En la carpeta</span>
+                )}
                 <span className="shrink-0 text-caption text-ob-muted">
                   {shortDate(n.updatedAt)}
                 </span>
@@ -357,88 +364,92 @@ export function Client({
         </Section>
       )}
 
-      <Section title="Documentos">
-        {c.documents.length === 0 ? (
-          <Empty
-            title="Carpeta vacía."
-            hint="Sube contratos, entregables y documentación técnica a la carpeta del cliente."
-          />
-        ) : (
-          <List>
-            {c.documents.map((d) =>
-              renaming === d.path ? (
-                <li key={d.path} className="px-3 py-2">
-                  <input
-                    autoFocus
-                    defaultValue={d.name}
-                    aria-label={`Nuevo nombre de ${d.name}`}
-                    onFocus={(e) => {
-                      const dot = e.currentTarget.value.lastIndexOf('.')
-                      e.currentTarget.setSelectionRange(
-                        0,
-                        dot > 0 ? dot : e.currentTarget.value.length
-                      )
-                    }}
-                    onBlur={(e) => void renameDoc(d, e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') e.currentTarget.blur()
-                      if (e.key === 'Escape') {
-                        e.stopPropagation()
-                        setRenaming(null)
-                      }
-                    }}
-                    className="h-8 w-full px-3 text-[14px] rounded-[4px] border border-ob-border bg-ob-bg text-ob-text outline-none placeholder:text-ob-faint focus:border-ob-accent"
-                  />
-                </li>
-              ) : (
-                <ActionRow
-                  key={d.path}
-                  onClick={() =>
-                    void openPath(`${c.folderPath}/${d.path}`).catch((e) => setError(String(e)))
-                  }
-                  actions={
-                    <>
-                      {EDITABLE.test(d.name) && (
+      {c.folder ? (
+        <ClientFiles key={c.folder} folder={c.folder} />
+      ) : (
+        <Section title="Documentos">
+          {c.documents.length === 0 ? (
+            <Empty
+              title="Carpeta vacía."
+              hint="Sube contratos, entregables y documentación técnica a la carpeta del cliente."
+            />
+          ) : (
+            <List>
+              {c.documents.map((d) =>
+                renaming === d.path ? (
+                  <li key={d.path} className="px-3 py-2">
+                    <input
+                      autoFocus
+                      defaultValue={d.name}
+                      aria-label={`Nuevo nombre de ${d.name}`}
+                      onFocus={(e) => {
+                        const dot = e.currentTarget.value.lastIndexOf('.')
+                        e.currentTarget.setSelectionRange(
+                          0,
+                          dot > 0 ? dot : e.currentTarget.value.length
+                        )
+                      }}
+                      onBlur={(e) => void renameDoc(d, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') e.currentTarget.blur()
+                        if (e.key === 'Escape') {
+                          e.stopPropagation()
+                          setRenaming(null)
+                        }
+                      }}
+                      className="h-8 w-full px-3 text-[14px] rounded-[4px] border border-ob-border bg-ob-bg text-ob-text outline-none placeholder:text-ob-faint focus:border-ob-accent"
+                    />
+                  </li>
+                ) : (
+                  <ActionRow
+                    key={d.path}
+                    onClick={() =>
+                      void openPath(`${c.folderPath}/${d.path}`).catch((e) => setError(String(e)))
+                    }
+                    actions={
+                      <>
+                        {EDITABLE.test(d.name) && (
+                          <IconButton
+                            label={`Editar ${d.name}`}
+                            size="sm"
+                            onClick={() => go({ name: 'document', client: id, path: d.path })}
+                          >
+                            <FilePen size={15} />
+                          </IconButton>
+                        )}
                         <IconButton
-                          label={`Editar ${d.name}`}
+                          label={`Renombrar ${d.name}`}
                           size="sm"
-                          onClick={() => go({ name: 'document', client: id, path: d.path })}
+                          onClick={() => setRenaming(d.path)}
                         >
-                          <FilePen size={15} />
+                          <Pencil size={14} />
                         </IconButton>
-                      )}
-                      <IconButton
-                        label={`Renombrar ${d.name}`}
-                        size="sm"
-                        onClick={() => setRenaming(d.path)}
-                      >
-                        <Pencil size={14} />
-                      </IconButton>
-                      <ConfirmButton
-                        label={`Mandar ${d.name} a la Papelera`}
-                        confirmLabel="¿A la Papelera?"
-                        onConfirm={() => void run(() => api.trashDocument(id, d.path))}
-                        size="sm"
-                      />
-                    </>
-                  }
-                >
-                  <span className="min-w-0 flex-1 truncate text-list">{d.name}</span>
-                  <span className="shrink-0 text-caption text-ob-muted">
-                    {d.folder === '.' ? '' : d.folder}
-                  </span>
-                  <span className="w-20 shrink-0 text-right text-caption text-ob-muted">
-                    {bytes(d.size)}
-                  </span>
-                  <span className="w-28 shrink-0 text-right text-caption text-ob-muted">
-                    {shortDate(d.modifiedAt)}
-                  </span>
-                </ActionRow>
-              )
-            )}
-          </List>
-        )}
-      </Section>
+                        <ConfirmButton
+                          label={`Mandar ${d.name} a la Papelera`}
+                          confirmLabel="¿A la Papelera?"
+                          onConfirm={() => void run(() => api.trashDocument(id, d.path))}
+                          size="sm"
+                        />
+                      </>
+                    }
+                  >
+                    <span className="min-w-0 flex-1 truncate text-list">{d.name}</span>
+                    <span className="shrink-0 text-caption text-ob-muted">
+                      {d.folder === '.' ? '' : d.folder}
+                    </span>
+                    <span className="w-20 shrink-0 text-right text-caption text-ob-muted">
+                      {bytes(d.size)}
+                    </span>
+                    <span className="w-28 shrink-0 text-right text-caption text-ob-muted">
+                      {shortDate(d.modifiedAt)}
+                    </span>
+                  </ActionRow>
+                )
+              )}
+            </List>
+          )}
+        </Section>
+      )}
       <AutomationsSection subject="client" subjectId={c.id} go={go} />
       <EntityActivity entity="clients" id={id} />
     </Page>

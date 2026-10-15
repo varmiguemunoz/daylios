@@ -12,3 +12,6 @@ out
 
 # Resultados locales del arnés de rendimiento
 scripts/perf/results
+
+# ffmpeg para Intel al construir en un Mac con Apple Silicon
+.ffmpeg-x64

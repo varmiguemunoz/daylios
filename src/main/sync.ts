@@ -1,6 +1,6 @@
 import { cpSync, existsSync, readFileSync } from 'fs'
 import { join } from 'path'
-import { safeFolderName, ensureClientFolder } from './services/documents'
+import { CLIENTS_FOLDER, clientFolderFor, ensureClientFolder, isInside } from './services/documents'
 import type { DataSource } from 'typeorm'
 import type { LocalSummary, RemoteChange, SyncStatus } from '@shared/sync-protocol'
 import type { SyncTable } from '@shared/edition'
@@ -23,7 +23,7 @@ interface SyncDeps {
   db: DataSource
   account: Account
   dataRoot: string
-  docsPath: () => string
+  workspacePath: () => string
   activeOrg: () => { id: string; name: string } | null
   deviceId: () => string
   notify: (changes?: RemoteChange[]) => void
@@ -104,14 +104,15 @@ export class Sync {
     if (!existsSync(marker)) return
     const mode = (JSON.parse(readFileSync(marker, 'utf8')) as { mode?: string }).mode
     if (mode !== 'seed') return
-    const docs = this.deps.docsPath()
+    const workspace = this.deps.workspacePath()
+    const clients = join(workspace, CLIENTS_FOLDER)
     const { withoutChangeLog } = await import('./db/author')
     const rows: { id: string; name: string; folder_path: string }[] = await this.deps.db.query(
       `SELECT id, name, folder_path FROM clients`
     )
     for (const row of rows) {
-      if (row.folder_path.startsWith(docs)) continue
-      const target = join(docs, safeFolderName(row.name))
+      if (isInside(clients, row.folder_path)) continue
+      const target = clientFolderFor(workspace, row.name)
       if (existsSync(row.folder_path) && !existsSync(target)) {
         cpSync(row.folder_path, target, { recursive: true })
       }
@@ -127,7 +128,7 @@ export class Sync {
     row: Record<string, unknown>
   ): Promise<Record<string, unknown>> {
     if (table !== 'clients' || row.folder_path) return {}
-    const folder = join(this.deps.docsPath(), safeFolderName(String(row.name ?? 'Cliente')))
+    const folder = clientFolderFor(this.deps.workspacePath(), String(row.name ?? 'Cliente'))
     await ensureClientFolder(folder).catch(() => undefined)
     return { folder_path: folder }
   }

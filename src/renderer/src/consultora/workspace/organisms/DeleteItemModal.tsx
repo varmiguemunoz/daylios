@@ -4,6 +4,7 @@ import { Button, ErrorNote } from '../../ui'
 import { Modal } from '../../../ui'
 import { attempt } from '../../lib'
 import { KIND_LABEL, ws } from '../lib'
+import { trashName } from '../../../lib/platform'
 
 interface DeleteItemModalProps {
   item: WorkspaceItem
@@ -83,7 +84,7 @@ export function DeleteItemModal({
           </p>
         )}
         <p className="text-caption text-ob-muted">
-          Va a la Papelera de macOS: puedes recuperarlo desde Finder.
+          Va a {trashName()}: puedes recuperarlo desde ahí.
         </p>
       </div>
       <ErrorNote message={error} />

@@ -1,9 +1,12 @@
 import { BrowserWindow, Menu, Tray, nativeImage, screen, shell, type Rectangle } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
-import trayIcon from '../../resources/trayTemplate.png?asset'
+import trayTemplate from '../../resources/trayTemplate.png?asset'
+import trayWindows from '../../resources/tray.ico?asset'
 import { MENUBAR_WINDOW_KEY, type MenubarWindowState } from '@shared/ui-state'
 import { uiState } from './services/ui-state'
+import { isMac } from './platform'
+import { placeNearTray } from './tray-placement'
 
 const WIDTH = 400
 const HEIGHT = 760
@@ -94,10 +97,10 @@ export function createTray(
   setPinned: (pinned: boolean) => MenubarWindowState
   unpinAndReset: () => void
 } {
-  const image = nativeImage.createFromPath(trayIcon)
-  image.setTemplateImage(true)
+  const image = nativeImage.createFromPath(isMac ? trayTemplate : trayWindows)
+  if (isMac) image.setTemplateImage(true)
   const tray = new Tray(image)
-  tray.setToolTip('DayliOS')
+  tray.setToolTip('Alisuite')
 
   const show = (): void => {
     const state = pinState()
@@ -113,13 +116,18 @@ export function createTray(
   }
 
   const menu = Menu.buildFromTemplate([
-    { label: 'Abrir DayliOS', click: show },
+    { label: 'Abrir Alisuite', click: show },
     { label: 'Abrir Consultora', click: openConsultora },
     { type: 'separator' },
     { label: 'Salir', role: 'quit' }
   ])
 
-  tray.on('click', () => (win.isVisible() ? win.hide() : show()))
+  let hiddenAt = 0
+  win.on('hide', () => (hiddenAt = Date.now()))
+  tray.on('click', () => {
+    if (win.isVisible()) win.hide()
+    else if (isMac || Date.now() - hiddenAt > 300) show()
+  })
   tray.on('right-click', () => tray.popUpContextMenu(menu))
 
   const setPinned = (pinned: boolean): MenubarWindowState => {
@@ -144,16 +152,5 @@ export function createTray(
 function placeUnder(win: BrowserWindow, tray: Tray): void {
   const icon = tray.getBounds()
   const area = screen.getDisplayNearestPoint({ x: icon.x, y: icon.y }).workArea
-  const x = Math.round(icon.x + icon.width / 2 - WIDTH / 2)
-  const y = Math.max(Math.round(icon.y + icon.height + 6), area.y + 6)
-  win.setBounds(
-    {
-      x: Math.min(Math.max(x, area.x + 8), area.x + area.width - WIDTH - 8),
-      y,
-      width: WIDTH,
-      // En pantallas bajas, encoger (el contenido hace scroll).
-      height: Math.min(HEIGHT, area.y + area.height - y - 8)
-    },
-    false
-  )
+  win.setBounds(placeNearTray(icon, area, WIDTH, HEIGHT), false)
 }

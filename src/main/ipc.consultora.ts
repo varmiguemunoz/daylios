@@ -1,6 +1,7 @@
 import { BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { homedir } from 'os'
-import { resolve, sep } from 'path'
+import { resolve } from 'path'
+import { isInside } from './services/documents'
 import { config, publicSettings, saveSettings } from './config'
 import type { Consultora } from './consultora'
 import { checkPermissions, openPrivacy, restartApp, type Privacy } from './permissions'
@@ -166,11 +167,16 @@ export function registerConsultoraIpc(
   // ---- Finder: abrir archivos o carpetas, solo dentro de tu carpeta personal ----
   // (no solo la carpeta raíz: si la cambias en Ajustes, los clientes antiguos siguen donde estaban)
   ipcMain.handle('shell:open', async (_e, path: string) => {
-    const root = resolve(homedir())
-    const target = resolve(String(path))
-    if (target !== root && !target.startsWith(root + sep))
-      throw new Error('Ruta fuera de tu carpeta personal.')
-    const error = await shell.openPath(target)
+    const error = await shell.openPath(insideHome(path))
     if (error) throw new Error(error)
   })
+  ipcMain.handle('shell:reveal', (_e, path: string) => shell.showItemInFolder(insideHome(path)))
+}
+
+function insideHome(path: string): string {
+  const root = resolve(homedir())
+  const target = resolve(String(path))
+  if (target !== root && !isInside(root, target))
+    throw new Error('Ruta fuera de tu carpeta personal.')
+  return target
 }

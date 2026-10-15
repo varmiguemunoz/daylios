@@ -1,4 +1,5 @@
-import { globalShortcut, systemPreferences } from 'electron'
+import { globalShortcut } from 'electron'
+import { accessibilityTrusted } from '../platform'
 
 interface Handlers {
   start: () => void
@@ -41,7 +42,7 @@ let onRelease: (() => void) | null = null
 
 async function startHook(): Promise<boolean> {
   if (hookStarted) return true
-  if (!systemPreferences.isTrustedAccessibilityClient(false)) return false
+  if (!accessibilityTrusted()) return false
   try {
     hook = (await import('uiohook-napi')) as unknown as Hook
     hook.uIOhook.on('keydown', () => (lastHookEvent = Date.now()))

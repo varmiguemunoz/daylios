@@ -13,6 +13,7 @@ import { NotesView } from './components/NotesView'
 import { TaskDetail } from './components/TaskDetail'
 import { NoteEditor } from './components/NoteEditor'
 import { UndoToast } from './components/UndoToast'
+import { kbd } from './lib/platform'
 
 type Tab = 'today' | 'history' | 'notes'
 
@@ -22,9 +23,9 @@ type Screen =
   | { name: 'note'; note: Note; trail?: Note[] }
 
 const TABS: { id: Tab; label: string; icon: typeof Sun; key: string }[] = [
-  { id: 'today', label: 'Hoy', icon: Sun, key: '⌘1' },
-  { id: 'history', label: 'Historial', icon: History, key: '⌘2' },
-  { id: 'notes', label: 'Notas', icon: NotebookPen, key: '⌘3' }
+  { id: 'today', label: 'Hoy', icon: Sun, key: kbd('⌘1') },
+  { id: 'history', label: 'Historial', icon: History, key: kbd('⌘2') },
+  { id: 'notes', label: 'Notas', icon: NotebookPen, key: kbd('⌘3') }
 ]
 
 const TAB_LABEL: Record<Tab, string> = { today: 'Hoy', history: 'Historial', notes: 'Notas' }

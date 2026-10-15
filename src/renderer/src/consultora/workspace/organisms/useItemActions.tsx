@@ -17,6 +17,7 @@ import { openItem, ws } from '../lib'
 import { NameModal } from './NameModal'
 import { DeleteItemModal } from './DeleteItemModal'
 import { FolderPicker } from './FolderPicker'
+import { fileManager } from '../../../lib/platform'
 
 type Dialog =
   | { kind: 'rename'; item: WorkspaceItem }
@@ -91,7 +92,7 @@ export function useItemActions(
       onSelect: () => setDialog({ kind: 'move', item })
     },
     {
-      label: 'Mostrar en Finder',
+      label: `Mostrar en ${fileManager()}`,
       icon: <ExternalLink size={ICON} />,
       onSelect: () => void run(() => ws.reveal(item.id))
     },

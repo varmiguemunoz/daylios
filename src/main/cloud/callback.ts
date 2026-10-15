@@ -5,9 +5,9 @@ export const DEEP_LINK = `${ACCOUNT_PROTOCOL}://auth/callback`
 export const LOOPBACK_PORT = 47615
 export const LOOPBACK_URL = `http://127.0.0.1:${LOOPBACK_PORT}/auth/callback`
 
-const DONE_PAGE = `<!doctype html><meta charset="utf-8"><title>DayliOS</title>
+const DONE_PAGE = `<!doctype html><meta charset="utf-8"><title>Alisuite</title>
 <body style="font:15px -apple-system,sans-serif;background:#1e1e1e;color:#dadada;display:grid;place-items:center;height:100vh;margin:0">
-<p>Listo. Ya puedes volver a DayliOS.</p></body>`
+<p>Listo. Ya puedes volver a Alisuite.</p></body>`
 
 interface Pending {
   resolve: (code: string) => void

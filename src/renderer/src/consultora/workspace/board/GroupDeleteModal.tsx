@@ -1,5 +1,6 @@
 import { Modal } from '../../../ui'
 import { Button } from '../../ui'
+import { kbd } from '../../../lib/platform'
 
 export function GroupDeleteModal({
   count,
@@ -30,7 +31,7 @@ export function GroupDeleteModal({
     >
       <p className="text-list">
         El grupo contiene {count} {count === 1 ? 'elemento' : 'elementos'}. Puedes quitar solo el
-        marco o borrarlo todo. Se puede deshacer con ⌘Z.
+        marco o borrarlo todo. Se puede deshacer con {kbd('⌘Z')}.
       </p>
     </Modal>
   )

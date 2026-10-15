@@ -21,6 +21,7 @@ import {
   type TextStyle
 } from '@shared/canvas-style'
 import { fontStack } from '../textStyle'
+import { kbd } from '../../../../lib/platform'
 
 const FONT_LABEL: Record<TextFont, string> = { sans: 'Sans', serif: 'Serif', mono: 'Mono' }
 const ALIGN: { align: TextAlign; label: string; Icon: typeof AlignLeft }[] = [
@@ -84,10 +85,10 @@ export const FormatBar = memo(function FormatBar({
   return (
     <NodeToolbar nodeId={nodeId} isVisible position={Position.Bottom} offset={14}>
       <div role="toolbar" aria-label="Formato del texto" className="ob-menu nodrag nopan">
-        <FormatButton label="Negrita · ⌘B" onPress={() => onWrap('**')}>
+        <FormatButton label={kbd('Negrita · ⌘B')} onPress={() => onWrap('**')}>
           <Bold size={15} />
         </FormatButton>
-        <FormatButton label="Cursiva · ⌘I" onPress={() => onWrap('*')}>
+        <FormatButton label={kbd('Cursiva · ⌘I')} onPress={() => onWrap('*')}>
           <Italic size={15} />
         </FormatButton>
         <Divider />

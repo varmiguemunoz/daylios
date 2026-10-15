@@ -11,6 +11,7 @@ import { Markdown } from './Markdown'
 import { MarkdownEditor, fromMarkdownEditor } from './MarkdownEditor'
 import { TaskSummary } from './TaskSummary'
 import { TaskDetailsDrawer } from './TaskDetailsDrawer'
+import { kbd } from '../lib/platform'
 
 interface TaskDetailProps {
   task: Task
@@ -108,7 +109,7 @@ export function TaskDetail({
         <BackButton label={backLabel} onClick={() => void back()} />
         <span className="flex items-center gap-1">
           <IconButton
-            label="Detalles: esfuerzo, tags y subtareas (⌘I)"
+            label={kbd('Detalles: esfuerzo, tags y subtareas (⌘I)')}
             onClick={() => setPanel(true)}
           >
             <SlidersHorizontal size={16} strokeWidth={2.5} />

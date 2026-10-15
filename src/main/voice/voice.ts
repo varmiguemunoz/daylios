@@ -1,4 +1,5 @@
-import { ipcMain, Notification, systemPreferences, type BrowserWindow } from 'electron'
+import { ipcMain, Notification, type BrowserWindow } from 'electron'
+import { accessibilityTrusted } from '../platform'
 import type { Note } from '@shared/notes'
 import type { VoiceStatus } from '@shared/consultora'
 import { config } from '../config'
@@ -41,7 +42,7 @@ export class VoiceController {
       enabled: config.voiceEnabled(),
       registered: this.state.registered,
       mode: this.state.mode,
-      accessibility: systemPreferences.isTrustedAccessibilityClient(false),
+      accessibility: accessibilityTrusted(),
       pending: await this.service.pending()
     }
   }

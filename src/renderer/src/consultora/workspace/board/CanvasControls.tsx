@@ -10,6 +10,7 @@ import {
   Settings,
   Undo2
 } from 'lucide-react'
+import { kbd } from '../../../lib/platform'
 
 interface CanvasControlsProps {
   minimap: boolean
@@ -67,29 +68,29 @@ export function CanvasControls(p: CanvasControlsProps): React.JSX.Element {
         </div>
       )}
       <div className="ob-controls">
-        <Control label="Acercar · ⌘=" onClick={p.onZoomIn}>
+        <Control label={kbd('Acercar · ⌘=')} onClick={p.onZoomIn}>
           <Plus size={16} />
         </Control>
         <span className="py-0.5 text-center text-[11px] text-ob-faint tabular-nums">
           {Math.round(zoom * 100)}%
         </span>
         {p.onReset && (
-          <Control label="Zoom al 100 % · ⌘0" onClick={p.onReset}>
+          <Control label={kbd('Zoom al 100 % · ⌘0')} onClick={p.onReset}>
             <RotateCw size={15} />
           </Control>
         )}
-        <Control label="Encuadrar todo · ⇧1" onClick={p.onFit}>
+        <Control label={kbd('Encuadrar todo · ⇧1')} onClick={p.onFit}>
           <Maximize size={15} />
         </Control>
-        <Control label="Alejar · ⌘−" onClick={p.onZoomOut}>
+        <Control label={kbd('Alejar · ⌘−')} onClick={p.onZoomOut}>
           <Minus size={16} />
         </Control>
       </div>
       <div className="ob-controls">
-        <Control label="Deshacer · ⌘Z" onClick={p.onUndo} disabled={!p.canUndo}>
+        <Control label={kbd('Deshacer · ⌘Z')} onClick={p.onUndo} disabled={!p.canUndo}>
           <Undo2 size={16} />
         </Control>
-        <Control label="Rehacer · ⇧⌘Z" onClick={p.onRedo} disabled={!p.canRedo}>
+        <Control label={kbd('Rehacer · ⇧⌘Z')} onClick={p.onRedo} disabled={!p.canRedo}>
           <Redo2 size={16} />
         </Control>
       </div>

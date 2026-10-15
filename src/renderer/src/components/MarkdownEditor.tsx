@@ -4,6 +4,7 @@ import type { SaveStatus } from '../lib/useAutosave'
 import { useIdleExit } from '../lib/useIdleExit'
 import { useScrollMemory } from '../lib/ui-state'
 import { Markdown } from './Markdown'
+import { kbd } from '../lib/platform'
 
 export const IDLE_MS = 10000
 
@@ -176,7 +177,7 @@ export function MarkdownEditor({
               enter()
             }
           }}
-          title={empty ? undefined : 'Doble clic para editar (⌘E)'}
+          title={empty ? undefined : kbd('Doble clic para editar (⌘E)')}
           className={`scroll-area fade-bottom min-h-0 flex-1 overflow-y-auto pb-6 pl-6 outline-none transition-colors focus-visible:bg-surface/40 ${
             empty ? 'cursor-text' : ''
           }`}

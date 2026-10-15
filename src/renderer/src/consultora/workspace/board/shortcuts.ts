@@ -1,3 +1,5 @@
+import { kbd } from '../../../lib/platform'
+
 export interface Shortcut {
   keys: string
   label: string
@@ -8,18 +10,18 @@ export const SHORTCUTS: { title: string; items: Shortcut[] }[] = [
     title: 'Lienzo',
     items: [
       { keys: 'Rueda', label: 'Desplazar' },
-      { keys: '⌘ Rueda', label: 'Zoom' },
-      { keys: '⇧1', label: 'Encuadrar todo' },
-      { keys: '⇧2', label: 'Encuadrar la selección' },
-      { keys: '⌘0', label: 'Zoom al 100 %' }
+      { keys: kbd('⌘ Rueda'), label: 'Zoom' },
+      { keys: kbd('⇧1'), label: 'Encuadrar todo' },
+      { keys: kbd('⇧2'), label: 'Encuadrar la selección' },
+      { keys: kbd('⌘0'), label: 'Zoom al 100 %' }
     ]
   },
   {
     title: 'Selección',
     items: [
-      { keys: '⇧ Clic', label: 'Añadir o quitar de la selección' },
+      { keys: kbd('⇧ Clic'), label: 'Añadir o quitar de la selección' },
       { keys: 'Arrastrar en el fondo', label: 'Seleccionar un área' },
-      { keys: '⌘A', label: 'Seleccionar todo' },
+      { keys: kbd('⌘A'), label: 'Seleccionar todo' },
       { keys: 'Esc', label: 'Quitar la selección' }
     ]
   },
@@ -27,10 +29,10 @@ export const SHORTCUTS: { title: string; items: Shortcut[] }[] = [
     title: 'Mover',
     items: [
       { keys: 'Flechas', label: 'Mover 20' },
-      { keys: '⇧ Flechas', label: 'Mover 100' },
-      { keys: '⇧ Arrastrar', label: 'Mover en un solo eje' },
-      { keys: '⌥ Arrastrar', label: 'Clonar' },
-      { keys: '⌃ Arrastrar', label: 'Mover sin ajustar' }
+      { keys: kbd('⇧ Flechas'), label: 'Mover 100' },
+      { keys: kbd('⇧ Arrastrar'), label: 'Mover en un solo eje' },
+      { keys: kbd('⌥ Arrastrar'), label: 'Clonar' },
+      { keys: kbd('⌃ Arrastrar'), label: 'Mover sin ajustar' }
     ]
   },
   {
@@ -38,12 +40,12 @@ export const SHORTCUTS: { title: string; items: Shortcut[] }[] = [
     items: [
       { keys: 'Doble clic en el fondo', label: 'Nueva tarjeta' },
       { keys: 'Doble clic en una conexión', label: 'Editar el rótulo' },
-      { keys: '⌘C  ⌘X  ⌘V', label: 'Copiar, cortar y pegar en el puntero' },
-      { keys: '⌘D', label: 'Duplicar' },
-      { keys: '⌘G', label: 'Agrupar' },
+      { keys: kbd('⌘C  ⌘X  ⌘V'), label: 'Copiar, cortar y pegar en el puntero' },
+      { keys: kbd('⌘D'), label: 'Duplicar' },
+      { keys: kbd('⌘G'), label: 'Agrupar' },
       { keys: '⌫', label: 'Borrar' },
-      { keys: '⌘Z', label: 'Deshacer' },
-      { keys: '⇧⌘Z  ⌘Y', label: 'Rehacer' }
+      { keys: kbd('⌘Z'), label: 'Deshacer' },
+      { keys: kbd('⇧⌘Z  ⌘Y'), label: 'Rehacer' }
     ]
   }
 ]

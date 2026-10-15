@@ -7,6 +7,7 @@ import type { WorkspaceApi } from '../shared/workspace'
 import type { UiStateApi } from '../shared/ui-state'
 import type { DashboardApi } from '../shared/metrics'
 import type { EditionApi } from '../shared/edition'
+import type { AppApi } from '../shared/app'
 import type { AccountApi } from '../shared/account'
 import type { OrgsApi } from '../shared/organizations'
 import type { SyncApi } from '../shared/sync-protocol'
@@ -24,6 +25,7 @@ declare global {
       dashboard: DashboardApi
 
       edition: EditionApi
+      app: AppApi
       account: AccountApi
       orgs: OrgsApi
       sync: SyncApi
@@ -69,6 +71,8 @@ declare global {
       ) => () => void
 
       openPath: (path: string) => Promise<void>
+      revealPath: (path: string) => Promise<void>
+      platform: string
 
       pathForFile: (file: File) => string
 

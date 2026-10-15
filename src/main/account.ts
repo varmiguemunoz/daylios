@@ -196,7 +196,7 @@ export class Account {
 
   private async loadAuth(): Promise<AuthService> {
     if (this.auth) return this.auth
-    if (!this.env) throw new Error('Esta copia de DayliOS no tiene la nube configurada.')
+    if (!this.env) throw new Error('Esta copia de Alisuite no tiene la nube configurada.')
     const [{ AuthService }, { AuthCallback }, { SecureSessionStorage }] = await Promise.all([
       import('./cloud/auth'),
       import('./cloud/callback'),

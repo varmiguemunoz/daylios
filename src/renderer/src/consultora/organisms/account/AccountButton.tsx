@@ -32,7 +32,7 @@ export function AccountButton({
       <button
         ref={anchor}
         type="button"
-        aria-label={`Cuenta de ${user.name ?? user.email ?? 'DayliOS'}`}
+        aria-label={`Cuenta de ${user.name ?? user.email ?? 'Alisuite'}`}
         title={user.name ?? user.email ?? undefined}
         onClick={() =>
           anchor.current &&

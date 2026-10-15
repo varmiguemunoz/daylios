@@ -31,7 +31,7 @@ export function Meetings({ go }: { go: Go }): React.JSX.Element {
 
   const fileName =
     file
-      ?.split('/')
+      ?.split(/[\\/]/)
       .pop()
       ?.replace(/\.[^.]+$/, '') ?? ''
 
@@ -134,7 +134,7 @@ export function Meetings({ go }: { go: Go }): React.JSX.Element {
       {file && (
         <MeetingSheet
           heading="Subir grabación"
-          hint={`${file.split('/').pop()} · se copia a la carpeta de documentos (el original no se toca), se transcribe y se resume.`}
+          hint={`${file.split(/[\\/]/).pop()} · se copia a la carpeta de documentos (el original no se toca), se transcribe y se resume.`}
           defaultTitle={fileName}
           submitLabel="Transcribir"
           onCancel={() => setFile(null)}

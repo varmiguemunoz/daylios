@@ -25,6 +25,7 @@ import {
 } from '../lib'
 import { useWorkspace } from '../context'
 import { ItemGrid, ItemList } from '../organisms/ItemViews'
+import { fileManager } from '../../../lib/platform'
 
 export function FolderPane({ folderId }: { folderId: string | null }): React.JSX.Element {
   const { go, actions } = useWorkspace()
@@ -176,7 +177,7 @@ export function FolderPane({ folderId }: { folderId: string | null }): React.JSX
           <div className="flex flex-col gap-3">
             <Empty
               title="Carpeta vacía."
-              hint="Crea una nota, un board o una carpeta, o suelta archivos de Finder aquí."
+              hint={`Crea una nota, un board o una carpeta, o suelta archivos de ${fileManager()} aquí.`}
             />
             <div className="flex flex-wrap gap-2">
               <Button onClick={() => void actions.newNote(folderId)}>Nueva nota</Button>

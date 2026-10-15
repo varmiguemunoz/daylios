@@ -2,12 +2,13 @@ import { readFileSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
 import { z } from 'zod'
+import { APP_NAME, dataDirFor } from '@shared/app'
 
 const CONNECTION_PATH =
   process.env.DAYLIOS_CONNECTION ??
-  join(homedir(), 'Library', 'Application Support', 'daily-os', 'connection.json')
+  join(dataDirFor(process.platform, homedir(), process.env), 'connection.json')
 
-const NOT_RUNNING = 'DayliOS no está abierto. Ábrelo desde el menubar y vuelve a intentarlo.'
+const NOT_RUNNING = `${APP_NAME} no está abierto. Ábrelo desde la bandeja y vuelve a intentarlo.`
 
 export async function api(method: string, path: string, body?: object): Promise<unknown> {
   let connection: { port: number; token: string }

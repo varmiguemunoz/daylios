@@ -6,9 +6,11 @@ import { Button, ErrorNote, Field, Section, Select } from '../ui'
 import { prefs } from '../workspace/lib'
 import { useScrollMemory } from '../../lib/ui-state'
 import { SettingRow, Toggle } from '../molecules/SettingRow'
+import { AppSettings } from '../organisms/AppSettings'
 import { EmailSettings } from './SettingsEmail'
 import { HubSettings } from './SettingsHub'
 import { AccountSettings } from './SettingsAccount'
+import { fileManager, isMac, isWindows, kbd } from '../../lib/platform'
 
 export type Category = 'general' | 'account' | 'email' | 'hub' | 'voice' | 'shortcuts'
 
@@ -66,6 +68,7 @@ export function Settings(): React.JSX.Element {
           {tab === 'general' && (
             <>
               <Connection />
+              <AppSettings />
               <Section title="Interfaz">
                 <SettingRow
                   name="Restablecer el diseño de las ventanas"
@@ -261,7 +264,7 @@ function Connection(): React.JSX.Element {
                 {settings.workspacePath}
               </span>
               Tus notas, boards y archivos viven aquí como archivos normales. Cambiarla no mueve
-              nada: mueve la carpeta en Finder y elige la nueva ubicación.
+              nada: mueve la carpeta en {fileManager()} y elige la nueva ubicación.
             </>
           }
         >
@@ -279,17 +282,17 @@ function Connection(): React.JSX.Element {
 }
 
 const SHORTCUTS = [
-  { value: 'Alt+Space', label: '⌥ Espacio' },
-  { value: 'CommandOrControl+Shift+Space', label: '⌘ ⇧ Espacio' },
-  { value: 'CommandOrControl+Shift+P', label: '⌘ ⇧ P' },
-  { value: 'Alt+Shift+Space', label: '⌥ ⇧ Espacio' }
+  ...(isWindows() ? [] : [{ value: 'Alt+Space', label: kbd('⌥ Espacio') }]),
+  { value: 'CommandOrControl+Shift+Space', label: kbd('⌘ ⇧ Espacio') },
+  { value: 'CommandOrControl+Shift+P', label: kbd('⌘ ⇧ P') },
+  { value: 'Alt+Shift+Space', label: kbd('⌥ ⇧ Espacio') }
 ]
 
 const WORKSPACE_SHORTCUTS = [
-  { value: 'Alt+CommandOrControl+W', label: '⌥ ⌘ W' },
-  { value: 'Alt+CommandOrControl+O', label: '⌥ ⌘ O' },
-  { value: 'Control+CommandOrControl+O', label: '⌃ ⌘ O' },
-  { value: 'Alt+Shift+O', label: '⌥ ⇧ O' },
+  { value: 'Alt+CommandOrControl+W', label: kbd('⌥ ⌘ W') },
+  { value: 'Alt+CommandOrControl+O', label: kbd('⌥ ⌘ O') },
+  ...(isMac() ? [{ value: 'Control+CommandOrControl+O', label: kbd('⌃ ⌘ O') }] : []),
+  { value: 'Alt+Shift+O', label: kbd('⌥ ⇧ O') },
   { value: '', label: 'Desactivado' }
 ]
 
@@ -323,9 +326,9 @@ function WorkspaceKey(): React.JSX.Element {
           Otra app ya usa ese atajo. Elige otro.
         </p>
       )}
-      {data.shortcut === 'Alt+CommandOrControl+W' && data.registered && (
+      {isMac() && data.shortcut === 'Alt+CommandOrControl+W' && data.registered && (
         <p className="mt-2 px-1 text-caption text-ob-muted">
-          En Finder y en el navegador ⌥⌘W es «Cerrar todas las ventanas»: mientras DayliOS esté
+          En Finder y en el navegador ⌥⌘W es «Cerrar todas las ventanas»: mientras Alisuite esté
           abierto, ese atajo abre el workspace.
         </p>
       )}
@@ -391,8 +394,8 @@ function Voice(): React.JSX.Element {
           <div className="mt-3 rounded-[6px] border-l-2 border-ob-accent bg-ob-accent/10 px-3 py-2 text-caption text-ob-link">
             <p>
               Para «mantener pulsado» macOS pide el permiso de <b>Accesibilidad</b> (sirve para
-              saber cuándo sueltas la tecla; DayliOS no lee lo que escribes). Actívalo para daily-os
-              y pulsa «Ya lo activé».
+              saber cuándo sueltas la tecla; Alisuite no lee lo que escribes). Actívalo para
+              Alisuite y pulsa «Ya lo activé».
             </p>
             <div className="mt-3 flex gap-2">
               <Button

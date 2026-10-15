@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto'
-import { In, type DataSource, type EntityManager } from 'typeorm'
+import { In, Raw, type DataSource, type EntityManager } from 'typeorm'
 import { toDayKey } from '@shared/tasks'
 import { normalizeName } from '@shared/consultora'
 import { QUICK_NOTES } from '@shared/workspace'
@@ -8,6 +8,7 @@ import {
   noteBrief,
   noteFileName,
   type Note,
+  type ClientNote,
   type NoteBrief,
   type NoteLinks,
   type NoteTarget,
@@ -138,17 +139,34 @@ async function notesByIds(manager: EntityManager, ids: string[]): Promise<Note[]
 
 export async function notesOfClient(
   manager: EntityManager,
-  clientId: string
-): Promise<NoteBrief[]> {
+  clientId: string,
+  folder: string | null = null
+): Promise<ClientNote[]> {
   const links = await manager
     .getRepository(NoteRelationModel)
     .findBy({ targetType: 'client', targetId: clientId })
-  return (
+  const manual = (
     await notesByIds(
       manager,
       links.map((l) => l.noteId)
     )
   ).map(noteBrief)
+  const inFolder = folder
+    ? await manager.getRepository(WorkspaceItemModel).find({
+        where: {
+          kind: 'note',
+          path: Raw((p) => `${p} >= :lo AND ${p} < :hi`, { lo: `${folder}/`, hi: `${folder}0` })
+        },
+        order: { updatedAt: 'DESC' }
+      })
+    : []
+  const linked = new Set(manual.map((n) => n.id))
+  return [
+    ...manual.map((n) => ({ ...n, origin: 'manual' as const })),
+    ...inFolder
+      .filter((row) => !linked.has(row.id))
+      .map((row) => ({ ...noteBrief(toNote(row)), origin: 'folder' as const }))
+  ]
 }
 
 export async function removeRelationsOf(

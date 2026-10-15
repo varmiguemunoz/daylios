@@ -16,7 +16,7 @@ interface ItemViewProps {
 
 function keys(item: WorkspaceItem, props: ItemViewProps) {
   return (e: React.KeyboardEvent): void => {
-    if (e.key === 'Backspace' && e.metaKey) {
+    if (e.key === 'Backspace' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault()
       props.onDelete(item)
     }

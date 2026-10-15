@@ -2,6 +2,7 @@ import { SlidersHorizontal } from 'lucide-react'
 import type { Task } from '@shared/tasks'
 import { EffortBars, TagChips } from './TaskMeta'
 import { SubtaskProgress } from './SubtaskProgress'
+import { kbd } from '../lib/platform'
 
 export function TaskSummary({
   task,
@@ -15,7 +16,7 @@ export function TaskSummary({
     <button
       type="button"
       onClick={onOpen}
-      title="Esfuerzo, tags y subtareas (⌘I)"
+      title={kbd('Esfuerzo, tags y subtareas (⌘I)')}
       className="-mx-2 flex min-h-8 max-w-full items-center gap-2 rounded-full px-2 text-left transition-colors hover:bg-surface"
     >
       {empty ? (

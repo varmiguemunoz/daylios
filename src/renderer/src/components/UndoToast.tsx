@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import type { Undo } from '../lib/useDay'
+import { kbd } from '../lib/platform'
 
 interface UndoToastProps {
   undo: Undo | null
@@ -28,7 +29,7 @@ export function UndoToast({ undo, onUndo, onDone }: UndoToastProps): React.JSX.E
         onClick={onUndo}
         className="h-9 rounded-full px-4 text-caption font-extrabold text-apricot hover:bg-apricot/10"
       >
-        Deshacer <span className="font-semibold text-milk-soft">⌘Z</span>
+        Deshacer <span className="font-semibold text-milk-soft">{kbd('⌘Z')}</span>
       </button>
     </div>
   )

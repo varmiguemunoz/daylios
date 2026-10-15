@@ -35,7 +35,7 @@ async function put(url: string, body: Buffer): Promise<string> {
     headers: { 'Content-Length': String(body.length) },
     signal: AbortSignal.timeout(TIMEOUT_MS)
   }).catch(() => {
-    throw new Error('No hay conexión con la nube de DayliOS.')
+    throw new Error('No hay conexión con la nube de Alisuite.')
   })
   if (!res.ok) throw new Error(`El almacén rechazó la subida (${res.status}).`)
   return (res.headers.get('etag') ?? '').replace(/"/g, '')
@@ -111,7 +111,7 @@ export async function download(
 ): Promise<void> {
   const { url } = await api.call<{ url: string }>('GET', `/files/${orgId}/blobs/${hash}`)
   const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) }).catch(() => {
-    throw new Error('No hay conexión con la nube de DayliOS.')
+    throw new Error('No hay conexión con la nube de Alisuite.')
   })
   if (!res.ok || !res.body) throw new Error(`No se pudo descargar el archivo (${res.status}).`)
   await mkdir(dirname(full), { recursive: true })

@@ -5,6 +5,7 @@ import { recordingApi, type Go } from './lib'
 import { acquire, PermissionError, record, release, type Capture, type Streams } from './capture'
 import { Button } from './ui'
 import { MeetingSheet } from './MeetingSheet'
+import { isMac } from '../lib/platform'
 
 type State =
   | { name: 'idle' }
@@ -167,15 +168,17 @@ function PermissionHelp({
       <p className="text-[14px] font-semibold text-ob-text">Falta el permiso de {what}</p>
       <ol className="mt-2 list-decimal pl-5 text-[13px] text-ob-muted">
         <li>
-          Abre Ajustes del Sistema y activa{' '}
-          <span className="font-semibold text-ob-text">daily-os</span>. Si ya estaba activo,
+          {isMac()
+            ? 'Abre Ajustes del Sistema y activa'
+            : 'Abre Configuración, Privacidad, y activa'}{' '}
+          <span className="font-semibold text-ob-text">Alisuite</span>. Si ya estaba activo,
           desactívalo y vuelve a activarlo.
         </li>
-        <li>Reinicia DayliOS: macOS solo aplica el permiso al volver a abrir la app.</li>
+        <li>Reinicia Alisuite: el sistema solo aplica el permiso al volver a abrir la app.</li>
       </ol>
       <div className="mt-4 flex flex-wrap gap-2">
         <Button kind="primary" onClick={() => void window.api.permissions.open(kind)}>
-          Abrir Ajustes del Sistema
+          {isMac() ? 'Abrir Ajustes del Sistema' : 'Abrir Configuración'}
         </Button>
         <Button
           disabled={restarting}
@@ -184,7 +187,7 @@ function PermissionHelp({
             void window.api.permissions.restartApp()
           }}
         >
-          {restarting ? 'Reiniciando…' : 'Reiniciar DayliOS'}
+          {restarting ? 'Reiniciando…' : 'Reiniciar Alisuite'}
         </Button>
         <Button onClick={onClose}>Cerrar</Button>
       </div>

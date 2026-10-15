@@ -4,6 +4,7 @@ import type { Task } from '@shared/tasks'
 import { Markdown } from './Markdown'
 import { EffortBars, TagChips } from './TaskMeta'
 import { SubtaskProgress } from './SubtaskProgress'
+import { kbd } from '../lib/platform'
 
 interface TaskRowProps {
   task: Task
@@ -121,7 +122,7 @@ export function TaskRow({
       tabIndex={0}
       {...drag}
       onKeyDown={onRowKey}
-      aria-label={`${task.title}${task.done ? ', hecha' : ''}. Enter para abrir, ⌥↑/⌥↓ para mover`}
+      aria-label={`${task.title}${task.done ? ', hecha' : ''}. Enter para abrir, ${kbd('⌥↑/⌥↓')} para mover`}
       className={`group flex items-center gap-3 rounded-md bg-surface py-1 pr-1.5 pl-3.5 ${
         compact ? 'min-h-[40px] text-list' : 'min-h-[46px]'
       } transition-colors outline-offset-0 hover:bg-surface-raised focus-visible:bg-surface-raised ${

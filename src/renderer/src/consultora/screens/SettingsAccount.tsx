@@ -40,7 +40,7 @@ export function AccountSettings(): React.JSX.Element {
           <SignInPanel state={account} />
         ) : (
           <p className="text-[14px] text-ob-muted">
-            Esta copia de DayliOS no tiene la nube configurada. Todo sigue funcionando en Local.
+            Esta copia de Alisuite no tiene la nube configurada. Todo sigue funcionando en Local.
           </p>
         )}
       </Section>

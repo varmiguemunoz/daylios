@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# DayliOS · desinstalación completa en macOS
+# Alisuite · desinstalación completa en macOS
 #
 # Quita el servicio, la app de /Applications, el MCP de Claude y los logs.
 # Pregunta antes de borrar tus tareas (la base de datos).
@@ -8,13 +8,13 @@
 #      npm run service:uninstall -- --purge (borra también los datos, sin preguntar)
 set -euo pipefail
 
-APP_NAME="daily-os"
+APP_NAME="Alisuite"
 LABEL="com.bloomilite.daylios"
 APP_PATH="/Applications/${APP_NAME}.app"
 APP_BIN="${APP_PATH}/Contents/MacOS/${APP_NAME}"
 PLIST="${HOME}/Library/LaunchAgents/${LABEL}.plist"
 LOG="${HOME}/Library/Logs/daylios.log"
-DATA_DIR="${HOME}/Library/Application Support/${APP_NAME}"
+DATA_DIR="${HOME}/Library/Application Support/daily-os"
 CLAUDE_CONFIG="${HOME}/Library/Application Support/Claude/claude_desktop_config.json"
 DOMAIN="gui/$(id -u)"
 
@@ -68,6 +68,6 @@ if [[ -d "$DATA_DIR" ]]; then
   fi
 fi
 
-printf '\n\033[1;32m✓ DayliOS desinstalado.\033[0m\n'
+printf '\n\033[1;32m✓ Alisuite desinstalado.\033[0m\n'
 echo "  → Reinicia Claude (⌘Q y abrir) para que deje de cargar el MCP."
 echo

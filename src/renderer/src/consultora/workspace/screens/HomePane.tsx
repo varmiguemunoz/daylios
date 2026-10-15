@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { KIND_ICON, flattenExplorer, openItem, ws } from '../lib'
 import { useLoad } from '../../lib'
 import { useWorkspace } from '../context'
+import { kbd } from '../../../lib/platform'
 
 export function HomePane({ onSearch }: { onSearch: () => void }): React.JSX.Element {
   const { go, actions, folderId } = useWorkspace()
@@ -22,13 +23,13 @@ export function HomePane({ onSearch }: { onSearch: () => void }): React.JSX.Elem
         <h1 className="text-[22px] font-semibold text-ob-text">Ningún archivo abierto</h1>
         <div className="mt-5 flex flex-col gap-2.5">
           <button type="button" className={link} onClick={() => void actions.newNote(folderId)}>
-            Crear una nota nueva <span className="text-ob-faint">(⌘N)</span>
+            Crear una nota nueva <span className="text-ob-faint">({kbd('⌘N')})</span>
           </button>
           <button type="button" className={link} onClick={() => void actions.newBoard(folderId)}>
             Crear un board nuevo
           </button>
           <button type="button" className={link} onClick={onSearch}>
-            Ir a un archivo <span className="text-ob-faint">(⌘O)</span>
+            Ir a un archivo <span className="text-ob-faint">({kbd('⌘O')})</span>
           </button>
         </div>
         {recent.length > 0 && (

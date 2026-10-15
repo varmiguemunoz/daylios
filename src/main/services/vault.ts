@@ -11,10 +11,10 @@ import {
   utimes,
   writeFile
 } from 'fs/promises'
-import { dirname, join, sep } from 'path'
+import { dirname, join } from 'path'
 import { baseName, extOf, isIgnored, kindOf, normalizePath, type ItemKind } from '@shared/workspace'
 import { AppError } from './app.error'
-import { safeFolderName } from './documents'
+import { isInside, safeFolderName } from './documents'
 import { moveToTrash } from './trash'
 
 export interface DiskEntry {
@@ -25,6 +25,40 @@ export interface DiskEntry {
   mtimeMs: number
   birthtime: string
 }
+
+interface FileInfo {
+  inode: string
+  size: number
+  mtimeMs: number
+  birthtime: Date
+  isDirectory: boolean
+}
+
+export async function fileInfo(
+  full: string,
+  follow: boolean,
+  wide = process.platform === 'win32'
+): Promise<FileInfo | null> {
+  const read = follow ? stat : lstat
+  if (!wide) {
+    const info = await read(full).catch(() => null)
+    if (!info) return null
+    const { ino, size, mtimeMs, birthtime } = info
+    return { inode: String(ino), size, mtimeMs, birthtime, isDirectory: info.isDirectory() }
+  }
+  const info = await read(full, { bigint: true }).catch(() => null)
+  if (!info) return null
+  return {
+    inode: info.ino.toString(),
+    size: Number(info.size),
+    mtimeMs: Number(info.mtimeNs / 1000n) / 1000,
+    birthtime: info.birthtime,
+    isDirectory: info.isDirectory()
+  }
+}
+
+const created = (info: FileInfo): string =>
+  (info.birthtime.getTime() ? info.birthtime : new Date(info.mtimeMs)).toISOString()
 
 const MAX_DEPTH = 24
 const MAX_NAME = 120
@@ -61,7 +95,7 @@ export class Vault {
     let probe = full
     while (!existsSync(probe) && probe !== dirname(probe)) probe = dirname(probe)
     const real = await realpath(probe)
-    if (real !== root && !real.startsWith(root + sep)) {
+    if (real !== root && !isInside(root, real)) {
       throw new AppError('invalid', 'Esa ruta está fuera del workspace.')
     }
     if (existsSync(full) && (await lstat(full)).isSymbolicLink()) {
@@ -90,15 +124,15 @@ export class Vault {
         if (isIgnored(entry.name) || entry.isSymbolicLink()) continue
         if (!entry.isDirectory() && !entry.isFile()) continue
         const rel = relDir ? `${relDir}/${entry.name}` : entry.name
-        const info = await lstat(join(dir, entry.name)).catch(() => null)
+        const info = await fileInfo(join(dir, entry.name), false)
         if (!info) continue
         out.push({
           path: rel,
           kind: kindOf(entry.name, entry.isDirectory()),
-          inode: String(info.ino),
+          inode: info.inode,
           size: entry.isDirectory() ? 0 : info.size,
           mtimeMs: info.mtimeMs,
-          birthtime: (info.birthtime.getTime() ? info.birthtime : info.mtime).toISOString()
+          birthtime: created(info)
         })
         if (entry.isDirectory()) await walk(rel, depth + 1)
       }
@@ -109,15 +143,15 @@ export class Vault {
 
   async entry(rel: string): Promise<DiskEntry | null> {
     const full = await this.safe(rel)
-    const info = await stat(full).catch(() => null)
+    const info = await fileInfo(full, true)
     if (!info) return null
     return {
       path: rel,
-      kind: kindOf(baseName(rel), info.isDirectory()),
-      inode: String(info.ino),
-      size: info.isDirectory() ? 0 : info.size,
+      kind: kindOf(baseName(rel), info.isDirectory),
+      inode: info.inode,
+      size: info.isDirectory ? 0 : info.size,
       mtimeMs: info.mtimeMs,
-      birthtime: (info.birthtime.getTime() ? info.birthtime : info.mtime).toISOString()
+      birthtime: created(info)
     }
   }
 

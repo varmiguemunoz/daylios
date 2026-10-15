@@ -14,7 +14,7 @@ const server = new McpServer(
   { name: 'daylios', version: '1.1.0' },
   {
     instructions:
-      'DayliOS es el sistema operativo de Miguel: el día (máximo 8 tareas; subtareas sin límite con create_task + parent), ' +
+      'Alisuite es el sistema operativo del equipo de Ali Muñoz Advisory: el día (máximo 8 tareas; subtareas sin límite con create_task + parent), ' +
       'notas relacionadas, clientes con proyectos y documentos, pipelines (uno por oferta), contactos con tags y email ' +
       'marketing (solo a suscritos). Las referencias a clientes, proyectos, prospectos, pipelines y etapas aceptan id o nombre. ' +
       'Las herramientas que borran piden confirm: true; llámalas primero sin él para ver el impacto y confirma con Miguel. ' +

@@ -1,5 +1,6 @@
-appId: com.electron.app
-productName: daily-os
+appId: com.alimunozadvisory.alisuite
+productName: Alisuite
+copyright: Ali Muñoz Advisory
 directories:
   buildResources: build
 files:
@@ -9,6 +10,7 @@ files:
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - '!{.ffmpeg-x64,.impeccable,.github,.claude,scripts,services,workers}/**'
 asarUnpack:
   - resources/**
   # Módulo nativo de SQLite: tiene que quedar fuera del .asar.
@@ -17,21 +19,49 @@ asarUnpack:
   - node_modules/ffmpeg-static/**
   # Teclado global (detectar cuándo se suelta el atajo de nota de voz).
   - node_modules/uiohook-napi/**
+afterPack: build/after-pack.cjs
 protocols:
-  - name: DayliOS
+  - name: Alisuite
     schemes:
       - daylios
 mac:
+  icon: build/icon.png
+  category: public.app-category.productivity
+  target:
+    - dmg
+    - zip
+  hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     # App de menubar: sin icono en el Dock desde el arranque.
     LSUIElement: true
-    # Grabación de reuniones (micrófono; la grabación de pantalla la pide macOS la primera vez)
-    NSMicrophoneUsageDescription: DayliOS graba el micrófono durante las reuniones que tú inicias.
-    NSAudioCaptureUsageDescription: DayliOS graba el audio del sistema durante las reuniones que tú inicias.
-  notarize: false
+    NSMicrophoneUsageDescription: Alisuite graba el micrófono durante las reuniones que tú inicias.
+    NSAudioCaptureUsageDescription: Alisuite graba el audio del sistema durante las reuniones que tú inicias.
+  notarize: true
 dmg:
-  artifactName: ${name}-${version}.${ext}
+  artifactName: Alisuite-${version}-${arch}.${ext}
+win:
+  icon: build/icon.png
+  target:
+    - target: nsis
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: Alisuite
+  uninstallDisplayName: Alisuite
+  artifactName: Alisuite-Setup-${version}.${ext}
+  deleteAppDataOnUninstall: false
+publish:
+  provider: github
+  owner: varmiguemunoz
+  repo: daylios
+  releaseType: draft
 # better-sqlite3 es nativo: se recompila para la versión de Electron al empaquetar.
 npmRebuild: true
 electronDownload:

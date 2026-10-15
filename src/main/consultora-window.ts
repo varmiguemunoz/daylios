@@ -4,6 +4,7 @@ import { is } from '@electron-toolkit/utils'
 import { CONSULTORA_WINDOW_KEY, type WindowBoundsState } from '@shared/ui-state'
 import { uiState } from './services/ui-state'
 import { onSomeDisplay } from './window'
+import { isMac } from './platform'
 
 const SIZE = { width: 1100, height: 760 }
 
@@ -27,8 +28,13 @@ export function showConsultora(): BrowserWindow {
     minWidth: 860,
     minHeight: 560,
     show: false,
-    title: 'Consultora · DayliOS',
-    titleBarStyle: 'hiddenInset',
+    title: 'Alisuite',
+    ...(isMac
+      ? { titleBarStyle: 'hiddenInset' as const }
+      : {
+          titleBarStyle: 'hidden' as const,
+          titleBarOverlay: { color: '#262626', symbolColor: '#dadada', height: 38 }
+        }),
     backgroundColor: '#131313',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),

@@ -23,6 +23,8 @@ export interface NoteBrief {
   updatedAt: string
 }
 
+export type ClientNote = NoteBrief & { origin: 'manual' | 'folder' }
+
 export type NoteTargetType = 'note' | 'client'
 export interface NoteTarget {
   type: NoteTargetType

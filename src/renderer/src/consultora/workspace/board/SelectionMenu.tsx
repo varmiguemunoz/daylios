@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import type { ShapeKind } from '@shared/canvas'
 import { COLORS, type BoardEdge, type BoardNode } from './flow'
+import { kbd } from '../../../lib/platform'
 
 function Tool({
   label,
@@ -119,7 +120,7 @@ export function SelectionMenu({
     <NodeToolbar nodeId={nodes.map((n) => n.id)} isVisible position={Position.Top} offset={14}>
       <div role="toolbar" aria-label="Selección" className="ob-menu">
         {readOnly ? (
-          <Tool label="Encuadrar selección · ⇧2" onClick={onZoom}>
+          <Tool label={kbd('Encuadrar selección · ⇧2')} onClick={onZoom}>
             <Scan size={16} />
           </Tool>
         ) : (
@@ -131,11 +132,11 @@ export function SelectionMenu({
               <Palette size={16} />
             </Tool>
             {palette && <ColorRow current={current} onColor={onColor} />}
-            <Tool label="Encuadrar selección · ⇧2" onClick={onZoom}>
+            <Tool label={kbd('Encuadrar selección · ⇧2')} onClick={onZoom}>
               <Scan size={16} />
             </Tool>
             {canGroup && (
-              <Tool label="Crear grupo · ⌘G" onClick={onGroup}>
+              <Tool label={kbd('Crear grupo · ⌘G')} onClick={onGroup}>
                 <Group size={16} />
               </Tool>
             )}

@@ -42,6 +42,7 @@ import { AddTriggerCard, TriggerCard } from '../../molecules/automation/TriggerC
 import { AddButton } from '../../molecules/automation/AddButton'
 import { NODE_DRAG } from '../../hooks/useTreeDrag'
 import { useEditor } from './context'
+import { kbd } from '../../../lib/platform'
 
 type StepData = { id: string }
 type TriggerData = { id: string }
@@ -377,8 +378,8 @@ function Flow({
         <Panel position="top-center">
           <p className="rounded-[6px] border border-ob-border bg-ob-alt px-3 py-1.5 text-[12px] text-ob-muted">
             {editor.drag.mode === 'subtree'
-              ? 'Moviendo el paso con lo que cuelga. Suelta ⌥ para mover solo el paso.'
-              : 'Moviendo solo el paso. Mantén ⌥ para llevar lo que cuelga.'}
+              ? kbd('Moviendo el paso con lo que cuelga. Suelta ⌥ para mover solo el paso.')
+              : kbd('Moviendo solo el paso. Mantén ⌥ para llevar lo que cuelga.')}
           </p>
         </Panel>
       )}

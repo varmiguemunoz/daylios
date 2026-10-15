@@ -1,4 +1,5 @@
-import { app, shell, systemPreferences } from 'electron'
+import { app, shell } from 'electron'
+import { accessibilityTrusted, askMicrophone, isMac, isWindows, mediaStatus } from './platform'
 
 export type Privacy = 'screen' | 'microphone' | 'accessibility'
 
@@ -9,27 +10,30 @@ export interface PermissionStatus {
   accessibility: boolean
 }
 
-const PANES: Record<Privacy, string> = {
+const MAC_PANES: Record<Privacy, string> = {
   screen: 'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture',
   microphone: 'x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone',
   accessibility: 'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility'
 }
 
+const WINDOWS_PANES: Partial<Record<Privacy, string>> = {
+  microphone: 'ms-settings:privacy-microphone'
+}
+
 export async function checkPermissions(): Promise<PermissionStatus> {
-  if (systemPreferences.getMediaAccessStatus('microphone') === 'not-determined') {
-    await systemPreferences.askForMediaAccess('microphone')
-  }
+  await askMicrophone()
   return {
-    screen: systemPreferences.getMediaAccessStatus('screen'),
-    microphone: systemPreferences.getMediaAccessStatus('microphone'),
-    accessibility: systemPreferences.isTrustedAccessibilityClient(false)
+    screen: mediaStatus('screen'),
+    microphone: mediaStatus('microphone'),
+    accessibility: accessibilityTrusted()
   }
 }
 
 export async function openPrivacy(kind: Privacy): Promise<void> {
   // Pedir Accesibilidad añade la app a la lista (con su interruptor) la primera vez.
-  if (kind === 'accessibility') systemPreferences.isTrustedAccessibilityClient(true)
-  await shell.openExternal(PANES[kind])
+  if (kind === 'accessibility') accessibilityTrusted(true)
+  const pane = isMac ? MAC_PANES[kind] : isWindows ? WINDOWS_PANES[kind] : undefined
+  if (pane) await shell.openExternal(pane)
 }
 
 export function restartApp(): void {

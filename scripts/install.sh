@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# DayliOS · instalación como servicio en macOS
+# Alisuite · instalación como servicio en macOS
 #
 # 1. Compila la app y la copia a /Applications
 # 2. La registra como LaunchAgent: arranca al iniciar sesión y, si se cierra o falla, launchd la vuelve a abrir
@@ -8,7 +8,9 @@
 # Uso: npm run service:install   (se puede correr las veces que quieras: reinstala encima)
 set -euo pipefail
 
-APP_NAME="daily-os"
+APP_NAME="Alisuite"
+OLD_APP_PATH="/Applications/daily-os.app"
+DATA_DIR="${HOME}/Library/Application Support/daily-os"
 LABEL="com.bloomilite.daylios"
 APP_PATH="/Applications/${APP_NAME}.app"
 APP_BIN="${APP_PATH}/Contents/MacOS/${APP_NAME}"
@@ -44,11 +46,12 @@ step "Deteniendo la versión anterior"
 launchctl bootout "${DOMAIN}/${LABEL}" 2>/dev/null || true
 # Solo la app, no el proceso MCP (que usa el mismo binario pero con mcp.js como argumento).
 pkill -f "${APP_BIN}\$" 2>/dev/null || true
+pkill -f "${OLD_APP_PATH}/Contents/MacOS/daily-os\$" 2>/dev/null || true
 sleep 1
 
 # ---- 3. Copiar a /Applications ----
 step "Instalando en ${APP_PATH}"
-rm -rf "$APP_PATH"
+rm -rf "$APP_PATH" "$OLD_APP_PATH"
 ditto "$BUILT_APP" "$APP_PATH"
 xattr -dr com.apple.quarantine "$APP_PATH" 2>/dev/null || true
 # Firma. macOS guarda los permisos (pantalla, micrófono, accesibilidad) ligados a la firma:
@@ -75,6 +78,9 @@ else
 fi
 
 # ---- 4. Servicio (LaunchAgent) ----
+# Con launchd no se usa el arranque al iniciar sesión de la app: marcarlo evita dos arranques.
+mkdir -p "$DATA_DIR"
+[[ -f "${DATA_DIR}/login-item" ]] || date > "${DATA_DIR}/login-item"
 step "Registrando el servicio ${LABEL}"
 mkdir -p "$(dirname "$PLIST")" "$(dirname "$LOG")"
 cat > "$PLIST" <<PLIST
@@ -137,13 +143,13 @@ fs.writeFileSync(file, JSON.stringify(config, null, 2) + '\n')
 NODE
 
 # ---- Listo ----
-printf '\n\033[1;32m✓ DayliOS instalado y corriendo como servicio.\033[0m\n'
+printf '\n\033[1;32m✓ Alisuite instalado y corriendo como servicio.\033[0m\n'
 cat <<INFO
 
   App:       ${APP_PATH}
   Servicio:  ${PLIST}
   Logs:      ${LOG}
-  Datos:     ~/Library/Application Support/${APP_NAME}/daylios.db
+  Datos:     ${DATA_DIR}/daylios.db
   MCP:       "daylios" en ${CLAUDE_CONFIG}
              (copia de seguridad: claude_desktop_config.json.bak)
 

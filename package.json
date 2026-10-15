@@ -1,9 +1,9 @@
 {
   "name": "daily-os",
   "version": "1.0.0",
-  "description": "DayliOS: tareas del día en el menubar de macOS, con MCP para Claude",
+  "description": "Alisuite: el sistema de trabajo de Ali Muñoz Advisory para macOS y Windows, con MCP para Claude",
   "main": "./out/main/index.js",
-  "author": "varmiguemunoz",
+  "author": "Ali Muñoz Advisory",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",
@@ -12,7 +12,7 @@
     "typecheck:cloud": "tsc --noEmit -p services/cloud/tsconfig.json",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "check": "npm run typecheck && npm run typecheck:cloud && eslint --cache .",
-    "test": "ELECTRON_RUN_AS_NODE=1 electron node_modules/vitest/vitest.mjs run",
+    "test": "node scripts/test.mjs",
     "perf": "electron-vite build && node scripts/perf/run.mts",
     "perf:interact": "electron-vite build && node scripts/perf/interact.mts",
     "start": "electron-vite preview",
@@ -20,6 +20,9 @@
     "build": "npm run typecheck && electron-vite build",
     "build:unpack": "npm run build && electron-builder --dir",
     "build:mac": "npm run build && electron-builder --mac",
+    "build:win": "npm run build && electron-builder --win",
+    "release:mac": "npm run build && node scripts/ffmpeg-x64.mjs && electron-builder --mac --x64 --arm64 --publish always",
+    "release:win": "npm run build && electron-builder --win --publish always",
     "postinstall": "electron-builder install-app-deps",
     "service:install": "bash scripts/install.sh",
     "service:uninstall": "bash scripts/uninstall.sh",
@@ -31,6 +34,7 @@
     "@modelcontextprotocol/sdk": "1.31.0",
     "@supabase/supabase-js": "2.117.3",
     "better-sqlite3": "^12.4.1",
+    "electron-updater": "^6.8.9",
     "express": "^5.1.0",
     "ffmpeg-static": "^5.2.0",
     "openai": "^5.0.0",
@@ -71,5 +75,6 @@
     "typescript": "^5.9.3",
     "vite": "^7.2.6",
     "vitest": "5.0.3"
-  }
+  },
+  "homepage": "https://github.com/varmiguemunoz/daylios"
 }

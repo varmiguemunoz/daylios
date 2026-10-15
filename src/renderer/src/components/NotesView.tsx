@@ -7,6 +7,7 @@ import { notesApi, onDataChanged } from '../lib/api'
 import { plural, relativeDay, timeOf } from '../lib/format'
 import { DayHeading } from './DayHeading'
 import { Pager } from './Pager'
+import { kbd } from '../lib/platform'
 
 const PAGE_SIZE = 7
 
@@ -53,7 +54,7 @@ export function NotesView({ today, onOpen, onCreate }: NotesViewProps): React.JS
         <button
           type="button"
           onClick={onCreate}
-          title="Nueva nota (⌘N)"
+          title={kbd('Nueva nota (⌘N)')}
           className="flex h-9 items-center gap-1.5 rounded-full bg-apricot pr-4 pl-3 text-caption font-extrabold text-ink transition-transform active:scale-95"
         >
           <Plus size={16} strokeWidth={3} />
@@ -75,7 +76,7 @@ export function NotesView({ today, onOpen, onCreate }: NotesViewProps): React.JS
           <div className="px-1 pt-2">
             <p className="text-label font-bold">Aún no hay notas.</p>
             <p className="mt-1 text-caption text-milk-soft">
-              Pulsa «Nueva» o ⌘N. Escribe en markdown: la primera línea es el título.
+              Pulsa «Nueva» o {kbd('⌘N')}. Escribe en markdown: la primera línea es el título.
             </p>
           </div>
         )}
