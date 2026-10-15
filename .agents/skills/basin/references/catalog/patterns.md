@@ -2,13 +2,13 @@
 
 Choose the engine based on the project's existing runtime and workload, then retrieve its current connection example.
 
-| Need | Starting point |
-|------|----------------|
-| Python catalog operations and ingestion without a Spark deployment | [PyIceberg](https://developers.cloudflare.com/basin-catalog/config-examples/pyiceberg/index.md) |
-| Existing Spark ETL and distributed table processing | [PySpark](https://developers.cloudflare.com/basin-catalog/config-examples/spark-python/index.md) |
-| Connect an existing SQL engine | [Engine configuration guides](https://developers.cloudflare.com/basin-catalog/config-examples/index.md) |
-| Query through Cloudflare's serverless SQL service | [Basin SQL](../sql/) |
-| Stream events into tables | [Basin Pipelines patterns](../pipelines/patterns.md) |
+| Need                                                               | Starting point                                                                                          |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| Python catalog operations and ingestion without a Spark deployment | [PyIceberg](https://developers.cloudflare.com/basin-catalog/config-examples/pyiceberg/index.md)         |
+| Existing Spark ETL and distributed table processing                | [PySpark](https://developers.cloudflare.com/basin-catalog/config-examples/spark-python/index.md)        |
+| Connect an existing SQL engine                                     | [Engine configuration guides](https://developers.cloudflare.com/basin-catalog/config-examples/index.md) |
+| Query through Cloudflare's serverless SQL service                  | [Basin SQL](../sql/)                                                                                    |
+| Stream events into tables                                          | [Basin Pipelines patterns](../pipelines/patterns.md)                                                    |
 
 Use the discovered Catalog URI and Warehouse name from [configuration](configuration.md). Match dependencies to the installed engine and the current guide instead of adopting a universal pinned Spark/Iceberg combination.
 

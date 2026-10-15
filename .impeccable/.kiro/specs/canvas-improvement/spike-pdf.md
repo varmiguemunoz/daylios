@@ -15,12 +15,12 @@ repo, en `/tmp/pdf-spike`, con el Electron del proyecto. No se tocó la app.
 
 ## Resultados
 
-| caso | A tiempo ms | A memoria MB | A procesos | B tiempo ms | B memoria MB | B procesos |
-|---|---|---|---|---|---|---|
-| 2 páginas, 1 | 90 a 94 | 659 a 679 | 7 | 115 a 146 | 412 a 418 | 4 |
-| 2 páginas, 10 | 131 a 140 | 1689 a 1745 | 16 | 152 a 220 | 576 a 580 | 4 |
-| 300 páginas, 1 | 83 a 163 | 691 a 692 | 7 | 123 a 128 | 425 | 4 |
-| 300 páginas, 10 | 128 a 140 | 1830 a 1841 | 16 | 206 a 237 | 597 a 636 | 4 |
+| caso            | A tiempo ms | A memoria MB | A procesos | B tiempo ms | B memoria MB | B procesos |
+| --------------- | ----------- | ------------ | ---------- | ----------- | ------------ | ---------- |
+| 2 páginas, 1    | 90 a 94     | 659 a 679    | 7          | 115 a 146   | 412 a 418    | 4          |
+| 2 páginas, 10   | 131 a 140   | 1689 a 1745  | 16         | 152 a 220   | 576 a 580    | 4          |
+| 300 páginas, 1  | 83 a 163    | 691 a 692    | 7          | 123 a 128   | 425          | 4          |
+| 300 páginas, 10 | 128 a 140   | 1830 a 1841  | 16         | 206 a 237   | 597 a 636    | 4          |
 
 - Memoria: suma de `workingSetSize` de todos los procesos de la app.
 - Tiempo A es el evento `load` del iframe, no la pintura. Tiempo B es el canvas ya pintado. A está

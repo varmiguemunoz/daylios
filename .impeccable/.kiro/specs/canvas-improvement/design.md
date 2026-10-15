@@ -48,10 +48,28 @@ src/test/
 ## Ajuste y alineación
 
 ```ts
-interface Rect { id: string; x: number; y: number; width: number; height: number }
-interface Guide { axis: 'x' | 'y'; at: number; from: number; to: number }
-function snapToObjects(moving: Rect, others: Rect[], threshold: number): { x: number; y: number; guides: Guide[] }
-function align(rects: Rect[], mode: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom'): Rect[]
+interface Rect {
+  id: string
+  x: number
+  y: number
+  width: number
+  height: number
+}
+interface Guide {
+  axis: 'x' | 'y'
+  at: number
+  from: number
+  to: number
+}
+function snapToObjects(
+  moving: Rect,
+  others: Rect[],
+  threshold: number
+): { x: number; y: number; guides: Guide[] }
+function align(
+  rects: Rect[],
+  mode: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom'
+): Rect[]
 function distribute(rects: Rect[], axis: 'x' | 'y'): Rect[]
 ```
 
@@ -81,7 +99,11 @@ interface TextStyle {
   align?: 'left' | 'center' | 'right'
   lineHeight?: number
 }
-interface DayliosNodeMeta { kind: 'sticky' | 'text' | 'shape'; shape?: ShapeKind; style?: TextStyle }
+interface DayliosNodeMeta {
+  kind: 'sticky' | 'text' | 'shape'
+  shape?: ShapeKind
+  style?: TextStyle
+}
 ```
 
 - Negrita y cursiva se escriben como markdown en `text`. Compatible con Obsidian.
@@ -95,14 +117,14 @@ interface DayliosNodeMeta { kind: 'sticky' | 'text' | 'shape'; shape?: ShapeKind
 
 Opciones para el spike 0.5:
 
-| criterio | A visor PDF de Chromium en iframe | B `pdfjs-dist` |
-|---|---|---|
-| dependencia nueva | no | sí |
-| CSP | `frame-src vault:` | `worker-src` para el worker |
-| control de carga y errores | bajo | alto |
-| miniatura en zoom alejado | no | sí, bitmap en caché |
-| aspecto | barra de Chromium | propio |
-| aislamiento | proceso del visor | worker sin DOM; `isEvalSupported false` |
+| criterio                   | A visor PDF de Chromium en iframe | B `pdfjs-dist`                          |
+| -------------------------- | --------------------------------- | --------------------------------------- |
+| dependencia nueva          | no                                | sí                                      |
+| CSP                        | `frame-src vault:`                | `worker-src` para el worker             |
+| control de carga y errores | bajo                              | alto                                    |
+| miniatura en zoom alejado  | no                                | sí, bitmap en caché                     |
+| aspecto                    | barra de Chromium                 | propio                                  |
+| aislamiento                | proceso del visor                 | worker sin DOM; `isEvalSupported false` |
 
 Decisión tras el spike, ver `spike-pdf.md`: **B, `pdfjs-dist` 6.4.299 exacto, compilación legacy**,
 en `devDependencies`. Unos 18 MB por tarjeta frente a 115 MB del visor de Chromium, sin procesos
@@ -149,11 +171,11 @@ Comunes:
 
 ## Pruebas
 
-| tipo | qué | dónde |
-|---|---|---|
-| unidad | flow, ops, history, snap, align, canvas-style, parse con `daylios.style` | `src/test` |
-| integración | `applyBoardOps` con estilos; ida y vuelta Obsidian con fixtures | `src/test` |
-| unidad, ya | `board-flow`, `board-ops`, `board-history`: 27 pruebas | `src/test` |
-| interacción | atajos, ajuste, alinear, pegar sobre `interact.canvas` | `scripts/perf` con Playwright |
-| visual | capturas por escena contra Obsidian y contra la línea base | `scripts/perf` |
-| rendimiento | escenarios de R6.2 | `scripts/perf` |
+| tipo        | qué                                                                      | dónde                         |
+| ----------- | ------------------------------------------------------------------------ | ----------------------------- |
+| unidad      | flow, ops, history, snap, align, canvas-style, parse con `daylios.style` | `src/test`                    |
+| integración | `applyBoardOps` con estilos; ida y vuelta Obsidian con fixtures          | `src/test`                    |
+| unidad, ya  | `board-flow`, `board-ops`, `board-history`: 27 pruebas                   | `src/test`                    |
+| interacción | atajos, ajuste, alinear, pegar sobre `interact.canvas`                   | `scripts/perf` con Playwright |
+| visual      | capturas por escena contra Obsidian y contra la línea base               | `scripts/perf`                |
+| rendimiento | escenarios de R6.2                                                       | `scripts/perf`                |

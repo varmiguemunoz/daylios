@@ -6,18 +6,18 @@ Streaming ingest: receive events over HTTP/Workers/Logpush, transform with SQL, 
 
 This reference is a fast-start with verified code and gotchas. For limits, settings, full SQL syntax, and pricing, **retrieve the live docs** — use the Cloudflare MCP `docs` tool if available, otherwise `webfetch` the URL. Docs are source of truth over this file.
 
-| Topic | URL |
-|-------|-----|
-| Overview / getting started | `https://developers.cloudflare.com/basin-pipelines/getting-started/index.md` |
-| Streams (write, manage, Logpush) | `https://developers.cloudflare.com/basin-pipelines/streams/index.md` |
-| Sinks | `https://developers.cloudflare.com/basin-pipelines/sinks/index.md` |
-| Basin Pipelines & SQL transforms | `https://developers.cloudflare.com/basin-pipelines/pipelines/index.md` |
-| SQL reference (statements, types) | `https://developers.cloudflare.com/basin-pipelines/sql-reference/index.md` |
-| Wrangler commands | `https://developers.cloudflare.com/basin-pipelines/reference/wrangler-commands/index.md` |
-| Terraform | `https://developers.cloudflare.com/basin-pipelines/reference/terraform/index.md` |
-| Limits | `https://developers.cloudflare.com/basin-pipelines/platform/limits/index.md` |
-| Pricing | `https://developers.cloudflare.com/basin-pipelines/platform/pricing/index.md` |
-| Metrics (GraphQL) | `https://developers.cloudflare.com/basin-pipelines/observability/metrics/index.md` |
+| Topic                             | URL                                                                                      |
+| --------------------------------- | ---------------------------------------------------------------------------------------- |
+| Overview / getting started        | `https://developers.cloudflare.com/basin-pipelines/getting-started/index.md`             |
+| Streams (write, manage, Logpush)  | `https://developers.cloudflare.com/basin-pipelines/streams/index.md`                     |
+| Sinks                             | `https://developers.cloudflare.com/basin-pipelines/sinks/index.md`                       |
+| Basin Pipelines & SQL transforms  | `https://developers.cloudflare.com/basin-pipelines/pipelines/index.md`                   |
+| SQL reference (statements, types) | `https://developers.cloudflare.com/basin-pipelines/sql-reference/index.md`               |
+| Wrangler commands                 | `https://developers.cloudflare.com/basin-pipelines/reference/wrangler-commands/index.md` |
+| Terraform                         | `https://developers.cloudflare.com/basin-pipelines/reference/terraform/index.md`         |
+| Limits                            | `https://developers.cloudflare.com/basin-pipelines/platform/limits/index.md`             |
+| Pricing                           | `https://developers.cloudflare.com/basin-pipelines/platform/pricing/index.md`            |
+| Metrics (GraphQL)                 | `https://developers.cloudflare.com/basin-pipelines/observability/metrics/index.md`       |
 
 ## Three Components
 
@@ -28,11 +28,11 @@ Sources → Stream → Pipeline (SQL) → Sink → R2
    Logpush          (row-level)   or Parquet/JSON files
 ```
 
-| Component | Purpose |
-|-----------|---------|
-| **Stream** | Receives events (HTTP endpoint, Worker binding, or Logpush). Structured (schema-validated) or unstructured. |
-| **Pipeline** | SQL connecting a stream to a sink. Row-level transforms only — no GROUP BY/aggregation. |
-| **Sink** | Writes to R2 — Iceberg via Basin Catalog, or raw Parquet/JSON. |
+| Component    | Purpose                                                                                                     |
+| ------------ | ----------------------------------------------------------------------------------------------------------- |
+| **Stream**   | Receives events (HTTP endpoint, Worker binding, or Logpush). Structured (schema-validated) or unstructured. |
+| **Pipeline** | SQL connecting a stream to a sink. Row-level transforms only — no GROUP BY/aggregation.                     |
+| **Sink**     | Writes to R2 — Iceberg via Basin Catalog, or raw Parquet/JSON.                                              |
 
 **Status:** The linked docs PR proposes Basin general availability. Verify current availability, limits, and pricing in the live docs before making claims or sizing workloads.
 
@@ -44,15 +44,18 @@ npx wrangler basin pipelines setup
 ```
 
 Minimal Worker producer:
+
 ```typescript
-interface Env { MY_STREAM: Pipeline; }
+interface Env {
+  MY_STREAM: Pipeline
+}
 
 export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    ctx.waitUntil(env.MY_STREAM.send([{ event_id: crypto.randomUUID(), amount: 29.99 }]));
-    return new Response("OK");
+    ctx.waitUntil(env.MY_STREAM.send([{ event_id: crypto.randomUUID(), amount: 29.99 }]))
+    return new Response('OK')
   }
-} satisfies ExportedHandler<Env>;
+} satisfies ExportedHandler<Env>
 ```
 
 ## Which Sink Type?

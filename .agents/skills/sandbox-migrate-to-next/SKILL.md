@@ -17,39 +17,39 @@ Existing apps should migrate **when you can**, so you are ready when 1.0 becomes
 
 ## Workflow
 
-1. **Review** hard rules and the replacement map  
-2. **Audit** the codebase; list hits and target shapes  
-3. **Clarify** with the user (cutover, bridge, Python image, unclear sites)  
-4. **Upgrade** package, image, and code  
-5. **Validate**  
+1. **Review** hard rules and the replacement map
+2. **Audit** the codebase; list hits and target shapes
+3. **Clarify** with the user (cutover, bridge, Python image, unclear sites)
+4. **Upgrade** package, image, and code
+5. **Validate**
 
 Stop after any step that needs a user decision.
 
 ## Hard rules
 
-- Worker package and container image must be the **same** `@next` line.  
-- Production cutover uses **immediate** container rollout. Stable and `@next` control protocols are incompatible both ways; gradual rollout leaves a broken mixed window. In-flight container work can stop.  
-- After cutover, `await sandbox.exec(...)` means process **started**, not command **finished**.  
-- Argv is as-is (no implicit shell). Shell syntax needs an explicit shell binary.  
-- Process handles have **no stdin** → terminals for interactive input.  
-- Observation `timeout` / `AbortSignal` cancel the **wait only**, not the process.  
-- No single retry loop for every error.  
-- Do not invent APIs (`gitCheckout` on core, process stdin, string-exec completion helper).  
-- Self-deployed bridge stays on **stable** (not part of the preview line yet).  
+- Worker package and container image must be the **same** `@next` line.
+- Production cutover uses **immediate** container rollout. Stable and `@next` control protocols are incompatible both ways; gradual rollout leaves a broken mixed window. In-flight container work can stop.
+- After cutover, `await sandbox.exec(...)` means process **started**, not command **finished**.
+- Argv is as-is (no implicit shell). Shell syntax needs an explicit shell binary.
+- Process handles have **no stdin** → terminals for interactive input.
+- Observation `timeout` / `AbortSignal` cancel the **wait only**, not the process.
+- No single retry loop for every error.
+- Do not invent APIs (`gitCheckout` on core, process stdin, string-exec completion helper).
+- Self-deployed bridge stays on **stable** (not part of the preview line yet).
 
 ## Replacement map
 
-| Stable | `@next` |
-| ------ | ------- |
-| `SANDBOX_TRANSPORT` / `transport` / `setTransport` | Remove — RPC only |
-| `await sandbox.exec("cmd")` → buffered result | `await sandbox.exec(argv)` → handle, then `output` / waits |
-| `execStream` / `startProcess` | Same handle: `logs`, `waitFor*`, `kill` |
-| Default / named sessions | Gone — `cwd`/`env` per launch, or one shell script |
-| `sandbox.terminal(request)` / session terminal | `createTerminal` + `terminal.connect(request)` |
-| xterm `sessionId` | `terminalId` |
-| Interpreter methods on `Sandbox` | `withInterpreter` → `sandbox.interpreter.*` |
-| `gitCheckout` | argv `git` via `exec` |
-| String kill signals | Numeric only |
+| Stable                                                   | `@next`                                                          |
+| -------------------------------------------------------- | ---------------------------------------------------------------- |
+| `SANDBOX_TRANSPORT` / `transport` / `setTransport`       | Remove — RPC only                                                |
+| `await sandbox.exec("cmd")` → buffered result            | `await sandbox.exec(argv)` → handle, then `output` / waits       |
+| `execStream` / `startProcess`                            | Same handle: `logs`, `waitFor*`, `kill`                          |
+| Default / named sessions                                 | Gone — `cwd`/`env` per launch, or one shell script               |
+| `sandbox.terminal(request)` / session terminal           | `createTerminal` + `terminal.connect(request)`                   |
+| xterm `sessionId`                                        | `terminalId`                                                     |
+| Interpreter methods on `Sandbox`                         | `withInterpreter` → `sandbox.interpreter.*`                      |
+| `gitCheckout`                                            | argv `git` via `exec`                                            |
+| String kill signals                                      | Numeric only                                                     |
 | Files, mounts, backups, ports, tunnels, `proxyToSandbox` | Mostly unchanged (ignore session/transport bits on stable pages) |
 
 Depth: [Migrate](https://developers.cloudflare.com/sandbox/sdk/migrate/index.md) · after port, day-to-day → **`sandbox-next`**
@@ -64,10 +64,10 @@ Also: string `exec(`, `cd` then a later `exec`, bare `createCodeContext` / `runC
 
 ## Clarify (ask when needed)
 
-- OK to cut production with `--containers-rollout=immediate` (live processes/terminals/streams may stop)?  
-- Self-deployed bridge? Leave on stable.  
-- Python interpreter → **`-python`** image variant?  
-- Call sites not covered by the map?  
+- OK to cut production with `--containers-rollout=immediate` (live processes/terminals/streams may stop)?
+- Self-deployed bridge? Leave on stable.
+- Python interpreter → **`-python`** image variant?
+- Call sites not covered by the map?
 
 ## Upgrade
 
@@ -88,52 +88,52 @@ Same prerelease tag on Worker and image when not on floating `next`.
 
 Apply replacements from the map. For each area, implement from the doc—not from stable habits:
 
-| Area | Doc |
-| ---- | --- |
-| Commands / handles / waits | [Processes](https://developers.cloudflare.com/sandbox/index.md) · [Processes API](https://developers.cloudflare.com/sandbox/index.md) |
-| `cwd` / `env` / secrets | [Environment](https://developers.cloudflare.com/sandbox/index.md) · [Outbound traffic](https://developers.cloudflare.com/sandbox/sdk/guides/outbound-traffic/index.md) |
-| Drop sessions | [Migrate](https://developers.cloudflare.com/sandbox/sdk/migrate/index.md) · [Lifecycle](https://developers.cloudflare.com/sandbox/index.md) |
-| Terminals | [Terminals](https://developers.cloudflare.com/sandbox/index.md) |
-| Interpreter | [Interpreter](https://developers.cloudflare.com/sandbox/index.md) |
-| Errors | [Errors](https://developers.cloudflare.com/sandbox/index.md) |
-| Durable job across requests | [Process execution — lifetime / durability](https://developers.cloudflare.com/sandbox/index.md) |
+| Area                        | Doc                                                                                                                                                                    |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Commands / handles / waits  | [Processes](https://developers.cloudflare.com/sandbox/index.md) · [Processes API](https://developers.cloudflare.com/sandbox/index.md)                                  |
+| `cwd` / `env` / secrets     | [Environment](https://developers.cloudflare.com/sandbox/index.md) · [Outbound traffic](https://developers.cloudflare.com/sandbox/sdk/guides/outbound-traffic/index.md) |
+| Drop sessions               | [Migrate](https://developers.cloudflare.com/sandbox/sdk/migrate/index.md) · [Lifecycle](https://developers.cloudflare.com/sandbox/index.md)                            |
+| Terminals                   | [Terminals](https://developers.cloudflare.com/sandbox/index.md)                                                                                                        |
+| Interpreter                 | [Interpreter](https://developers.cloudflare.com/sandbox/index.md)                                                                                                      |
+| Errors                      | [Errors](https://developers.cloudflare.com/sandbox/index.md)                                                                                                           |
+| Durable job across requests | [Process execution — lifetime / durability](https://developers.cloudflare.com/sandbox/index.md)                                                                        |
 
 **Commands (shape):**
 
 ```ts
 // Before (stable)
-const result = await sandbox.exec("npm test");
+const result = await sandbox.exec('npm test')
 
 // After (@next)
-const process = await sandbox.exec(["/bin/bash", "-lc", "npm test"]);
-const result = await process.output({ encoding: "utf8" });
+const process = await sandbox.exec(['/bin/bash', '-lc', 'npm test'])
+const result = await process.output({ encoding: 'utf8' })
 ```
 
 ```ts
-const server = await sandbox.exec(["/bin/bash", "-lc", "npm run dev"], {
-  cwd: "/workspace/app",
-});
-await server.waitForPort(3000, { timeout: 60_000 });
-await server.kill(); // numeric; default 15
+const server = await sandbox.exec(['/bin/bash', '-lc', 'npm run dev'], {
+  cwd: '/workspace/app'
+})
+await server.waitForPort(3000, { timeout: 60_000 })
+await server.kill() // numeric; default 15
 ```
 
 **Terminals (shape):**
 
 ```ts
-const terminal = await sandbox.createTerminal({ command: ["bash"], cwd: "/workspace" });
-const t = await sandbox.getTerminal(terminal.id);
-if (!t) return new Response("terminal gone", { status: 410 });
-return t.connect(request, { cursor, cols, rows });
+const terminal = await sandbox.createTerminal({ command: ['bash'], cwd: '/workspace' })
+const t = await sandbox.getTerminal(terminal.id)
+if (!t) return new Response('terminal gone', { status: 410 })
+return t.connect(request, { cursor, cols, rows })
 ```
 
 **Interpreter (shape):**
 
 ```ts
-import { Sandbox as BaseSandbox } from "@cloudflare/sandbox";
-import { withInterpreter } from "@cloudflare/sandbox/interpreter";
+import { Sandbox as BaseSandbox } from '@cloudflare/sandbox'
+import { withInterpreter } from '@cloudflare/sandbox/interpreter'
 
 export class Sandbox extends BaseSandbox<Env> {
-  interpreter = withInterpreter(this);
+  interpreter = withInterpreter(this)
 }
 ```
 
@@ -141,10 +141,10 @@ export class Sandbox extends BaseSandbox<Env> {
 
 ```ts
 const clone = await sandbox.exec(
-  ["git", "clone", "--depth", "1", "--", repoUrl, "/workspace/repo"],
-  { cwd: "/workspace" },
-);
-const result = await clone.output({ encoding: "utf8" });
+  ['git', 'clone', '--depth', '1', '--', repoUrl, '/workspace/repo'],
+  { cwd: '/workspace' }
+)
+const result = await clone.output({ encoding: 'utf8' })
 ```
 
 Delete transport settings entirely. Remove session APIs. Isolate users with **separate sandbox IDs**.
@@ -161,25 +161,25 @@ Leave `rollout_active_grace_period` at default `0` (or set `0` if raised). After
 
 ## Validate
 
-1. Lockfile + Dockerfile on the same `@next` line  
-2. Typecheck against `@next`  
-3. Smoke argv `exec` + `output({ encoding: "utf8" })`  
-4. Smoke long process / terminal / interpreter if used  
-5. Errors distinguished: unavailable / interrupted-RPC / stale / local wait  
-6. No live secrets in sandbox env  
-7. Grep again for removed APIs  
-8. Production used `--containers-rollout=immediate`  
+1. Lockfile + Dockerfile on the same `@next` line
+2. Typecheck against `@next`
+3. Smoke argv `exec` + `output({ encoding: "utf8" })`
+4. Smoke long process / terminal / interpreter if used
+5. Errors distinguished: unavailable / interrupted-RPC / stale / local wait
+6. No live secrets in sandbox env
+7. Grep again for removed APIs
+8. Production used `--containers-rollout=immediate`
 
 Then day-to-day work uses **`sandbox-next`**.
 
 ## Red flags — stop and fix
 
-- Mixing `@next` Worker with stable image (or reverse)  
-- Gradual container rollout for this cutover  
-- Treating `await exec` as command completion  
-- Assuming `cd` / exports persist across `exec` calls  
-- One retry wrapper for every error  
-- Inventing `gitCheckout`, process stdin, or undocumented APIs  
-- Keeping pre-cutover process/terminal IDs after deploy  
-- Forcing production cutover without user agreement  
-- Putting live secrets in `setEnvVars` / launch `env`  
+- Mixing `@next` Worker with stable image (or reverse)
+- Gradual container rollout for this cutover
+- Treating `await exec` as command completion
+- Assuming `cd` / exports persist across `exec` calls
+- One retry wrapper for every error
+- Inventing `gitCheckout`, process stdin, or undocumented APIs
+- Keeping pre-cutover process/terminal IDs after deploy
+- Forcing production cutover without user agreement
+- Putting live secrets in `setEnvVars` / launch `env`

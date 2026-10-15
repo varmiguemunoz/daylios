@@ -11,10 +11,10 @@ Export an `email()` function from your Worker. No special wrangler binding neede
 ```typescript
 export default {
   async email(message, env, ctx): Promise<void> {
-    console.log(`Email from ${message.from} to ${message.to}`);
-    await message.forward("team@company.com");
-  },
-} satisfies ExportedHandler<Env>;
+    console.log(`Email from ${message.from} to ${message.to}`)
+    await message.forward('team@company.com')
+  }
+} satisfies ExportedHandler<Env>
 ```
 
 Set up routing rules in **Dashboard** > **Compute & AI** > **Email Service** > **Email Routing** > **Routing Rules**, or via `wrangler email routing rules create`.
@@ -36,12 +36,15 @@ The `message` parameter is a `ForwardableEmailMessage`. Run `npx wrangler types`
 ### Forward
 
 ```typescript
-await message.forward("team@company.com");
+await message.forward('team@company.com')
 
 // With custom headers
-await message.forward("team@company.com", new Headers({
-  "X-Original-Recipient": message.to,
-}));
+await message.forward(
+  'team@company.com',
+  new Headers({
+    'X-Original-Recipient': message.to
+  })
+)
 ```
 
 Destination must be verified first (Dashboard or `wrangler email routing addresses create`).
@@ -49,7 +52,7 @@ Destination must be verified first (Dashboard or `wrangler email routing address
 ### Reject
 
 ```typescript
-message.setReject("Your message was blocked");
+message.setReject('Your message was blocked')
 ```
 
 ### Reply
@@ -121,40 +124,51 @@ The `email()` handler stores the email and returns immediately. Replies happen l
 ### Receive and Store
 
 ```typescript
-import PostalMime from "postal-mime";
+import PostalMime from 'postal-mime'
 
 export class MailboxDO extends DurableObject {
-  async storeEmail(from: string, to: string, subject: string, body: string,
-                   messageId: string, inReplyTo: string | null) {
+  async storeEmail(
+    from: string,
+    to: string,
+    subject: string,
+    body: string,
+    messageId: string,
+    inReplyTo: string | null
+  ) {
     this.ctx.storage.sql.exec(
       `INSERT INTO emails (sender, recipient, subject, body, message_id, in_reply_to, date, read)
        VALUES (?, ?, ?, ?, ?, ?, datetime('now'), 0)`,
-      from, to, subject, body, messageId, inReplyTo
-    );
+      from,
+      to,
+      subject,
+      body,
+      messageId,
+      inReplyTo
+    )
   }
 }
 
 export default {
   async email(message, env, ctx) {
-    const raw = await new Response(message.raw).arrayBuffer();
-    const parsed = await PostalMime.parse(raw);
+    const raw = await new Response(message.raw).arrayBuffer()
+    const parsed = await PostalMime.parse(raw)
 
-    const id = env.MAILBOX.idFromName(message.to);
-    const stub = env.MAILBOX.get(id);
+    const id = env.MAILBOX.idFromName(message.to)
+    const stub = env.MAILBOX.get(id)
 
     await stub.storeEmail(
       message.from,
       message.to,
-      parsed.subject || "(no subject)",
-      parsed.text || parsed.html || "",
-      message.headers.get("message-id") || "",
-      message.headers.get("in-reply-to") || null,
-    );
+      parsed.subject || '(no subject)',
+      parsed.text || parsed.html || '',
+      message.headers.get('message-id') || '',
+      message.headers.get('in-reply-to') || null
+    )
 
     // Optionally trigger an AI agent to draft a reply (non-blocking)
     // ctx.waitUntil(notifyAgent(env, message.to, emailId));
-  },
-} satisfies ExportedHandler<Env>;
+  }
+} satisfies ExportedHandler<Env>
 ```
 
 ### Reply Later
@@ -165,10 +179,10 @@ When a user (or agent) decides to reply, build proper threading headers and send
 // In an HTTP handler or agent tool — not in the email() handler
 async function replyToStoredEmail(env: Env, original: StoredEmail, replyBody: string) {
   // Build threading headers (In-Reply-To + References per RFC 2822)
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = {}
   if (original.messageId) {
-    headers["In-Reply-To"] = original.messageId;
-    headers["References"] = original.messageId;
+    headers['In-Reply-To'] = original.messageId
+    headers['References'] = original.messageId
   }
 
   await env.EMAIL.send({
@@ -177,8 +191,8 @@ async function replyToStoredEmail(env: Env, original: StoredEmail, replyBody: st
     subject: `Re: ${original.subject}`,
     text: replyBody,
     html: `<p>${replyBody}</p>`,
-    headers,
-  });
+    headers
+  })
 }
 ```
 

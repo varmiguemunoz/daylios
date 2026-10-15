@@ -6,25 +6,25 @@ Serverless, distributed, **read-only** query engine (Apache DataFusion) for Apac
 
 For full function lists, data types, and pricing, **retrieve the live docs** — use the Cloudflare MCP `docs` tool if available, otherwise `webfetch`.
 
-| Topic | URL |
-|-------|-----|
-| Overview / get started | `https://developers.cloudflare.com/basin-sql/get-started/index.md` |
-| Query data | `https://developers.cloudflare.com/basin-sql/query-data/index.md` |
-| SQL reference | `https://developers.cloudflare.com/basin-sql/sql-reference/index.md` |
-| Aggregate functions | `https://developers.cloudflare.com/basin-sql/sql-reference/aggregate-functions/index.md` |
-| Scalar functions | `https://developers.cloudflare.com/basin-sql/sql-reference/scalar-functions/index.md` |
-| Complex types | `https://developers.cloudflare.com/basin-sql/sql-reference/complex-types/index.md` |
+| Topic                        | URL                                                                                         |
+| ---------------------------- | ------------------------------------------------------------------------------------------- |
+| Overview / get started       | `https://developers.cloudflare.com/basin-sql/get-started/index.md`                          |
+| Query data                   | `https://developers.cloudflare.com/basin-sql/query-data/index.md`                           |
+| SQL reference                | `https://developers.cloudflare.com/basin-sql/sql-reference/index.md`                        |
+| Aggregate functions          | `https://developers.cloudflare.com/basin-sql/sql-reference/aggregate-functions/index.md`    |
+| Scalar functions             | `https://developers.cloudflare.com/basin-sql/sql-reference/scalar-functions/index.md`       |
+| Complex types                | `https://developers.cloudflare.com/basin-sql/sql-reference/complex-types/index.md`          |
 | Limitations & best practices | `https://developers.cloudflare.com/basin-sql/reference/limitations-best-practices/index.md` |
-| Wrangler commands | `https://developers.cloudflare.com/basin-sql/reference/wrangler-commands/index.md` |
-| Pricing | `https://developers.cloudflare.com/basin-sql/platform/pricing/index.md` |
+| Wrangler commands            | `https://developers.cloudflare.com/basin-sql/reference/wrangler-commands/index.md`          |
+| Pricing                      | `https://developers.cloudflare.com/basin-sql/platform/pricing/index.md`                     |
 
 ## Connection Values
 
-| Value | Format |
-|-------|--------|
+| Value         | Format                                                                                        |
+| ------------- | --------------------------------------------------------------------------------------------- |
 | REST endpoint | `https://api.sql.cloudflarestorage.com/api/v1/accounts/{ACCOUNT_ID}/basin-sql/query/{BUCKET}` |
-| Wrangler | `npx wrangler basin sql query "{WAREHOUSE}" "<SQL>"` with `WRANGLER_BASIN_SQL_AUTH_TOKEN` set |
-| Warehouse | `{ACCOUNT_ID}_{BUCKET}` |
+| Wrangler      | `npx wrangler basin sql query "{WAREHOUSE}" "<SQL>"` with `WRANGLER_BASIN_SQL_AUTH_TOKEN` set |
+| Warehouse     | `{ACCOUNT_ID}_{BUCKET}`                                                                       |
 
 > The REST endpoint is `api.sql.cloudflarestorage.com` — **not** the account API host. The legacy `/r2-sql/query/` path may still work, but use `/basin-sql/query/` for new integrations.
 

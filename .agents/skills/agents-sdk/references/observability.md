@@ -7,35 +7,35 @@ Agents emit structured events via Node.js `diagnostics_channel`. Subscribe in de
 ## Subscribe to Events
 
 ```typescript
-import { subscribe } from "agents/observability";
+import { subscribe } from 'agents/observability'
 
-subscribe("agents:rpc", (event) => {
-  console.log(`RPC call: ${event.payload.method}`);
-});
+subscribe('agents:rpc', (event) => {
+  console.log(`RPC call: ${event.payload.method}`)
+})
 
-subscribe("agents:state", (event) => {
-  console.log(`State change on ${event.agent}`);
-});
+subscribe('agents:state', (event) => {
+  console.log(`State change on ${event.agent}`)
+})
 ```
 
 ## Available Channels
 
-| Channel | Events |
-|---------|--------|
-| `agents:state` | State changes |
-| `agents:rpc` | `@callable` invocations |
-| `agents:message` | WebSocket messages |
-| `agents:schedule` | Schedule triggers |
-| `agents:lifecycle` | Agent start, connect, disconnect |
-| `agents:workflow` | Workflow progress, completion, errors |
-| `agents:mcp` | MCP server connections, tool calls |
-| `agents:email` | Email received |
+| Channel            | Events                                |
+| ------------------ | ------------------------------------- |
+| `agents:state`     | State changes                         |
+| `agents:rpc`       | `@callable` invocations               |
+| `agents:message`   | WebSocket messages                    |
+| `agents:schedule`  | Schedule triggers                     |
+| `agents:lifecycle` | Agent start, connect, disconnect      |
+| `agents:workflow`  | Workflow progress, completion, errors |
+| `agents:mcp`       | MCP server connections, tool calls    |
+| `agents:email`     | Email received                        |
 
 ## Per-Agent Override
 
 ```typescript
 export class MyAgent extends Agent<Env, State> {
-  observability = undefined; // disable for this agent
+  observability = undefined // disable for this agent
 }
 ```
 

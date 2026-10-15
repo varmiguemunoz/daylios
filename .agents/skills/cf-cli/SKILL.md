@@ -13,19 +13,19 @@ Docs index: https://developers.cloudflare.com/cf/llms.txt
 
 ## Documentation
 
-| Topic | Page |
-|-------|------|
-| Install, sign in, credential and account selection | https://developers.cloudflare.com/cf/get-started/index.md |
-| First Worker with `cf init`, `cf dev`, `cf deploy` | https://developers.cloudflare.com/cf/get-started/first-worker/index.md |
-| Find, create, and delete resources from the terminal | https://developers.cloudflare.com/cf/get-started/resources/index.md |
-| `cf` for Wrangler users | https://developers.cloudflare.com/cf/wrangler/index.md |
-| Migrate a Wrangler project with `cf migrate` | https://developers.cloudflare.com/cf/wrangler/migrate/index.md |
-| Wrangler-to-`cf` command and config reference | https://developers.cloudflare.com/cf/wrangler/reference/index.md |
-| Develop, build, and deploy; modes and previews | https://developers.cloudflare.com/cf/projects/index.md |
-| Typed `cloudflare.config.ts` | https://developers.cloudflare.com/cf/projects/cloudflare-config/index.md |
-| Using `cf` with coding agents (safety rules) | https://developers.cloudflare.com/cf/agents/index.md |
-| CI, API tokens, unattended authentication | https://developers.cloudflare.com/cf/ci/index.md |
-| Environment variables | https://developers.cloudflare.com/cf/environment-variables/index.md |
+| Topic                                                | Page                                                                     |
+| ---------------------------------------------------- | ------------------------------------------------------------------------ |
+| Install, sign in, credential and account selection   | https://developers.cloudflare.com/cf/get-started/index.md                |
+| First Worker with `cf init`, `cf dev`, `cf deploy`   | https://developers.cloudflare.com/cf/get-started/first-worker/index.md   |
+| Find, create, and delete resources from the terminal | https://developers.cloudflare.com/cf/get-started/resources/index.md      |
+| `cf` for Wrangler users                              | https://developers.cloudflare.com/cf/wrangler/index.md                   |
+| Migrate a Wrangler project with `cf migrate`         | https://developers.cloudflare.com/cf/wrangler/migrate/index.md           |
+| Wrangler-to-`cf` command and config reference        | https://developers.cloudflare.com/cf/wrangler/reference/index.md         |
+| Develop, build, and deploy; modes and previews       | https://developers.cloudflare.com/cf/projects/index.md                   |
+| Typed `cloudflare.config.ts`                         | https://developers.cloudflare.com/cf/projects/cloudflare-config/index.md |
+| Using `cf` with coding agents (safety rules)         | https://developers.cloudflare.com/cf/agents/index.md                     |
+| CI, API tokens, unattended authentication            | https://developers.cloudflare.com/cf/ci/index.md                         |
+| Environment variables                                | https://developers.cloudflare.com/cf/environment-variables/index.md      |
 
 ## FIRST: check installation and sign in
 

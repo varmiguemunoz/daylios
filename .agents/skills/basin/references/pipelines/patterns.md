@@ -7,11 +7,15 @@ Code-first patterns. For observability dataset/field schemas and Logpush dataset
 ```typescript
 export default {
   async fetch(req, env, ctx) {
-    const event = { event_id: crypto.randomUUID(), event_type: "page_view", timestamp: new Date().toISOString() };
-    ctx.waitUntil(env.MY_STREAM.send([event]));  // don't block the response
-    return new Response("OK");
+    const event = {
+      event_id: crypto.randomUUID(),
+      event_type: 'page_view',
+      timestamp: new Date().toISOString()
+    }
+    ctx.waitUntil(env.MY_STREAM.send([event])) // don't block the response
+    return new Response('OK')
   }
-};
+}
 ```
 
 ## Client-Side Validation with Zod
@@ -19,16 +23,16 @@ export default {
 Structured streams drop invalid events silently during processing. Validate before sending for immediate feedback.
 
 ```typescript
-import { z } from "zod";
+import { z } from 'zod'
 
 const EventSchema = z.object({
   event_id: z.string(),
-  category: z.enum(["purchase", "view"]),
-  amount: z.number().positive().optional(),
-});
+  category: z.enum(['purchase', 'view']),
+  amount: z.number().positive().optional()
+})
 
-const validated = EventSchema.parse(rawEvent);  // throws synchronously
-await env.MY_STREAM.send([validated]);
+const validated = EventSchema.parse(rawEvent) // throws synchronously
+await env.MY_STREAM.send([validated])
 ```
 
 ## Scheduled Collector Worker
@@ -45,15 +49,16 @@ await env.MY_STREAM.send([validated]);
 ```typescript
 export default {
   async scheduled(event, env, ctx) {
-    const items = await (await fetch("https://api.example.com/data")).json();
-    const events = items.map(i => ({
+    const items = await (await fetch('https://api.example.com/data')).json()
+    const events = items.map((i) => ({
       event_id: crypto.randomUUID(),
       timestamp: new Date().toISOString(),
-      category: i.type, amount: i.value,
-    }));
-    await env.EVENT_STREAM.send(events);
-  },
-};
+      category: i.type,
+      amount: i.value
+    }))
+    await env.EVENT_STREAM.send(events)
+  }
+}
 ```
 
 ## Logpush → Basin Pipelines
@@ -78,9 +83,9 @@ Configure via Dashboard (**Logpush → Create a job → Basin Pipelines** destin
 
 ```typescript
 await Promise.all([
-  env.ANALYTICS_STREAM.send([event]),  // long-term storage + SQL
-  env.PROCESS_QUEUE.send(event),       // immediate processing + retries
-]);
+  env.ANALYTICS_STREAM.send([event]), // long-term storage + SQL
+  env.PROCESS_QUEUE.send(event) // immediate processing + retries
+])
 ```
 
 Use Basin Pipelines for long-term storage + SQL; Queues for immediate processing/retries/DLQ; both for fan-out.
@@ -108,8 +113,9 @@ Basin Pipelines can't change. Version + dual-write:
 ```bash
 npx wrangler basin pipelines streams create events_v2 --schema-file v2.json
 ```
+
 ```typescript
-await Promise.all([env.EVENTS_V1.send([event]), env.EVENTS_V2.send([event])]);
+await Promise.all([env.EVENTS_V1.send([event]), env.EVENTS_V2.send([event])])
 // query across versions with UNION ALL in Basin SQL
 ```
 

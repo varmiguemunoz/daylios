@@ -29,18 +29,18 @@ Se implementa en orden; cada módulo se aprueba antes de empezar.
 
 ## Módulos y orden
 
-| #   | Carpeta                | Qué resuelve                                                         | Depende de |
-| --- | ---------------------- | -------------------------------------------------------------------- | ---------- |
-| 0   | `foundations`          | Eventos de dominio, primitivas UI (Drawer, Modal…), MCP modular      | —          |
-| 1   | `subtasks`             | Funcionalidad 1: subtareas                                           | 0          |
-| 2   | `tags-admin`           | Funcionalidad 2: ver, renombrar y borrar tags (contactos y tareas)   | 0          |
-| 3   | `note-relations`       | Arreglo 1: notas relacionadas + notas ↔ clientes                     | 0          |
-| 4   | `clients-admin`        | Arreglo 2: borrar clientes y proyectos, editar y borrar documentos   | 3          |
-| 5   | `contacts-ux`          | Arreglo 3: filtros en panel, ficha nueva, contacto → prospecto       | 0, 2, 6\*  |
-| 6   | `multi-pipeline`       | Arreglo 4: varios pipelines, columnas/lista, editor, navegación      | 0          |
-| 7   | `automations`          | Arreglo 5: hecho en `.kiro/specs/automations`, reemplaza a Reglas    | 0, 2, 6    |
-| 8   | `mcp-full-coverage`    | Arreglo 6: Claude puede hacer todo lo que hace la UI                 | todos      |
-| 9   | `task-detail-minimal`  | Detalle sin ruido: editor sin modos, panel lateral, subtareas en Hoy | 1          |
+| #   | Carpeta               | Qué resuelve                                                         | Depende de |
+| --- | --------------------- | -------------------------------------------------------------------- | ---------- |
+| 0   | `foundations`         | Eventos de dominio, primitivas UI (Drawer, Modal…), MCP modular      | —          |
+| 1   | `subtasks`            | Funcionalidad 1: subtareas                                           | 0          |
+| 2   | `tags-admin`          | Funcionalidad 2: ver, renombrar y borrar tags (contactos y tareas)   | 0          |
+| 3   | `note-relations`      | Arreglo 1: notas relacionadas + notas ↔ clientes                     | 0          |
+| 4   | `clients-admin`       | Arreglo 2: borrar clientes y proyectos, editar y borrar documentos   | 3          |
+| 5   | `contacts-ux`         | Arreglo 3: filtros en panel, ficha nueva, contacto → prospecto       | 0, 2, 6\*  |
+| 6   | `multi-pipeline`      | Arreglo 4: varios pipelines, columnas/lista, editor, navegación      | 0          |
+| 7   | `automations`         | Arreglo 5: hecho en `.kiro/specs/automations`, reemplaza a Reglas    | 0, 2, 6    |
+| 8   | `mcp-full-coverage`   | Arreglo 6: Claude puede hacer todo lo que hace la UI                 | todos      |
+| 9   | `task-detail-minimal` | Detalle sin ruido: editor sin modos, panel lateral, subtareas en Hoy | 1          |
 
 \* `contacts-ux` usa el selector de pipeline de «Convertir en prospecto»; si se hace antes que 6,
 el modal elige solo etapa y se amplía en 6. Orden de esta sesión: 0 → 1 → 2 → 3 → 4 → 6 → 5 → 8.

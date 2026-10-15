@@ -2,15 +2,15 @@
 
 Use the official workflow examples after identifying where the existing application handles authorization, video ownership, and processing state.
 
-| Workflow | Read |
-|---|---|
-| Browser uploads through a server-issued URL | [Direct creator uploads](https://developers.cloudflare.com/stream/uploading-videos/direct-creator-uploads/index.md) |
-| Large or interruption-prone uploads | [Resumable uploads](https://developers.cloudflare.com/stream/uploading-videos/resumable-uploads/index.md) |
+| Workflow                                           | Read                                                                                                                                                                                                                                                    |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Browser uploads through a server-issued URL        | [Direct creator uploads](https://developers.cloudflare.com/stream/uploading-videos/direct-creator-uploads/index.md)                                                                                                                                     |
+| Large or interruption-prone uploads                | [Resumable uploads](https://developers.cloudflare.com/stream/uploading-videos/resumable-uploads/index.md)                                                                                                                                               |
 | Update application state when processing completes | [Video webhooks](https://developers.cloudflare.com/stream/manage-video-library/using-webhooks/index.md) and [upload progress tracking](https://developers.cloudflare.com/stream/uploading-videos/direct-creator-uploads/index.md#track-upload-progress) |
-| Verify an incoming processing notification | [Webhook authenticity](https://developers.cloudflare.com/stream/manage-video-library/using-webhooks/index.md#verify-webhook-authenticity) |
-| Embed playback in a React application | [Stream Player and framework integrations](https://developers.cloudflare.com/stream/viewing-videos/using-the-stream-player/index.md) |
-| Serve private videos | [Signed playback and signing examples](https://developers.cloudflare.com/stream/viewing-videos/securing-your-stream/index.md) |
-| Broadcast from a browser | [Browser-based WebRTC](https://developers.cloudflare.com/stream/examples/browser-based-webrtc/index.md) |
+| Verify an incoming processing notification         | [Webhook authenticity](https://developers.cloudflare.com/stream/manage-video-library/using-webhooks/index.md#verify-webhook-authenticity)                                                                                                               |
+| Embed playback in a React application              | [Stream Player and framework integrations](https://developers.cloudflare.com/stream/viewing-videos/using-the-stream-player/index.md)                                                                                                                    |
+| Serve private videos                               | [Signed playback and signing examples](https://developers.cloudflare.com/stream/viewing-videos/securing-your-stream/index.md)                                                                                                                           |
+| Broadcast from a browser                           | [Browser-based WebRTC](https://developers.cloudflare.com/stream/examples/browser-based-webrtc/index.md)                                                                                                                                                 |
 
 ## Application Decisions
 

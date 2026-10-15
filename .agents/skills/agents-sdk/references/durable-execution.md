@@ -9,23 +9,23 @@ Fibers let agent work survive Durable Object eviction. Progress is checkpointed 
 ```typescript
 export class MyAgent extends Agent<Env, State> {
   async onRequest(request: Request) {
-    await this.runFiber("process-data", async (ctx) => {
-      const step1 = await fetchData();
-      ctx.stash({ step: 1, data: step1 });
+    await this.runFiber('process-data', async (ctx) => {
+      const step1 = await fetchData()
+      ctx.stash({ step: 1, data: step1 })
 
-      const step2 = await transform(step1);
-      ctx.stash({ step: 2, result: step2 });
+      const step2 = await transform(step1)
+      ctx.stash({ step: 2, result: step2 })
 
-      this.setState({ result: step2 });
-    });
-    return new Response("Started");
+      this.setState({ result: step2 })
+    })
+    return new Response('Started')
   }
 
   async onFiberRecovered(ctx) {
-    const checkpoint = ctx.stash;
+    const checkpoint = ctx.stash
     if (checkpoint.step === 1) {
-      const step2 = await transform(checkpoint.data);
-      this.setState({ result: step2 });
+      const step2 = await transform(checkpoint.data)
+      this.setState({ result: step2 })
     }
   }
 }
@@ -33,14 +33,14 @@ export class MyAgent extends Agent<Env, State> {
 
 ## Key APIs
 
-| API | Purpose |
-|-----|---------|
-| `this.runFiber(name, fn)` | Start a named fiber |
-| `ctx.stash` / `this.stash` | Read latest checkpoint |
-| `ctx.stash = data` | Write checkpoint (JSON-serializable) |
-| `onFiberRecovered(ctx)` | Called on DO restart if fiber was in-flight |
-| `keepAlive()` | Prevent hibernation while fiber runs |
-| `keepAliveWhile(fn)` | Keep alive for duration of async function |
+| API                        | Purpose                                     |
+| -------------------------- | ------------------------------------------- |
+| `this.runFiber(name, fn)`  | Start a named fiber                         |
+| `ctx.stash` / `this.stash` | Read latest checkpoint                      |
+| `ctx.stash = data`         | Write checkpoint (JSON-serializable)        |
+| `onFiberRecovered(ctx)`    | Called on DO restart if fiber was in-flight |
+| `keepAlive()`              | Prevent hibernation while fiber runs        |
+| `keepAliveWhile(fn)`       | Keep alive for duration of async function   |
 
 ## Important
 

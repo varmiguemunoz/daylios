@@ -3,23 +3,19 @@
 For older Next.js projects using `pages/` rather than `app/`. The widget renders client-side; siteverify lives in the API route.
 
 ```tsx title="pages/signup.tsx"
-import Script from "next/script";
+import Script from 'next/script'
 
 export default function SignupPage() {
-	return (
-		<>
-			<Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" />
-			<form action="/api/signup" method="POST">
-				<input name="email" type="email" required />
-				<div
-					className="cf-turnstile"
-					data-sitekey="YOUR_SITEKEY"
-					data-action="signup"
-				/>
-				<button type="submit">Sign up</button>
-			</form>
-		</>
-	);
+  return (
+    <>
+      <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" />
+      <form action="/api/signup" method="POST">
+        <input name="email" type="email" required />
+        <div className="cf-turnstile" data-sitekey="YOUR_SITEKEY" data-action="signup" />
+        <button type="submit">Sign up</button>
+      </form>
+    </>
+  )
 }
 ```
 
@@ -28,47 +24,44 @@ This native form navigates to the API response, so it does not need client-side 
 API route (canonical siteverify):
 
 ```ts title="pages/api/signup.ts"
-import type { NextApiRequest, NextApiResponse } from "next";
+import type { NextApiRequest, NextApiResponse } from 'next'
 
 const expectedHostnames = new Set(
-	(process.env.TURNSTILE_HOSTNAMES ?? "")
-		.split(",")
-		.map((h) => h.trim())
-		.filter(Boolean),
-);
+  (process.env.TURNSTILE_HOSTNAMES ?? '')
+    .split(',')
+    .map((h) => h.trim())
+    .filter(Boolean)
+)
 
-export default async function handler(
-	req: NextApiRequest,
-	res: NextApiResponse,
-) {
-	const token = req.body["cf-turnstile-response"] ?? req.body.token;
-	if (expectedHostnames.size === 0) {
-		return res.status(403).json({ error: "Verification failed" });
-	}
-	const remoteip =
-		(req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0] ??
-		req.socket.remoteAddress;
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const token = req.body['cf-turnstile-response'] ?? req.body.token
+  if (expectedHostnames.size === 0) {
+    return res.status(403).json({ error: 'Verification failed' })
+  }
+  const remoteip =
+    (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0] ??
+    req.socket.remoteAddress
 
-	const verify = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-		method: "POST",
-		headers: { "Content-Type": "application/x-www-form-urlencoded" },
-		body: new URLSearchParams({
-			secret: process.env.TURNSTILE_SECRET!,
-			response: token,
-			...(remoteip ? { remoteip } : {}),
-		}),
-	});
-	const result = await verify.json();
-	if (
-		verify.ok !== true ||
-		result.success !== true ||
-		result.action !== "signup" ||
-		!expectedHostnames.has(result.hostname)
-	) {
-		return res.status(403).json({ error: "Verification failed" });
-	}
-	// process signup
-	return res.json({ ok: true });
+  const verify = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      secret: process.env.TURNSTILE_SECRET!,
+      response: token,
+      ...(remoteip ? { remoteip } : {})
+    })
+  })
+  const result = await verify.json()
+  if (
+    verify.ok !== true ||
+    result.success !== true ||
+    result.action !== 'signup' ||
+    !expectedHostnames.has(result.hostname)
+  ) {
+    return res.status(403).json({ error: 'Verification failed' })
+  }
+  // process signup
+  return res.json({ ok: true })
 }
 ```
 
@@ -76,7 +69,7 @@ export default async function handler(
 
 ## Substitutions
 
-| Placeholder         | Replace with                                                         |
-| ------------------- | -------------------------------------------------------------------- |
-| `YOUR_SITEKEY`      | The widget site key from Step 8                                      |
-| `TURNSTILE_SECRET`  | Env-var name. Value is the secret captured in Step 8, kept off disk. |
+| Placeholder        | Replace with                                                         |
+| ------------------ | -------------------------------------------------------------------- |
+| `YOUR_SITEKEY`     | The widget site key from Step 8                                      |
+| `TURNSTILE_SECRET` | Env-var name. Value is the secret captured in Step 8, kept off disk. |

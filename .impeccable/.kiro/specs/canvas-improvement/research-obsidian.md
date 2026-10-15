@@ -27,12 +27,12 @@ Equivale a `research/obsidian-canvas-analysis.md` del encargo. Vive junto a la s
 
 Fixtures:
 
-| archivo | contenido |
-|---|---|
-| `pequeno.canvas` | 10 tarjetas de texto, 1 grupo, nota, imagen, PDF de 2 páginas, enlace, 8 conexiones |
-| `mediano.canvas` | 200 nodos, 200 conexiones |
-| `grande.canvas` | 1000 nodos, 1000 conexiones |
-| `interact.canvas` | 6 tarjetas de 260 por 140 en rejilla 3 por 2 y una conexión |
+| archivo           | contenido                                                                           |
+| ----------------- | ----------------------------------------------------------------------------------- |
+| `pequeno.canvas`  | 10 tarjetas de texto, 1 grupo, nota, imagen, PDF de 2 páginas, enlace, 8 conexiones |
+| `mediano.canvas`  | 200 nodos, 200 conexiones                                                           |
+| `grande.canvas`   | 1000 nodos, 1000 conexiones                                                         |
+| `interact.canvas` | 6 tarjetas de 260 por 140 en rejilla 3 por 2 y una conexión                         |
 
 ## 1. Modelo de datos
 
@@ -124,16 +124,16 @@ Fixtures:
 
 ## 9. Estilos medidos, tema oscuro
 
-| token | valor |
-|---|---|
-| fondo del lienzo | `#1C1C1C` |
-| puntos | `#333333`, radio 0.7 |
-| `--canvas-color` | `#7e7e7e` |
-| etiqueta de tarjeta | `#666666` |
-| acento | `hsl(258,88%,66%)`, rgb 138, 92, 245 |
-| texto normal, tenue, débil | `#dadada`, `#b3b3b3`, `#666666` |
-| fondo secundario, borde | `#282828`, `#333333` |
-| color 1 y 6 | `#fb464c`, `#a882ff` |
+| token                      | valor                                |
+| -------------------------- | ------------------------------------ |
+| fondo del lienzo           | `#1C1C1C`                            |
+| puntos                     | `#333333`, radio 0.7                 |
+| `--canvas-color`           | `#7e7e7e`                            |
+| etiqueta de tarjeta        | `#666666`                            |
+| acento                     | `hsl(258,88%,66%)`, rgb 138, 92, 245 |
+| texto normal, tenue, débil | `#dadada`, `#b3b3b3`, `#666666`      |
+| fondo secundario, borde    | `#282828`, `#333333`                 |
+| color 1 y 6                | `#fb464c`, `#a882ff`                 |
 
 Tema claro: fondo `#fff`, puntos `#e4e4e4`, `--canvas-color #c0c0c0`, colores 1 a 6 `#e93147`,
 `#ec7500`, `#e0ac00`, `#08b94e`, `#00bfbc`, `#7852ee`.
@@ -158,11 +158,11 @@ acercar, restablecer, encuadrar, alejar; deshacer, rehacer; ayuda. Menú de tarj
 Medidor por rAF: fps, p50, p95, peor frame y frames de más de 50 ms. Observer de longtask. pan son
 60 eventos de rueda cada 16 ms, zoom 40 pasos de ⌘ y rueda, drag 60 movimientos.
 
-| board | primer nodo ms | DOM en fit | escala fit | pan fit fps | zoom fit fps | DOM al 100 % | pan 100 | drag 100 |
-|---|---|---|---|---|---|---|---|---|
-| pequeño | 77 | 15 | 0.30 | 60 | 53.4, 5 frames de más de 50 ms | 8 | 60 | 60 |
-| mediano | 38 | 200 | 0.126 | 60 | 58.8, 1 longtask de 74 ms | 12 | 60 | 60 |
-| grande | 98 | 1000 | 0.0625 | 49.7, p95 49.9 | 34.1, p50 33.3 | 8 | 60 | 60 |
+| board   | primer nodo ms | DOM en fit | escala fit | pan fit fps    | zoom fit fps                   | DOM al 100 % | pan 100 | drag 100 |
+| ------- | -------------- | ---------- | ---------- | -------------- | ------------------------------ | ------------ | ------- | -------- |
+| pequeño | 77             | 15         | 0.30       | 60             | 53.4, 5 frames de más de 50 ms | 8            | 60      | 60       |
+| mediano | 38             | 200        | 0.126      | 60             | 58.8, 1 longtask de 74 ms      | 12           | 60      | 60       |
+| grande  | 98             | 1000       | 0.0625     | 49.7, p95 49.9 | 34.1, p50 33.3                 | 8            | 60      | 60       |
 
 Una sola ejecución en Obsidian. La varianza no se midió.
 

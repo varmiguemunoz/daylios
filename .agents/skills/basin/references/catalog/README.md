@@ -4,12 +4,12 @@ Use Basin Catalog for Iceberg analytics and data pipelines on object storage. Fo
 
 Distinguish the Iceberg REST catalog used by query engines from Cloudflare's control-plane API for catalog administration. Start with the workflow you need:
 
-| Task | Reference |
-|------|-----------|
+| Task                                                                 | Reference                         |
+| -------------------------------------------------------------------- | --------------------------------- |
 | Enable a catalog, discover connection values, and choose credentials | [Configuration](configuration.md) |
-| Select administration or engine APIs | [API selection](api.md) |
-| Choose a Python, Spark, or SQL workflow | [Patterns](patterns.md) |
-| Diagnose authentication, maintenance, or client problems | [Troubleshooting](gotchas.md) |
+| Select administration or engine APIs                                 | [API selection](api.md)           |
+| Choose a Python, Spark, or SQL workflow                              | [Patterns](patterns.md)           |
+| Diagnose authentication, maintenance, or client problems             | [Troubleshooting](gotchas.md)     |
 
 Copy the actual **Catalog URI** and **Warehouse name** from the catalog detail page or Wrangler's enable output. Pass both to the selected engine; do not reconstruct them from an assumed bucket naming convention. Retrieve [Manage catalogs](https://developers.cloudflare.com/basin-catalog/manage-catalogs/index.md) before setup or permission changes.
 

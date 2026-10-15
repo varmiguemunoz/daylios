@@ -2,20 +2,20 @@
 
 See [README.md](./README.md) for the retrieval workflow. Fetch the relevant guide before creating or changing resources; use current configuration fields and CLI syntax from these sources.
 
-| Task | Official documentation |
-|------|------------------------|
-| Create the first configuration and bind it to a Worker | [Get started](https://developers.cloudflare.com/hyperdrive/get-started/index.md) |
-| Create, inspect, update, or delete configurations; set cache or pool options | [Wrangler commands](https://developers.cloudflare.com/hyperdrive/reference/wrangler-commands/index.md) |
-| Generate TypeScript types from Worker configuration | [Workers TypeScript](https://developers.cloudflare.com/workers/languages/typescript/index.md) |
-| Connect a private database using the recommended Workers VPC route | [Workers VPC integration](https://developers.cloudflare.com/hyperdrive/configuration/connect-to-private-database-vpc/index.md) |
-| Maintain a private database connection using Tunnel and Access | [Tunnel integration](https://developers.cloudflare.com/hyperdrive/configuration/connect-to-private-database/index.md) |
-| Configure database network access | [Firewall and networking](https://developers.cloudflare.com/hyperdrive/configuration/firewall-and-networking-configuration/index.md) |
-| Configure server verification or client certificates | [SSL/TLS certificates](https://developers.cloudflare.com/hyperdrive/configuration/tls-ssl-certificates-for-hyperdrive/index.md) |
-| Rotate origin database credentials | [Credential rotation](https://developers.cloudflare.com/hyperdrive/configuration/rotate-credentials/index.md) |
-| Configure cache freshness or separate cached and fresh-read bindings | [Query caching](https://developers.cloudflare.com/hyperdrive/concepts/query-caching/index.md) |
-| Budget origin connections across configurations | [Tune connection pooling](https://developers.cloudflare.com/hyperdrive/configuration/tune-connection-pool/index.md) |
-| Choose local database access or remote Hyperdrive testing | [Local development](https://developers.cloudflare.com/hyperdrive/configuration/local-development/index.md) |
-| Evaluate Worker placement for multiple database round trips | [Smart Placement](https://developers.cloudflare.com/workers/configuration/placement/index.md) |
+| Task                                                                         | Official documentation                                                                                                               |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Create the first configuration and bind it to a Worker                       | [Get started](https://developers.cloudflare.com/hyperdrive/get-started/index.md)                                                     |
+| Create, inspect, update, or delete configurations; set cache or pool options | [Wrangler commands](https://developers.cloudflare.com/hyperdrive/reference/wrangler-commands/index.md)                               |
+| Generate TypeScript types from Worker configuration                          | [Workers TypeScript](https://developers.cloudflare.com/workers/languages/typescript/index.md)                                        |
+| Connect a private database using the recommended Workers VPC route           | [Workers VPC integration](https://developers.cloudflare.com/hyperdrive/configuration/connect-to-private-database-vpc/index.md)       |
+| Maintain a private database connection using Tunnel and Access               | [Tunnel integration](https://developers.cloudflare.com/hyperdrive/configuration/connect-to-private-database/index.md)                |
+| Configure database network access                                            | [Firewall and networking](https://developers.cloudflare.com/hyperdrive/configuration/firewall-and-networking-configuration/index.md) |
+| Configure server verification or client certificates                         | [SSL/TLS certificates](https://developers.cloudflare.com/hyperdrive/configuration/tls-ssl-certificates-for-hyperdrive/index.md)      |
+| Rotate origin database credentials                                           | [Credential rotation](https://developers.cloudflare.com/hyperdrive/configuration/rotate-credentials/index.md)                        |
+| Configure cache freshness or separate cached and fresh-read bindings         | [Query caching](https://developers.cloudflare.com/hyperdrive/concepts/query-caching/index.md)                                        |
+| Budget origin connections across configurations                              | [Tune connection pooling](https://developers.cloudflare.com/hyperdrive/configuration/tune-connection-pool/index.md)                  |
+| Choose local database access or remote Hyperdrive testing                    | [Local development](https://developers.cloudflare.com/hyperdrive/configuration/local-development/index.md)                           |
+| Evaluate Worker placement for multiple database round trips                  | [Smart Placement](https://developers.cloudflare.com/workers/configuration/placement/index.md)                                        |
 
 ## Setup decisions
 

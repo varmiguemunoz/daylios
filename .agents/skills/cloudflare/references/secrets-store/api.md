@@ -2,13 +2,13 @@
 
 Fetch the current API documentation before implementing calls or copying types.
 
-| Task | Documentation |
-|------|---------------|
-| Read a bound account secret asynchronously in a Worker | [Workers integration: access the secret](https://developers.cloudflare.com/secrets-store/integrations/workers/index.md#3-access-the-secret-on-the-env-object) |
-| Generate binding and runtime types for the Worker configuration | [Workers TypeScript](https://developers.cloudflare.com/workers/languages/typescript/index.md) |
-| Manage stores and secrets, inspect metadata, or query quota | [Secrets Store REST API](https://developers.cloudflare.com/api/resources/secrets_store/index.md) |
-| Choose authorization and consuming-service scope | [Access control](https://developers.cloudflare.com/secrets-store/access-control/index.md) |
-| Manage secrets through the CLI instead of REST | [Wrangler Secrets Store commands](https://developers.cloudflare.com/workers/wrangler/commands/secrets-store/index.md) |
+| Task                                                            | Documentation                                                                                                                                                 |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Read a bound account secret asynchronously in a Worker          | [Workers integration: access the secret](https://developers.cloudflare.com/secrets-store/integrations/workers/index.md#3-access-the-secret-on-the-env-object) |
+| Generate binding and runtime types for the Worker configuration | [Workers TypeScript](https://developers.cloudflare.com/workers/languages/typescript/index.md)                                                                 |
+| Manage stores and secrets, inspect metadata, or query quota     | [Secrets Store REST API](https://developers.cloudflare.com/api/resources/secrets_store/index.md)                                                              |
+| Choose authorization and consuming-service scope                | [Access control](https://developers.cloudflare.com/secrets-store/access-control/index.md)                                                                     |
+| Manage secrets through the CLI instead of REST                  | [Wrangler Secrets Store commands](https://developers.cloudflare.com/workers/wrangler/commands/secrets-store/index.md)                                         |
 
 ## Runtime decisions
 

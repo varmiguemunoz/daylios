@@ -41,44 +41,44 @@ The `PUBLIC_` prefix is mandatory for client-exposed variables in Astro. The sec
 ## API route (canonical siteverify)
 
 ```ts title="src/pages/api/signup.ts"
-import type { APIRoute } from "astro";
+import type { APIRoute } from 'astro'
 
 const expectedHostnames = new Set(
-	(import.meta.env.TURNSTILE_HOSTNAMES ?? "")
-		.split(",")
-		.map((h) => h.trim())
-		.filter(Boolean),
-);
+  (import.meta.env.TURNSTILE_HOSTNAMES ?? '')
+    .split(',')
+    .map((h) => h.trim())
+    .filter(Boolean)
+)
 
 export const POST: APIRoute = async ({ request, clientAddress }) => {
-	const form = await request.formData();
-	const token = form.get("cf-turnstile-response");
-	if (typeof token !== "string" || expectedHostnames.size === 0) {
-		return new Response("forbidden", { status: 403 });
-	}
+  const form = await request.formData()
+  const token = form.get('cf-turnstile-response')
+  if (typeof token !== 'string' || expectedHostnames.size === 0) {
+    return new Response('forbidden', { status: 403 })
+  }
 
-	const verify = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-		method: "POST",
-		headers: { "Content-Type": "application/x-www-form-urlencoded" },
-		body: new URLSearchParams({
-			secret: import.meta.env.TURNSTILE_SECRET,
-			response: token,
-			remoteip: clientAddress,
-		}),
-	});
-	const result = await verify.json();
-	if (
-		verify.ok !== true ||
-		result.success !== true ||
-		result.action !== "signup" ||
-		!expectedHostnames.has(result.hostname)
-	) {
-		return new Response("forbidden", { status: 403 });
-	}
+  const verify = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      secret: import.meta.env.TURNSTILE_SECRET,
+      response: token,
+      remoteip: clientAddress
+    })
+  })
+  const result = await verify.json()
+  if (
+    verify.ok !== true ||
+    result.success !== true ||
+    result.action !== 'signup' ||
+    !expectedHostnames.has(result.hostname)
+  ) {
+    return new Response('forbidden', { status: 403 })
+  }
 
-	// process signup
-	return Response.json({ ok: true });
-};
+  // process signup
+  return Response.json({ ok: true })
+}
 ```
 
 ## Variant: Astro Actions
@@ -86,47 +86,47 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 If the project uses Astro Actions, call siteverify from the action:
 
 ```ts title="src/actions/index.ts"
-import { defineAction } from "astro:actions";
-import { z } from "astro:schema";
+import { defineAction } from 'astro:actions'
+import { z } from 'astro:schema'
 
 const expectedHostnames = new Set(
-	(import.meta.env.TURNSTILE_HOSTNAMES ?? "")
-		.split(",")
-		.map((h) => h.trim())
-		.filter(Boolean),
-);
+  (import.meta.env.TURNSTILE_HOSTNAMES ?? '')
+    .split(',')
+    .map((h) => h.trim())
+    .filter(Boolean)
+)
 
 export const server = {
-	signup: defineAction({
-		accept: "form",
-		input: z.object({
-			email: z.string().email(),
-			"cf-turnstile-response": z.string(),
-		}),
-		handler: async (input, ctx) => {
-			if (expectedHostnames.size === 0) throw new Error("Verification failed");
-			const verify = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-				method: "POST",
-				headers: { "Content-Type": "application/x-www-form-urlencoded" },
-				body: new URLSearchParams({
-					secret: import.meta.env.TURNSTILE_SECRET,
-					response: input["cf-turnstile-response"],
-					remoteip: ctx.clientAddress,
-				}),
-			});
-			const result = await verify.json();
-			if (
-				verify.ok !== true ||
-				result.success !== true ||
-				result.action !== "signup" ||
-				!expectedHostnames.has(result.hostname)
-			) {
-				throw new Error("Verification failed");
-			}
-			// process signup
-		},
-	}),
-};
+  signup: defineAction({
+    accept: 'form',
+    input: z.object({
+      email: z.string().email(),
+      'cf-turnstile-response': z.string()
+    }),
+    handler: async (input, ctx) => {
+      if (expectedHostnames.size === 0) throw new Error('Verification failed')
+      const verify = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          secret: import.meta.env.TURNSTILE_SECRET,
+          response: input['cf-turnstile-response'],
+          remoteip: ctx.clientAddress
+        })
+      })
+      const result = await verify.json()
+      if (
+        verify.ok !== true ||
+        result.success !== true ||
+        result.action !== 'signup' ||
+        !expectedHostnames.has(result.hostname)
+      ) {
+        throw new Error('Verification failed')
+      }
+      // process signup
+    }
+  })
+}
 ```
 
 `signup` is the stable action for this surface. Preserve an existing custom migration action and compare the returned action to the same value. Siteverify is mandatory for every widget mode, including pre-clearance. Set `TURNSTILE_HOSTNAMES` to the deployment-specific frontend hostnames; a production value must not include `localhost` or `127.0.0.1`.
@@ -193,7 +193,7 @@ For a client-side Astro Action, replace the native form and script with an expli
 
 ## Substitutions
 
-| Placeholder         | Replace with                                                         |
-| ------------------- | -------------------------------------------------------------------- |
-| `YOUR_SITEKEY`      | The widget site key from Step 8                                      |
-| `YOUR_SECRET`       | The secret captured in Step 8. Stays in env, never inlined.          |
+| Placeholder    | Replace with                                                |
+| -------------- | ----------------------------------------------------------- |
+| `YOUR_SITEKEY` | The widget site key from Step 8                             |
+| `YOUR_SECRET`  | The secret captured in Step 8. Stays in env, never inlined. |

@@ -62,7 +62,7 @@ export default {
   fetch: withSupabase({ auth: 'user' }, async (_req, ctx) => {
     const { data } = await ctx.supabase.from('todos').select()
     return Response.json(data)
-  }),
+  })
 }
 ```
 
@@ -73,17 +73,14 @@ import { createSupabaseContext } from 'npm:@supabase/server@1'
 export default {
   fetch: async (req: Request) => {
     const { data: ctx, error } = await createSupabaseContext(req, {
-      auth: 'user',
+      auth: 'user'
     })
     if (error) {
-      return Response.json(
-        { message: error.message, code: error.code },
-        { status: error.status },
-      )
+      return Response.json({ message: error.message, code: error.code }, { status: error.status })
     }
     const { data } = await ctx.supabase.from('todos').select()
     return Response.json(data)
-  },
+  }
 }
 ```
 
@@ -98,7 +95,7 @@ export default {
   fetch: withSupabase({ auth: 'user' }, async (_req, ctx) => {
     const { data } = await ctx.supabase.from('todos').select()
     return Response.json(data)
-  }),
+  })
 }
 ```
 
@@ -180,11 +177,7 @@ For Next.js / SvelteKit / Remix, **compose `@supabase/server` with [`@supabase/s
 ```ts
 // Key imports for building the adapter
 import { createServerClient } from '@supabase/ssr'
-import {
-  verifyCredentials,
-  createContextClient,
-  createAdminClient,
-} from '@supabase/server/core'
+import { verifyCredentials, createContextClient, createAdminClient } from '@supabase/server/core'
 ```
 
 ### Server-to-server (secret key auth)
@@ -204,7 +197,7 @@ export default {
       .from('scheduled_tasks')
       .insert({ name: body.taskName, scheduled_at: body.scheduledAt })
     return Response.json({ success: true, data })
-  }),
+  })
 }
 ```
 
@@ -215,12 +208,12 @@ await fetch('https://<project>.supabase.co/functions/v1/my-function', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    apikey: 'sb_secret_automations_...', // the named secret key
+    apikey: 'sb_secret_automations_...' // the named secret key
   },
   body: JSON.stringify({
     taskName: 'cleanup',
-    scheduledAt: new Date().toISOString(),
-  }),
+    scheduledAt: new Date().toISOString()
+  })
 })
 ```
 
@@ -237,10 +230,10 @@ export default {
   fetch: withSupabase(
     {
       auth: 'user',
-      issuer: fromSupabaseUrl(Deno.env.get('SUPABASE_URL')!),
+      issuer: fromSupabaseUrl(Deno.env.get('SUPABASE_URL')!)
     },
-    async (req, ctx) => Response.json({ user: ctx.userClaims }),
-  ),
+    async (req, ctx) => Response.json({ user: ctx.userClaims })
+  )
 }
 ```
 
@@ -287,7 +280,7 @@ export default {
       .select()
       .single()
     return Response.json(data)
-  }),
+  })
 }
 ```
 
@@ -301,16 +294,15 @@ export default {
     const { orderId } = await req.json()
 
     // Calls process-order with the secret key automatically
-    const { data, error } = await ctx.supabaseAdmin.functions.invoke(
-      'process-order',
-      { body: { orderId } },
-    )
+    const { data, error } = await ctx.supabaseAdmin.functions.invoke('process-order', {
+      body: { orderId }
+    })
 
     if (error) {
       return Response.json({ error: error.message }, { status: 500 })
     }
     return Response.json(data)
-  }),
+  })
 }
 ```
 
@@ -386,7 +378,7 @@ export default {
       event = await stripe.webhooks.constructEventAsync(
         body,
         sig,
-        Deno.env.get('STRIPE_WEBHOOK_SECRET')!,
+        Deno.env.get('STRIPE_WEBHOOK_SECRET')!
       )
     } catch {
       return Response.json({ error: 'Invalid signature' }, { status: 401 })
@@ -404,7 +396,7 @@ export default {
     }
 
     return Response.json({ received: true })
-  }),
+  })
 }
 ```
 
@@ -431,8 +423,8 @@ Deno.serve(async (req: Request) => {
     Deno.env.get('SUPABASE_URL') ?? '',
     Deno.env.get('SUPABASE_ANON_KEY') ?? '',
     {
-      global: { headers: { Authorization: req.headers.get('Authorization')! } },
-    },
+      global: { headers: { Authorization: req.headers.get('Authorization')! } }
+    }
   )
   const { data } = await supabaseClient.from('orders').select('*')
   return Response.json(data)
@@ -450,7 +442,7 @@ export default {
   fetch: withSupabase({ auth: 'user' }, async (_req, ctx) => {
     const { data } = await ctx.supabase.from('orders').select('*')
     return Response.json(data)
-  }),
+  })
 }
 ```
 

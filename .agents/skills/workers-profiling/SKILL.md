@@ -23,7 +23,6 @@ Where possible, use the [`cf` CLI](/cf/) to capture profiles. If the user reques
 
 If `cf` isn't available, consider prompting the user whether they would like to install it.
 
-
 The profiling API will return a pprof file which you can analyze directly, or using appropriate tools like Go's `pprof` utility.
 
 ## Inspect the evidence

@@ -16,9 +16,7 @@ Fetch https://developers.cloudflare.com/agents/runtime/operations/configuration/
       { "name": "ChatAgent", "class_name": "ChatAgent" }
     ]
   },
-  "migrations": [
-    { "tag": "v1", "new_sqlite_classes": ["MyAgent", "ChatAgent"] }
-  ],
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["MyAgent", "ChatAgent"] }],
   "ai": { "binding": "AI" },
   "assets": {
     "directory": "./dist/client",
@@ -41,14 +39,14 @@ Fetch https://developers.cloudflare.com/agents/runtime/operations/configuration/
 ## Vite Setup
 
 ```typescript
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import { cloudflare } from "@cloudflare/vite-plugin";
-import { agents } from "agents/vite";
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import { cloudflare } from '@cloudflare/vite-plugin'
+import { agents } from 'agents/vite'
 
 export default defineConfig({
   plugins: [react(), cloudflare(), agents()]
-});
+})
 ```
 
 ## Type Generation

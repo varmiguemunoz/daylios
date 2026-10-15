@@ -13,11 +13,11 @@ Cloudflare Data Platform is now **Basin**. Cloudflare Pipelines, R2 Data Catalog
 
 ## Choose the workflow
 
-| Need | Product | Reference | Current docs |
-|------|---------|-----------|--------------|
-| Receive events, transform rows, and deliver to R2 | Basin Pipelines | [Pipelines guide](references/pipelines/README.md) | [Basin Pipelines](https://developers.cloudflare.com/basin-pipelines/index.md) |
-| Manage Iceberg metadata, table maintenance, and engine access | Basin Catalog | [Catalog guide](references/catalog/README.md) | [Basin Catalog](https://developers.cloudflare.com/basin-catalog/index.md) |
-| Query Iceberg tables with analytical SQL | Basin SQL | [SQL guide](references/sql/README.md) | [Basin SQL](https://developers.cloudflare.com/basin-sql/index.md) |
+| Need                                                          | Product         | Reference                                         | Current docs                                                                  |
+| ------------------------------------------------------------- | --------------- | ------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Receive events, transform rows, and deliver to R2             | Basin Pipelines | [Pipelines guide](references/pipelines/README.md) | [Basin Pipelines](https://developers.cloudflare.com/basin-pipelines/index.md) |
+| Manage Iceberg metadata, table maintenance, and engine access | Basin Catalog   | [Catalog guide](references/catalog/README.md)     | [Basin Catalog](https://developers.cloudflare.com/basin-catalog/index.md)     |
+| Query Iceberg tables with analytical SQL                      | Basin SQL       | [SQL guide](references/sql/README.md)             | [Basin SQL](https://developers.cloudflare.com/basin-sql/index.md)             |
 
 Typical flow: Basin Pipelines → Basin Catalog tables in R2 → Basin SQL or a compatible external engine. Begin with the [Basin getting started guide](https://developers.cloudflare.com/basin/get-started/guide/index.md) for an end-to-end setup.
 

@@ -5,24 +5,16 @@ For static sites or any project without a JS framework. The widget renders clien
 ```html
 <!doctype html>
 <html>
-	<head>
-		<script
-			src="https://challenges.cloudflare.com/turnstile/v0/api.js"
-			async
-			defer
-		></script>
-	</head>
-	<body>
-		<form action="/api/subscribe" method="POST">
-			<input name="email" type="email" required />
-			<div
-				class="cf-turnstile"
-				data-sitekey="YOUR_SITEKEY"
-				data-action="subscribe"
-			></div>
-			<button type="submit">Subscribe</button>
-		</form>
-	</body>
+  <head>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  </head>
+  <body>
+    <form action="/api/subscribe" method="POST">
+      <input name="email" type="email" required />
+      <div class="cf-turnstile" data-sitekey="YOUR_SITEKEY" data-action="subscribe"></div>
+      <button type="submit">Subscribe</button>
+    </form>
+  </body>
 </html>
 ```
 
@@ -35,31 +27,31 @@ Add this to your existing `/api/subscribe` handler before the rest of its logic:
 ```js
 // Node / fetch idiom
 const expectedHostnames = new Set(
-	(process.env.TURNSTILE_HOSTNAMES ?? '')
-		.split(',')
-		.map((h) => h.trim())
-		.filter(Boolean),
-);
-if (expectedHostnames.size === 0) return res.status(403).end();
+  (process.env.TURNSTILE_HOSTNAMES ?? '')
+    .split(',')
+    .map((h) => h.trim())
+    .filter(Boolean)
+)
+if (expectedHostnames.size === 0) return res.status(403).end()
 
-const token = req.body['cf-turnstile-response'];
+const token = req.body['cf-turnstile-response']
 const r = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-	method: 'POST',
-	headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-	body: new URLSearchParams({
-		secret: process.env.TURNSTILE_SECRET,
-		response: token,
-		remoteip: req.ip,
-	}),
-});
-const result = await r.json();
+  method: 'POST',
+  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  body: new URLSearchParams({
+    secret: process.env.TURNSTILE_SECRET,
+    response: token,
+    remoteip: req.ip
+  })
+})
+const result = await r.json()
 if (
-	r.ok !== true ||
-	result.success !== true ||
-	result.action !== 'subscribe' ||
-	!expectedHostnames.has(result.hostname)
+  r.ok !== true ||
+  result.success !== true ||
+  result.action !== 'subscribe' ||
+  !expectedHostnames.has(result.hostname)
 ) {
-	return res.status(403).end();
+  return res.status(403).end()
 }
 // existing handler logic runs here
 ```
@@ -100,43 +92,43 @@ For an AJAX flow, replace the native form and API script with explicit rendering
 
 ```html
 <form id="subscribe-form">
-	<input name="email" type="email" required />
-	<div id="subscribe-turnstile"></div>
-	<button type="submit">Subscribe</button>
+  <input name="email" type="email" required />
+  <div id="subscribe-turnstile"></div>
+  <button type="submit">Subscribe</button>
 </form>
 <script>
-	let subscribeWidgetId;
+  let subscribeWidgetId
 
-	window.onSubscribeTurnstileLoad = () => {
-		subscribeWidgetId = window.turnstile.render("#subscribe-turnstile", {
-			sitekey: "YOUR_SITEKEY",
-			action: "subscribe",
-		});
-	};
+  window.onSubscribeTurnstileLoad = () => {
+    subscribeWidgetId = window.turnstile.render('#subscribe-turnstile', {
+      sitekey: 'YOUR_SITEKEY',
+      action: 'subscribe'
+    })
+  }
 
-	document.getElementById("subscribe-form").addEventListener("submit", async (event) => {
-		event.preventDefault();
-		try {
-			const res = await fetch("/api/subscribe", {
-				method: "POST",
-				body: new FormData(event.currentTarget),
-			});
-			const json = await res.json();
-			if (!res.ok || json.ok !== true) throw new Error("Submission failed");
-			// proceed
-		} catch {
-			// surface the error
-		} finally {
-			if (subscribeWidgetId !== undefined) {
-				window.turnstile.reset(subscribeWidgetId);
-			}
-		}
-	});
+  document.getElementById('subscribe-form').addEventListener('submit', async (event) => {
+    event.preventDefault()
+    try {
+      const res = await fetch('/api/subscribe', {
+        method: 'POST',
+        body: new FormData(event.currentTarget)
+      })
+      const json = await res.json()
+      if (!res.ok || json.ok !== true) throw new Error('Submission failed')
+      // proceed
+    } catch {
+      // surface the error
+    } finally {
+      if (subscribeWidgetId !== undefined) {
+        window.turnstile.reset(subscribeWidgetId)
+      }
+    }
+  })
 </script>
 <script
-	src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onSubscribeTurnstileLoad&render=explicit"
-	async
-	defer
+  src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onSubscribeTurnstileLoad&render=explicit"
+  async
+  defer
 ></script>
 ```
 
@@ -150,8 +142,8 @@ If your project is pure-static (no server-side handler — just HTML served from
 
 ## Substitutions
 
-| Placeholder         | Replace with                                                         |
-| ------------------- | -------------------------------------------------------------------- |
-| `YOUR_SITEKEY`      | The widget site key from Step 8                                      |
-| `/api/subscribe`    | The path to your existing form-handling endpoint                     |
-| `TURNSTILE_SECRET`  | Env-var name. Value is the secret captured in Step 8, kept off disk. |
+| Placeholder        | Replace with                                                         |
+| ------------------ | -------------------------------------------------------------------- |
+| `YOUR_SITEKEY`     | The widget site key from Step 8                                      |
+| `/api/subscribe`   | The path to your existing form-handling endpoint                     |
+| `TURNSTILE_SECRET` | Env-var name. Value is the secret captured in Step 8, kept off disk. |
