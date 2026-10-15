@@ -1,4 +1,4 @@
-import type { LeadPayload, Rule } from './marketing'
+import type { LeadPayload } from './marketing'
 
 export interface HubSource {
   slug: string
@@ -10,7 +10,6 @@ export interface HubSource {
 
 export interface HubConfig {
   sources: HubSource[]
-  rules: Rule[]
 
   segments: Record<string, string>
 
@@ -62,7 +61,6 @@ export type HubItem = HubLeadItem | HubStatusItem
 export interface HubHealth {
   ok: true
   sources: number
-  rules: number
   queued: number
   resend: boolean
   webhooks: boolean

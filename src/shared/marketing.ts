@@ -61,7 +61,7 @@ export interface TagSummary extends Tag {
 export interface TagUsage {
   slug: string
   contacts: number
-  rules: { id: string; name: string; active: boolean }[]
+  automations: { id: string; name: string; active: boolean }[]
   sources: string[]
 }
 
@@ -82,35 +82,6 @@ export interface LeadSource {
 }
 
 export type LeadSourceInput = Partial<Pick<LeadSource, 'name' | 'defaultTags'>> & { slug?: string }
-
-// ---- Reglas ----
-
-export type RuleAction =
-  | { type: 'add_tag'; tag: string }
-  | { type: 'remove_tag'; tag: string }
-  | { type: 'fire_event'; event: string }
-  | { type: 'promote'; stage: string }
-
-export const RULE_ACTION_TYPES: RuleAction['type'][] = [
-  'add_tag',
-  'remove_tag',
-  'fire_event',
-  'promote'
-]
-
-export interface Rule {
-  id: string
-  name: string
-  position: number
-  active: boolean
-
-  triggerTag: string
-  actions: RuleAction[]
-  createdAt: string
-  updatedAt: string
-}
-
-export type RuleInput = Partial<Pick<Rule, 'name' | 'active' | 'triggerTag' | 'actions'>>
 
 // ---- Secuencias (Automations de Resend) ----
 
@@ -212,13 +183,6 @@ export interface MarketingApi {
   removeSource(slug: string): Promise<void>
 
   testHub(): Promise<{ ok: boolean; message: string }>
-
-  listRules(): Promise<Rule[]>
-  createRule(input: RuleInput): Promise<Rule>
-  updateRule(id: string, patch: RuleInput): Promise<Rule>
-  removeRule(id: string): Promise<void>
-
-  reorderRules(ids: string[]): Promise<Rule[]>
 
   listSequences(): Promise<SequenceSummary[]>
   setSequenceStatus(id: string, enabled: boolean): Promise<SequenceSummary>

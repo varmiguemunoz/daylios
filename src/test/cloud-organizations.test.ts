@@ -204,7 +204,7 @@ describe('organizaciones: casos de uso', () => {
 
   it('el admin cambia el rol de un miembro pero no puede dar la propiedad', async () => {
     const { service, me, members } = setup('admin')
-    await service.changeRole(me, ORG, OTHER, 'viewer').catch(() => undefined)
+    await service.changeRole(me, ORG, OTHER, 'viewer')
     expect(members[1].role).toBe('viewer')
     await expect(service.changeRole(me, ORG, OTHER, 'owner')).rejects.toThrow(/Transferir/)
   })

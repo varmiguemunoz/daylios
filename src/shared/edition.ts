@@ -53,14 +53,15 @@ export const SYNC_TABLES = [
   'contact_tags',
   'tags',
   'lead_sources',
-  'rules',
   'newsletters',
   'tasks',
   'note_relations',
   'workspace_items',
   'workspace_refs',
   'dashboards',
-  'file_manifest'
+  'file_manifest',
+  'automations',
+  'automation_versions'
 ] as const
 export type SyncTable = (typeof SYNC_TABLES)[number]
 
@@ -74,9 +75,9 @@ export const SOFT_DELETE_TABLES: SyncTable[] = [
   'contacts',
   'tags',
   'lead_sources',
-  'rules',
   'tasks',
-  'file_manifest'
+  'file_manifest',
+  'automations'
 ]
 
 export const SOFT_DELETE_DAYS = 30
@@ -94,7 +95,11 @@ export const NEVER_SYNC = {
     'sync_revs',
     'file_state',
     'file_uploads',
-    'activity_cache'
+    'activity_cache',
+    'automation_events',
+    'automation_runs',
+    'automation_run_steps',
+    'automation_trigger_log'
   ],
   columns: {
     lead_sources: ['secret'],

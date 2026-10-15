@@ -39,6 +39,7 @@ import { RefPicker } from '../molecules/RefPicker'
 import { Properties, PropertyRow } from '../molecules/Properties'
 import { useGoneRedirect, useScreenTitle } from '../chrome'
 import { ConvertToProspectModal } from '../organisms/ConvertToProspectModal'
+import { AutomationsSection } from '../organisms/automation/AutomationsSection'
 import { EntityActivity } from '../organisms/activity/EntityActivity'
 
 export function Contact({
@@ -306,6 +307,7 @@ export function Contact({
       )}
 
       <Timeline contact={c} go={go} />
+      <AutomationsSection subject="contact" subjectId={c.id} go={go} />
       <EntityActivity entity="contacts" id={id} />
     </Page>
   )

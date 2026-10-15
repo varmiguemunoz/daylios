@@ -3,7 +3,6 @@ import { handle, sha256, toStatuses, type HubDeps } from './hub'
 import { MemoryStore } from './store'
 import { FakeResend } from '../../../src/main/test/fake-resend'
 import type { HubLeadItem, HubStatusItem } from '../../../src/shared/hub'
-import type { Rule } from '../../../src/shared/marketing'
 
 const BASE = 'https://hub.test'
 const SECRET = 'secreto-de-la-web'
@@ -30,7 +29,6 @@ describe('leads-hub', () => {
       sources: [
         { slug: 'web', name: 'Web', secretHash: await sha256(SECRET), defaultTags: ['newsletter'] }
       ],
-      rules: [],
       segments: {}
     })
   })
@@ -127,39 +125,29 @@ describe('leads-hub', () => {
     expect((store.items[1] as HubLeadItem).resend.unsubscribed).toBe(true)
   })
 
-  it('aplica reglas: encadena tags, eventos y promoción', async () => {
-    const rule = (id: string, triggerTag: string, actions: Rule['actions']): Rule => ({
-      id,
-      name: id,
-      position: 0,
-      active: true,
-      triggerTag,
-      actions,
-      createdAt: '',
-      updatedAt: ''
-    })
-    const config = await store.getConfig()
-    await store.putConfig({
-      ...config,
-      rules: [
-        rule('r1', 'webinar', [
-          { type: 'add_tag', tag: 'nurture' },
-          { type: 'remove_tag', tag: 'newsletter' }
-        ]),
-        rule('r2', 'nurture', [
-          { type: 'fire_event', event: 'nurture.start' },
-          { type: 'promote', stage: 'Discovery' }
-        ])
-      ]
-    })
+  it('solo marca como nuevos los tags que el contacto no tenía', async () => {
     await lead({ email: 'a@x.com', tags: ['webinar'] })
-    const item = store.items[0] as HubLeadItem
-    expect(item.added).toEqual(['origen-web', 'webinar', 'nurture'])
-    expect(item.promote).toBe('Discovery')
-    expect(resend.events.map((e) => e.event)).toContain('nurture.start')
-    expect(
-      [...resend.contacts.get('a@x.com')!.segments].map((id) => resend.segments.get(id))
-    ).not.toContain('tag:newsletter')
+    resend.events = []
+    await lead({ email: 'a@x.com', tags: ['webinar', 'promo', 'promo'] })
+    const item = store.items[1] as HubLeadItem
+    expect(item.added).toEqual(['promo'])
+    expect(item.removed).toEqual([])
+    expect(item.events).toEqual([])
+    expect(item.promote).toBeNull()
+    expect(resend.events.map((e) => e.event)).toEqual(['tag.promo'])
+  })
+
+  it('acepta configs viejas con reglas y las ignora', async () => {
+    const put = await handle(
+      new Request(`${BASE}/admin/config`, {
+        method: 'PUT',
+        headers: { authorization: `Bearer ${ADMIN}` },
+        body: JSON.stringify({ sources: [], rules: [{ id: 'r1' }], segments: {} })
+      }),
+      deps
+    )
+    expect(put.status).toBe(200)
+    expect(await put.json()).not.toHaveProperty('rules')
   })
 
   it('si Resend falla, encola igual con ok: false', async () => {
@@ -200,7 +188,7 @@ describe('leads-hub', () => {
       new Request(`${BASE}/admin/config`, {
         method: 'PUT',
         headers: { authorization: `Bearer ${ADMIN}` },
-        body: JSON.stringify({ sources: [], rules: [], segments: { extra: 'seg_1' } })
+        body: JSON.stringify({ sources: [], segments: { extra: 'seg_1' } })
       }),
       deps
     )

@@ -79,8 +79,8 @@ de nube. La edición Equipo, en construcción, suma cuenta, organización y sinc
   vacíos; el código de nube (`src/main/cloud`) solo se carga en Equipo.
 - Cada cambio en las tablas sincronizables deja una fila en `change_log` por triggers de SQLite.
   En Local se queda en las últimas 10 000.
-- Borrar clientes, proyectos, reuniones, prospectos, pipelines, contactos, tags, fuentes, reglas o
-  tareas marca `deleted_at`. Se purgan a los 30 días.
+- Borrar clientes, proyectos, reuniones, prospectos, pipelines, contactos, tags, fuentes,
+  automatizaciones o tareas marca `deleted_at`. Se purgan a los 30 días.
 - Nunca salen del Mac: `settings.json`, claves de API, tokens, `ui-state.json`, secretos de las
   fuentes, la cola de voz, grabaciones en curso y el outbox del email (`NEVER_SYNC`).
 - Microservicio en `services/cloud`, NestJS hexagonal sobre Supabase. Ver su README.
@@ -185,7 +185,7 @@ Grabaciones: `CLIENTS_DOCS_PATH/_reuniones/` hasta que se asocian a un cliente; 
 
 ## Email marketing (leads, secuencias, newsletter)
 
-Un GoHighLevel pequeño dentro de la Consultora: **Contactos** (personas de clientes y prospectos, y leads de email en la misma base) y el grupo **Email**: Fuentes, Reglas, Secuencias y Newsletters. Spec: `.kiro/specs/email-automations/`.
+Un GoHighLevel pequeño dentro de la Consultora: **Contactos** (personas de clientes y prospectos, y leads de email en la misma base) y el grupo **Email**: Fuentes, Secuencias y Newsletters. Spec: `.kiro/specs/email-automations/`. Lo que antes eran Reglas ahora son [Automatizaciones](#automatizaciones).
 
 ```
 Formulario / Zapier / Make ──POST /in/<fuente>──▶ Worker leads-hub (Cloudflare, siempre encendido)
@@ -197,7 +197,7 @@ Claude Cowork ──MCP──▶ DayliOS ──▶ Resend (newsletter diario, se
 
 - **Solo opt-in.** Un contacto creado a mano queda «Sin marketing»; suscribirlo pide confirmar que dio su permiso. Los leads de una fuente entran suscritos y guardan fuente y fecha como prueba de consentimiento.
 - **Tags**: cada lead lleva `origen-<fuente>` y los tags por defecto de la fuente. Cada tag es un Segment de Resend (`tag:<slug>`). Al entrar en un tag, un suscrito dispara el evento `tag.<slug>`; uno nuevo, `lead.created`.
-- **Reglas**: «cuando entra el tag X → añadir/quitar tag, disparar evento, pasar a pipeline». Corren en el Worker al recibir un lead y en la app al etiquetar.
+- **Tags que disparan algo**: se arman como automatizaciones con el trigger «Se añade un tag». El Worker ya no evalúa reglas: solo marca como nuevos los tags que el contacto no tenía.
 - **Secuencias**: Automations de Resend. Se crean en su dashboard o pidiéndoselas a Claude (`save_sequence`). Resend no deja editar una activa: hay que pausarla.
 - **Newsletter**: lo escribe y lo envía Claude (`send_newsletter`). Salvaguardas: pausa global, máximo uno por día, tag con suscritos, copia previa a tu email, enlace de baja obligatorio e historial. Si algún suscrito del tag aún no está sincronizado con Resend, no se envía.
 - **Sin conexión**: todo cambio hacia Resend pasa por una cola local con reintentos (1 min → 6 h). Ajustes → Email muestra lo pendiente.
@@ -222,6 +222,27 @@ Tarea programada (por ejemplo, de lunes a viernes a las 08:00):
 > Usa get_newsletter_context. Si está en pausa o ya se envió hoy, termina sin hacer nada. Elige el tag con suscritos que toque hoy (alterna entre ellos) y escribe un newsletter breve y útil en español para educar a esos contactos sobre integración de software y AI: un tema que no aparezca en los últimos asuntos, un asunto claro de menos de 60 caracteres, 3–5 párrafos cortos en HTML simple y una sola llamada a la acción. Sin datos inventados ni promesas. Envíalo con send_newsletter. Si falla, explica el error.
 
 Las tareas programadas y la app corren con el Mac despierto. Las secuencias y la recepción de leads no dependen del Mac.
+
+## Automatizaciones
+
+Un motor de flujos al estilo de GoHighLevel dentro de la Consultora. Spec e investigación: `.kiro/specs/automations/`.
+
+- **Qué es**: triggers (un tag, una etapa, un prospecto ganado, una tarea completada, una hora fija, a mano) que
+  inscriben a un sujeto (contacto, prospecto, cliente, tarea, reunión o ninguno) en un árbol de pasos: tags, campos,
+  pipeline, clientes, proyectos, tareas, notas, emails, notificaciones del Mac, webhooks, esperas, Si o si no, Ir a y
+  Finalizar.
+- **Editor**: lienzo en árbol de arriba abajo. «+» entre pasos y al final de cada rama. Se arrastra un paso, o con ⌥
+  el paso con lo que cuelga, a cualquier «+». ⌘Z y ⇧⌘Z, ⌘C y ⇧⌘C para copiar con lo que cuelga, ⌘V en un «+».
+- **Borrador y versiones**: el borrador se guarda solo. Publicar crea una versión inmutable y la activa. Las
+  ejecuciones en curso siguen con su versión. Se guardan las últimas 10 y se puede restaurar cualquiera.
+- **Probar** simula sobre un sujeto real sin escribir nada. **Ejecutar** corre la versión publicada a mano.
+- **Ejecuciones**: corren en este Mac. Sobreviven al cierre de la app y lo vencido corre al abrir, marcado «con
+  retraso». Los pasos externos reintentan a 1, 5 y 30 minutos. Anti bucles: cadena de 5, sin auto disparo y bloqueo a
+  20 entradas del mismo sujeto en 30 minutos. Se guardan 60 días.
+- **Equipo**: las definiciones se sincronizan; las ejecuciones son de cada Mac y un cambio que llega de otro Mac no
+  dispara nada en el tuyo.
+- **Ampliar**: un nodo nuevo es su especificación en `src/shared/automations/catalog.ts` y su handler en
+  `src/main/automations/handlers`. Un test falla si falta uno de los dos.
 
 ## Tareas: tags y esfuerzo
 
@@ -286,18 +307,19 @@ Las herramientas que borran piden `confirm: true`: sin él devuelven el impacto 
 clientes, proyectos, prospectos, pipelines y etapas aceptan id o nombre. Excepciones a propósito: claves y secretos,
 permisos de macOS y empezar o detener una grabación en vivo.
 
-| Dominio    | Herramientas                                                                                                                                                                                                                                                                                                                                |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Día        | `get_day` · `get_history` · `create_task` (con `parent` crea una subtarea) · `get_task` · `update_task` · `delete_task` · `move_task` · `list_tasks` (tablero con estado y filtros) · `carry_over_pending` · `reorder_tasks` · `reorder_subtasks` · `complete_subtasks`                                                                     |
-| Notas      | `list_notes` · `get_note` (con relaciones) · `create_note` · `update_note` · `delete_note` · `search_notes` · `link_notes` · `unlink_notes` · `link_note_client` · `unlink_note_client`                                                                                                                                                     |
-| Clientes   | `get_overview` · `list_clients` · `get_client` · `save_client` · `get_client_impact` · `delete_client` · `get_project` · `save_project` · `delete_project` · `search` · `append_note`                                                                                                                                                       |
-| Documentos | `list_documents` · `read_document` · `write_document` · `rename_document` · `delete_document` (a la Papelera)                                                                                                                                                                                                                               |
-| Reuniones  | `list_meetings` · `get_meeting` · `create_meeting` · `update_meeting` · `process_meeting` · `delete_meeting` · `list_action_items` · `update_action_item` · `import_recording`                                                                                                                                                              |
-| Pipelines  | `list_pipelines` · `get_pipeline` · `get_metrics` (los números de Inicio) · `save_pipeline` · `delete_pipeline` · `get_prospect` · `save_prospect` · `move_prospect` · `delete_prospect`                                                                                                                                                    |
-| Contactos  | `list_contacts` · `get_contact` · `save_contact` · `delete_contact` · `tag_contact` · `set_contact_subscription` · `convert_contact` (alias `promote_contact`) · `detach_contact_prospect`                                                                                                                                                  |
-| Tags       | `list_tags` (`kind`: contact o task) · `rename_tag` · `set_tag_audience` · `delete_tag` · `rename_task_tag` · `delete_task_tag`                                                                                                                                                                                                             |
-| Workspace  | `workspace_tree` · `workspace_list` · `workspace_search` · `workspace_read` · `workspace_write_note` · `workspace_create_folder` · `workspace_move` · `workspace_delete` (a la Papelera) · `workspace_create_board` · `board_read` · `board_edit`                                                                                           |
-| Email      | `list_sources` · `save_source` · `rotate_source_secret` · `delete_source` · `list_rules` · `save_rule` · `delete_rule` · `list_sequences` · `get_sequence` · `save_sequence` · `set_sequence_status` · `get_newsletter_context` · `send_newsletter` · `list_newsletters` · `get_newsletter` · `get_marketing_status` · `sync_marketing_now` |
+| Dominio          | Herramientas                                                                                                                                                                                                                                                                                                                                 |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Día              | `get_day` · `get_history` · `create_task` (con `parent` crea una subtarea) · `get_task` · `update_task` · `delete_task` · `move_task` · `list_tasks` (tablero con estado y filtros) · `carry_over_pending` · `reorder_tasks` · `reorder_subtasks` · `complete_subtasks`                                                                      |
+| Notas            | `list_notes` · `get_note` (con relaciones) · `create_note` · `update_note` · `delete_note` · `search_notes` · `link_notes` · `unlink_notes` · `link_note_client` · `unlink_note_client`                                                                                                                                                      |
+| Clientes         | `get_overview` · `list_clients` · `get_client` · `save_client` · `get_client_impact` · `delete_client` · `get_project` · `save_project` · `delete_project` · `search` · `append_note`                                                                                                                                                        |
+| Documentos       | `list_documents` · `read_document` · `write_document` · `rename_document` · `delete_document` (a la Papelera)                                                                                                                                                                                                                                |
+| Reuniones        | `list_meetings` · `get_meeting` · `create_meeting` · `update_meeting` · `process_meeting` · `delete_meeting` · `list_action_items` · `update_action_item` · `import_recording`                                                                                                                                                               |
+| Pipelines        | `list_pipelines` · `get_pipeline` · `get_metrics` (los números de Inicio) · `save_pipeline` · `delete_pipeline` · `get_prospect` · `save_prospect` · `move_prospect` · `delete_prospect`                                                                                                                                                     |
+| Contactos        | `list_contacts` · `get_contact` · `save_contact` · `delete_contact` · `tag_contact` · `set_contact_subscription` · `convert_contact` (alias `promote_contact`) · `detach_contact_prospect`                                                                                                                                                   |
+| Tags             | `list_tags` (`kind`: contact o task) · `rename_tag` · `set_tag_audience` · `delete_tag` · `rename_task_tag` · `delete_task_tag`                                                                                                                                                                                                              |
+| Workspace        | `workspace_tree` · `workspace_list` · `workspace_search` · `workspace_read` · `workspace_write_note` · `workspace_create_folder` · `workspace_move` · `workspace_delete` (a la Papelera) · `workspace_create_board` · `board_read` · `board_edit`                                                                                            |
+| Email            | `list_sources` · `save_source` · `rotate_source_secret` · `delete_source` · `list_sequences` · `get_sequence` · `save_sequence` · `set_sequence_status` · `get_newsletter_context` · `send_newsletter` · `list_newsletters` · `get_newsletter` · `get_marketing_status` · `sync_marketing_now`                                               |
+| Automatizaciones | `list_automation_catalog` · `list_automations` · `get_automation` · `save_automation_draft` · `publish_automation` (con `confirm`) · `set_automation_status` · `delete_automation` (con `confirm`) · `test_automation` · `run_automation` · `list_automation_runs` · `get_automation_run` · `cancel_automation_run` · `retry_automation_run` |
 
 `create_task` y `update_task` aceptan `description` (markdown), `tags` y `effort` (alto/medio/bajo). En el título también funcionan `#tag` y `!alto` / `!medio` / `!bajo`. `update_task` además acepta `status` (todo, doing, done) y `client`, `project` o `prospect` por id; cadena vacía quita la relación.
 

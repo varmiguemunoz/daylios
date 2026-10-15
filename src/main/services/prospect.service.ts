@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto'
+import { emit } from '../automations/events'
 import { In, IsNull, Not, type DataSource, type EntityManager } from 'typeorm'
 import {
   STAGE_KINDS,
@@ -237,52 +238,9 @@ export class ProspectService {
     index?: number,
     pipelineRef?: unknown
   ): Promise<{ prospect: Prospect; client: Client | null }> {
-    return transactionGuard(this.db, async (manager) => {
-      const prospects = manager.getRepository(ProspectModel)
-      const p = await findByRef(prospects, ref, 'company', 'el prospecto')
-      const current = await manager.getRepository(StageModel).findOneBy({ id: p.stageId })
-      const scope = pipelineRef
-        ? (await findPipeline(manager, pipelineRef)).id
-        : current?.pipelineId
-      const stage = await findStage(manager, stageRef, scope)
-
-      await recordStage(manager, p, current, stage)
-      p.stageId = stage.id
-      p.updatedAt = now()
-
-      // Reordenar la columna destino con el prospecto en su sitio nuevo
-      const column = (
-        await prospects.find({
-          where: { stageId: stage.id },
-          order: { position: 'ASC', updatedAt: 'DESC' }
-        })
-      ).filter((other) => other.id !== p.id)
-      const at =
-        typeof index === 'number' ? Math.max(0, Math.min(Math.floor(index), column.length)) : 0
-      column.splice(at, 0, p)
-      for (const [position, row] of column.entries()) {
-        if (row.id !== p.id) await prospects.update({ id: row.id }, { position })
-        else p.position = position
-      }
-
-      let client: Client | null = null
-      if (stage.kind === 'won' && !p.clientId) {
-        client = await insertClient(manager, {
-          name: p.company,
-          contactsMd: p.contactMd,
-          notesMd: p.notesMd ? `## Del pipeline\n\n${p.notesMd}` : ''
-        })
-        p.clientId = client.id
-        await manager
-          .getRepository(MeetingModel)
-          .update({ prospectId: p.id, clientId: IsNull() }, { clientId: client.id })
-        await manager
-          .getRepository(ContactModel)
-          .update({ prospectId: p.id, clientId: IsNull() }, { clientId: client.id })
-      }
-
-      return { prospect: await prospects.save(p), client }
-    })
+    return transactionGuard(this.db, (manager) =>
+      moveProspect(manager, ref, stageRef, index, pipelineRef)
+    )
   }
 
   remove(ref: unknown): Promise<void> {
@@ -429,4 +387,59 @@ export async function recordStage(
   })
   if (to.kind === 'open') p.closedAt = null
   else if (from?.kind !== to.kind || !p.closedAt) p.closedAt = at
+  const subject = { type: 'prospect' as const, id: p.id }
+  const payload = { pipelineId: to.pipelineId, fromStageId: from?.id ?? null, toStageId: to.id }
+  await emit(manager, from ? 'prospect.stage_changed' : 'prospect.created', subject, payload)
+  if (to.kind !== 'open' && from?.kind !== to.kind)
+    await emit(manager, to.kind === 'won' ? 'prospect.won' : 'prospect.lost', subject, payload)
+}
+
+export async function moveProspect(
+  manager: EntityManager,
+  ref: unknown,
+  stageRef: unknown,
+  index?: number,
+  pipelineRef?: unknown
+): Promise<{ prospect: Prospect; client: Client | null }> {
+  const prospects = manager.getRepository(ProspectModel)
+  const p = await findByRef(prospects, ref, 'company', 'el prospecto')
+  const current = await manager.getRepository(StageModel).findOneBy({ id: p.stageId })
+  const scope = pipelineRef ? (await findPipeline(manager, pipelineRef)).id : current?.pipelineId
+  const stage = await findStage(manager, stageRef, scope)
+
+  await recordStage(manager, p, current, stage)
+  p.stageId = stage.id
+  p.updatedAt = now()
+
+  // Reordenar la columna destino con el prospecto en su sitio nuevo
+  const column = (
+    await prospects.find({
+      where: { stageId: stage.id },
+      order: { position: 'ASC', updatedAt: 'DESC' }
+    })
+  ).filter((other) => other.id !== p.id)
+  const at = typeof index === 'number' ? Math.max(0, Math.min(Math.floor(index), column.length)) : 0
+  column.splice(at, 0, p)
+  for (const [position, row] of column.entries()) {
+    if (row.id !== p.id) await prospects.update({ id: row.id }, { position })
+    else p.position = position
+  }
+
+  let client: Client | null = null
+  if (stage.kind === 'won' && !p.clientId) {
+    client = await insertClient(manager, {
+      name: p.company,
+      contactsMd: p.contactMd,
+      notesMd: p.notesMd ? `## Del pipeline\n\n${p.notesMd}` : ''
+    })
+    p.clientId = client.id
+    await manager
+      .getRepository(MeetingModel)
+      .update({ prospectId: p.id, clientId: IsNull() }, { clientId: client.id })
+    await manager
+      .getRepository(ContactModel)
+      .update({ prospectId: p.id, clientId: IsNull() }, { clientId: client.id })
+  }
+
+  return { prospect: await prospects.save(p), client }
 }

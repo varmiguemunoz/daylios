@@ -1,10 +1,11 @@
 import { createHash, randomUUID } from 'crypto'
+import { emit } from '../automations/events'
 import { IsNull, type DataSource, type EntityManager } from 'typeorm'
 import type { HubConfig, HubHealth, HubItem, HubLeadItem, HubStatusItem } from '@shared/hub'
 import type { Contact } from '@shared/consultora'
 import { LEAD_CREATED } from '@shared/marketing'
 import { ContactModel } from '../models/contact.model'
-import { HubReceiptModel, LeadSourceModel, RuleModel, TagModel } from '../models/marketing.model'
+import { HubReceiptModel, LeadSourceModel, TagModel } from '../models/marketing.model'
 import { transactionGuard } from '../guards/transaction.guard'
 import { now } from './fields'
 import { changeTags, logEvent, promoteContact, setStatus } from './contact.service'
@@ -85,7 +86,6 @@ export class HubSync {
 
   async buildConfig(): Promise<HubConfig> {
     const sources = await this.db.getRepository(LeadSourceModel).find({ order: { slug: 'ASC' } })
-    const rules = await this.db.getRepository(RuleModel).find({ order: { position: 'ASC' } })
     const tags = await this.db.getRepository(TagModel).find({ order: { slug: 'ASC' } })
     return {
       sources: sources.map((s) => ({
@@ -94,7 +94,6 @@ export class HubSync {
         secretHash: createHash('sha256').update(s.secret).digest('hex'),
         defaultTags: s.defaultTags
       })),
-      rules,
       segments: Object.fromEntries(
         tags.filter((t) => t.audience && t.segmentId).map((t) => [t.slug, t.segmentId!])
       ),
@@ -133,6 +132,7 @@ async function applyLead(manager: EntityManager, item: HubLeadItem): Promise<voi
   const { lead } = item
   let contact = await repo.findOneBy({ email: lead.email })
   const isNew = !contact
+  const wasSubscribed = contact?.status === 'subscribed'
   const stamp = now()
 
   if (!contact) {
@@ -170,11 +170,14 @@ async function applyLead(manager: EntityManager, item: HubLeadItem): Promise<voi
     await repo.save(contact)
   }
   await logEvent(manager, contact.id, 'lead', { source: item.source })
+  const subject = { type: 'contact' as const, id: contact.id }
+  if (isNew) await emit(manager, 'contact.created', subject, { source: item.source })
+  if (contact.status === 'subscribed' && !wasSubscribed)
+    await emit(manager, 'contact.subscribed', subject, { origin: 'hub' })
 
   await changeTags(manager, contact, {
     add: item.added,
     remove: item.removed,
-    rules: false, // ya las evaluó el Worker
     remoteDone: item.resend.ok,
     extraEvents: item.resend.ok ? [] : item.events
   })

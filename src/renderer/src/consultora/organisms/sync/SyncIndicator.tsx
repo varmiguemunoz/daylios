@@ -35,7 +35,8 @@ const TABLE_LABEL: Record<string, string> = {
   contacts: 'Contacto',
   tags: 'Tag',
   lead_sources: 'Fuente',
-  rules: 'Regla',
+  automations: 'Automatización',
+  automation_versions: 'Versión de automatización',
   tasks: 'Tarea'
 }
 

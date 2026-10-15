@@ -18,7 +18,6 @@ class FakeHub implements HubClient {
     return {
       ok: true,
       sources: 0,
-      rules: 0,
       queued: this.queue.length,
       resend: true,
       webhooks: true

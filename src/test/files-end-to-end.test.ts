@@ -58,7 +58,7 @@ describe('archivos de punta a punta con dos copias', () => {
         db,
         api: () => api,
         orgId: ORG,
-        deviceId: device,
+        deviceId: `device-${device}`,
         markerFile: '/nonexistent/sync-init.json',
         notify: () => undefined,
         subscribe: () => () => undefined,

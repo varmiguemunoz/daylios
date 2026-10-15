@@ -29,6 +29,7 @@ import { InlineField } from '../molecules/InlineField'
 import { Properties, PropertyRow } from '../molecules/Properties'
 import { Authorship } from '../organisms/orgs/Authorship'
 import { AssigneeRow } from '../organisms/orgs/AssigneeRow'
+import { AutomationsSection } from '../organisms/automation/AutomationsSection'
 import { EntityActivity } from '../organisms/activity/EntityActivity'
 
 export function Prospect({
@@ -212,6 +213,7 @@ export function Prospect({
           </List>
         )}
       </Section>
+      <AutomationsSection subject="prospect" subjectId={p.id} go={go} />
       <EntityActivity entity="prospects" id={id} />
     </Page>
   )

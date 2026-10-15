@@ -22,8 +22,9 @@ export type Screen =
   | { name: 'tags' }
   | { name: 'contacts' }
   | { name: 'contact'; id: string }
+  | { name: 'automations' }
+  | { name: 'automation'; id: string }
   | { name: 'sources' }
-  | { name: 'rules' }
   | { name: 'sequences' }
   | { name: 'newsletters' }
   | { name: 'note'; id: string }
@@ -106,3 +107,7 @@ export const bytes = (n: number): string =>
     : n < 1024 ** 2
       ? `${Math.round(n / 1024)} KB`
       : `${(n / 1024 ** 2).toFixed(1)} MB`
+
+const ISO = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?Z/g
+
+export const humanize = (message: string): string => message.replace(ISO, (iso) => dateTime(iso))

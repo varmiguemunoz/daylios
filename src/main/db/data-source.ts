@@ -33,6 +33,9 @@ import { AddAssignees1729200000000 } from './migrations/AddAssignees'
 import { AddSyncTables1729300000000 } from './migrations/AddSyncTables'
 import { AddFileManifest1729400000000 } from './migrations/AddFileManifest'
 import { AddActivityCache1729500000000 } from './migrations/AddActivityCache'
+import { AddAutomations1729600000000 } from './migrations/AddAutomations'
+import { MigrateRulesToAutomations1729700000000 } from './migrations/MigrateRulesToAutomations'
+import { AUTOMATION_ENTITIES } from '../models/automation.model'
 import { DashboardModel, StageEventModel } from '../models/metrics.model'
 import {
   ContactEventModel,
@@ -41,7 +44,6 @@ import {
   LeadSourceModel,
   NewsletterModel,
   OutboxModel,
-  RuleModel,
   TagModel
 } from '../models/marketing.model'
 
@@ -57,7 +59,6 @@ export const ENTITIES = [
   ContactTagModel,
   ContactEventModel,
   LeadSourceModel,
-  RuleModel,
   NewsletterModel,
   OutboxModel,
   HubReceiptModel,
@@ -66,7 +67,8 @@ export const ENTITIES = [
   WorkspaceItemModel,
   WorkspaceRefModel,
   StageEventModel,
-  DashboardModel
+  DashboardModel,
+  ...AUTOMATION_ENTITIES
 ]
 
 // En orden. Nunca edites una publicada: añade una nueva al final.
@@ -90,7 +92,9 @@ export const MIGRATIONS = [
   AddAssignees1729200000000,
   AddSyncTables1729300000000,
   AddFileManifest1729400000000,
-  AddActivityCache1729500000000
+  AddActivityCache1729500000000,
+  AddAutomations1729600000000,
+  MigrateRulesToAutomations1729700000000
 ]
 
 export async function openDatabase(dir: string): Promise<DataSource> {

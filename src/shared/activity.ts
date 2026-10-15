@@ -11,7 +11,9 @@ export const ACTIVITY_VERBS = [
   'uploaded',
   'renamed',
   'invited',
-  'joined'
+  'joined',
+  'published',
+  'paused'
 ] as const
 export type ActivityVerb = (typeof ACTIVITY_VERBS)[number]
 
@@ -24,7 +26,8 @@ export const ACTIVITY_ENTITIES = [
   'tasks',
   'pipelines',
   'file_manifest',
-  'members'
+  'members',
+  'automations'
 ] as const
 export type ActivityEntity = (typeof ACTIVITY_ENTITIES)[number]
 
@@ -97,7 +100,9 @@ export const VERB_LABEL: Record<ActivityVerb, string> = {
   uploaded: 'Subió',
   renamed: 'Renombró',
   invited: 'Invitó',
-  joined: 'Se unió'
+  joined: 'Se unió',
+  published: 'Publicó',
+  paused: 'Pausó'
 }
 
 export const ENTITY_LABEL: Record<ActivityEntity, string> = {
@@ -109,7 +114,8 @@ export const ENTITY_LABEL: Record<ActivityEntity, string> = {
   tasks: 'Tareas',
   pipelines: 'Pipelines',
   file_manifest: 'Archivos',
-  members: 'Miembros'
+  members: 'Miembros',
+  automations: 'Automatizaciones'
 }
 
 const NOUN: Record<ActivityEntity, string> = {
@@ -121,7 +127,8 @@ const NOUN: Record<ActivityEntity, string> = {
   tasks: 'la tarea',
   pipelines: 'el pipeline',
   file_manifest: 'el archivo',
-  members: ''
+  members: '',
+  automations: 'la automatización'
 }
 
 export const NOTIFY_KIND_OF: Partial<Record<ActivityEntity, NotifyKind>> = {
@@ -164,6 +171,10 @@ export function activityPhrase(e: ActivityEntry, name: (userId: string | null) =
       return `${who} invitó a ${e.title === 'enlace' ? 'alguien por enlace' : e.title}`
     case 'joined':
       return `${who} se unió a la organización`
+    case 'published':
+      return `${who} publicó ${what}${e.detail ? ` ${e.detail}` : ''}`
+    case 'paused':
+      return `${who} pausó ${what}`
   }
 }
 

@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto'
+import { emit } from '../automations/events'
 import { join } from 'path'
 import type { DataSource, EntityManager } from 'typeorm'
 import {
@@ -166,6 +167,7 @@ export async function insertClient(manager: EntityManager, input: ClientInput): 
     updatedAt: stamp
   }
   await clients.insert(client)
+  await emit(manager, 'client.created', { type: 'client', id: client.id })
   await ensureClientFolder(client.folderPath)
   return client
 }

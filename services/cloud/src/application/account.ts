@@ -22,7 +22,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 export class UpdateProfile {
   constructor(private readonly profiles: ProfileRepository) {}
 
-  execute(user: AuthUser, input: { name?: unknown }): Promise<Profile> {
+  async execute(user: AuthUser, input: { name?: unknown }): Promise<Profile> {
     return this.profiles.setName(
       user,
       invalid(() => cleanName(input?.name))
@@ -33,7 +33,7 @@ export class UpdateProfile {
 export class RegisterDevice {
   constructor(private readonly devices: DeviceRepository) {}
 
-  execute(
+  async execute(
     user: AuthUser,
     id: string,
     input: { name?: unknown; platform?: unknown }
@@ -55,7 +55,7 @@ export class ListDevices {
 export class ForgetOtherDevices {
   constructor(private readonly devices: DeviceRepository) {}
 
-  execute(user: AuthUser, keepId: string): Promise<number> {
+  async execute(user: AuthUser, keepId: string): Promise<number> {
     if (!UUID.test(keepId)) throw new AccountError('Dispositivo inválido.', 'invalid')
     return this.devices.removeOthers(user, keepId)
   }

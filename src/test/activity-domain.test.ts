@@ -50,6 +50,26 @@ describe('actividad: qué cuenta como acción', () => {
     expect(moved.verbs).toEqual([])
   })
 
+  it('automatizaciones: publicar y pausar cuentan, editar el borrador no', async () => {
+    const a = await run(
+      up('automations', 'a1', { name: 'Bienvenida', status: 'draft', draft: '{}' }),
+      null
+    )
+    expect(a.verbs).toEqual(['created'])
+    const edited = await run(up('automations', 'a1', { draft: '{"root":"n1"}' }), a.state)
+    expect(edited.verbs).toEqual([])
+    const published = await run(
+      up('automations', 'a1', { status: 'active', version_number: 1, version_id: 'v1' }),
+      edited.state
+    )
+    expect(published.verbs).toEqual(['published'])
+    expect(published.drafts[0].detail).toBe('v1')
+    const paused = await run(up('automations', 'a1', { status: 'paused' }), published.state)
+    expect(paused.verbs).toEqual(['paused'])
+    const renamed = await run(up('automations', 'a1', { name: 'Hola' }), paused.state)
+    expect(renamed.verbs).toEqual(['updated'])
+  })
+
   it('mover a una etapa ganada es ganar, a otra es mover', async () => {
     const p = await run(up('prospects', 'p1', { company: 'Acme', stage_id: 'lead' }), null)
     const moved = await run(up('prospects', 'p1', { stage_id: 'propuesta' }), p.state)

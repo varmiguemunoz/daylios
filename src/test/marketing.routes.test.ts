@@ -43,6 +43,7 @@ describe('/marketing (API que usa Claude)', () => {
     const c = await contacts.create({ email: 'ana@x.com' })
     await contacts.tag(c.id, { add: ['clientes'] })
     await contacts.subscribe(c.id)
+    await marketing.tags.setAudience('clientes', true)
   })
   afterEach(async () => {
     await new Promise((r) => server.close(r))
@@ -91,18 +92,7 @@ describe('/marketing (API que usa Claude)', () => {
     expect(list.data[0].html).toBeUndefined()
   })
 
-  it('reglas, secuencias, fuentes (sin secretos) y tags', async () => {
-    const rule = await call('POST', '/rules', {
-      name: 'Bienvenida',
-      triggerTag: 'webinar',
-      actions: [{ type: 'fire_event', event: 'webinar.welcome' }]
-    })
-    expect(rule.status).toBe(201)
-    expect((await call('GET', '/rules')).data).toHaveLength(1)
-    expect((await call('POST', '/rules', { name: 'x', triggerTag: 'a', actions: [] })).status).toBe(
-      400
-    )
-
+  it('secuencias, fuentes (sin secretos) y tags', async () => {
     const seq = await call('POST', '/sequences', {
       name: 'Webinar',
       event: 'webinar.welcome',

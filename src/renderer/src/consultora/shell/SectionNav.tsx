@@ -1,4 +1,5 @@
 import { EMAIL_SECTIONS, SECTIONS, type Section, type SectionLink } from '../sections'
+import { useAutomationAlerts } from '../hooks/useAutomationAlerts'
 
 export function SectionNav({
   current,
@@ -7,7 +8,9 @@ export function SectionNav({
   current: Section | null
   onOpen: (id: Section) => void
 }): React.JSX.Element {
+  const alerts = useAutomationAlerts()
   const row = (s: SectionLink): React.JSX.Element => {
+    const badge = s.id === 'automations' ? alerts : 0
     const Icon = s.icon
     const here = s.id === current
     return (
@@ -21,7 +24,15 @@ export function SectionNav({
         }`}
       >
         <Icon size={15} strokeWidth={2} className="shrink-0" aria-hidden />
-        <span className="truncate">{s.label}</span>
+        <span className="min-w-0 flex-1 truncate">{s.label}</span>
+        {badge > 0 && (
+          <span
+            title="Con fallos en las últimas 24 h o bloqueadas"
+            className="grid h-4 min-w-4 place-items-center rounded-full bg-ob-red/20 px-1 text-[11px] font-semibold text-ob-red tabular-nums"
+          >
+            {badge}
+          </span>
+        )}
       </button>
     )
   }

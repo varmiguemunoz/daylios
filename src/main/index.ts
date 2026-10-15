@@ -13,6 +13,11 @@ import {
 import { pathToFileURL } from 'url'
 import { optimizer } from '@electron-toolkit/utils'
 import { openDatabase } from './db/data-source'
+import { AutomationEngine } from './automations/engine'
+import { AutomationService } from './automations/service'
+import { registerAutomationsIpc, runsChangedBroadcaster } from './ipc.automations'
+import { createHandlers } from './automations/handlers'
+import { createPorts, macNotifier } from './automations/adapters'
 import { maintainDatabase } from './db/change-log'
 import { cloud, loadEdition } from './edition'
 import { registerEditionIpc } from './ipc.edition'
@@ -294,6 +299,22 @@ async function start(): Promise<void> {
   registerMarketingIpc(marketing, notify)
   marketing.sync.start()
   powerMonitor.on('resume', () => void marketing.sync.tick())
+  const automations = new AutomationEngine(db, {
+    handlers: createHandlers(notes),
+    ports: createPorts(),
+    onRunChange: runsChangedBroadcaster(),
+    onAlert: (_id, message) => macNotifier.notify('Automatización', message)
+  })
+  const automationDeps = {
+    db,
+    kick: () => automations.kick(),
+    invalidate: () => automations.cache.invalidate(),
+    userId: () => account?.userId() ?? null
+  }
+  registerAutomationsIpc(new AutomationService({ ...automationDeps, origin: () => 'user' }), notify)
+  void automations.start().catch((error) => console.error('[automations]', error))
+  powerMonitor.on('resume', () => automations.kick())
+  app.on('before-quit', () => automations.stop())
   allowScreenCapture()
   ipcMain.on('window:hide', () => win.hide())
   ipcMain.on('window:openConsultora', (_e, target?: { client?: string; workspace?: boolean }) => {
@@ -307,7 +328,18 @@ async function start(): Promise<void> {
   if (!app.isPackaged) win.once('ready-to-show', show)
 
   // Claude cambió algo: las ventanas recargan lo que estén mostrando.
-  await startServer({ tasks, notes, consultora, marketing, workspace }, dataDir, notify)
+  await startServer(
+    {
+      tasks,
+      notes,
+      consultora,
+      marketing,
+      workspace,
+      automations: new AutomationService({ ...automationDeps, origin: () => 'claude' })
+    },
+    dataDir,
+    notify
+  )
   await sync.refresh().catch((error) => console.error('[sincronización]', error))
   await files.refresh().catch((error) => console.error('[archivos]', error))
   await activity.refresh().catch((error) => console.error('[actividad]', error))

@@ -136,7 +136,8 @@ export function can(actor: ActorRef | null, action: OrgAction, target?: ActorRef
     case 'member.remove':
     case 'member.role':
       if (role !== 'owner' && role !== 'admin') return false
-      if (!target || target.role === 'owner') return false
+      if (!target) return true
+      if (target.role === 'owner') return false
       return target.userId !== actor.userId
     case 'org.leave':
       return role !== 'owner'

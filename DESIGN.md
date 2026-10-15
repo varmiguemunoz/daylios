@@ -394,15 +394,25 @@ Since W6 the whole Consultora window uses the Obsidian theme described under Wor
 
 ### Email Marketing (Consultora)
 
-- **Sidebar group:** a micro milk-soft «Email» label under the main sections, then Fuentes, Reglas, Secuencias, Newsletters (same side items).
+- **Sidebar group:** a micro milk-soft «Email» label under the main sections, then Fuentes, Secuencias, Newsletters (same side items). Automatizaciones lives in the main group.
 - **Subscription pill:** mint «Suscrito»; neutral «Baja»; coral «Rebotó» / «Spam». A work contact (`none`) shows nothing: calm by default.
 - **Tags:** neutral surface-raised micro pills. A tag is a label, not a state, so it never takes a pastel. The tag editor is a surface field with removable pills (rose on hover) and an inline input with native suggestions.
 - **Status filter:** chips (the Period pattern, apricot when selected); tag and source filters are pill selects next to the search pill.
 - **Consent:** subscribing by hand is two-step: «Suscribir» becomes «¿Te dio su permiso? Suscribir».
 - **Sources:** one surface card per source. URL and secret sit in night rows with system mono (they are code), each with a «Copiar» button that turns into a mint check. Rotating the secret is two-step (apricot), deleting is two-step (rose).
-- **Rules:** read as sentences («Cuando entra [tag] → añadir [tag] · disparar `evento`»). Paused rules drop to 60% opacity. Editing happens in place inside a card with a 1.5px inset apricot stroke at 40%.
 - **Newsletters:** «Pausar» quiet pill; while paused it becomes an apricot «Reanudar». History rows expand into a sandboxed preview on milk (the email's own world). Status: mint sent, apricot scheduled or sending, coral failed.
 - **Notices that need action** (connect Resend or the hub) use a 10% apricot wash with an apricot action pill.
+
+### Automations (Consultora)
+
+- **List:** one row per automation read as a sentence («Cuando se suscribe → enviar el email…»), status pill (mint active, neutral paused or draft, coral locked), version and run counts. Drafts sit at 60%. An empty list offers three one click examples as hairline cards.
+- **Editor:** a board page with the publish bar on the right of the title (status pill, version, save state, Probar, Ejecutar, Versiones, Pausar, the error count and Publicar in the accent, hidden when there is nothing to publish) and four tabs: Lienzo, Ajustes, Inscripciones, Registro.
+- **Canvas:** reads top to bottom as it runs. Triggers are dashed `#262626` cards on top, side by side, joined into the first step. Steps are fixed 260 by 76 cards, 1px border, 6px radius, icon in a 24px tile, name over a muted sentence. The thread is a 1px `#4a4a4a` line; a wait is a pill on it with a yellow clock. Branch names sit on the line. «+» slots are 24px circles between every pair of steps and at the end of each branch.
+- **Color with meaning:** destructive steps get a red icon; validation errors are orange (border at 60%, alert icon with the count). The accent is only for selection, the lit path of a run and the primary action.
+- **Drag:** a step drags to any «+»; valid slots fill with a 20% accent wash and grow on hover, invalid ones drop to 40%. ⌥ carries the subtree and a top center note says which mode is on. The tree re animates to its new shape in 240ms expo.
+- **Side panel:** one at a time, docked 360px on the right, never a scrim: step picker (search, collapsible groups, favorites with a yellow star, steps that do not apply dimmed with the reason), step panel and trigger panel. Closing or switching keeps edits; only «Cancelar» discards. Selecting a step centers it.
+- **Stats and paths:** stats mode adds passed, waiting (yellow) and failed (red) counts to each card with a legend in the tab row. Opening a run lights its path in the accent and dims the rest to 40%.
+- **Type sizes in the Obsidian theme:** 12, 13, 14, 15, 16, 20 and 28px. Nothing below 12px.
 
 ### Voice Pill
 

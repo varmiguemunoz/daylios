@@ -1,6 +1,6 @@
 import { EntitySchema } from 'typeorm'
 import { ALIVE, DELETED_AT, type SoftDeletable } from './soft-delete'
-import type { ContactEvent, LeadSource, Newsletter, Rule, Tag } from '@shared/marketing'
+import type { ContactEvent, LeadSource, Newsletter, Tag } from '@shared/marketing'
 
 export const TagModel = new EntitySchema<Tag & SoftDeletable>({
   name: 'Tag',
@@ -63,22 +63,6 @@ export const LeadSourceModel = new EntitySchema<LeadSource & SoftDeletable>({
     deletedAt: DELETED_AT
   },
   indices: [{ name: 'uq_lead_sources_slug', columns: ['slug'], unique: true, where: ALIVE }]
-})
-
-export const RuleModel = new EntitySchema<Rule & SoftDeletable>({
-  name: 'Rule',
-  tableName: 'rules',
-  columns: {
-    id: { type: 'text', primary: true },
-    name: { type: 'text' },
-    position: { type: 'integer', default: 0 },
-    active: { type: 'boolean', default: true },
-    triggerTag: { name: 'trigger_tag', type: 'text' },
-    actions: { type: 'simple-json', default: '[]' },
-    createdAt: { name: 'created_at', type: 'text' },
-    updatedAt: { name: 'updated_at', type: 'text' },
-    deletedAt: DELETED_AT
-  }
 })
 
 export const NewsletterModel = new EntitySchema<Newsletter>({

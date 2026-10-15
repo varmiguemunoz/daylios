@@ -3,9 +3,8 @@ import type { DataSource } from 'typeorm'
 import { ContactService } from '../main/services/contact.service'
 import { ProspectService } from '../main/services/prospect.service'
 import { TagService } from '../main/services/tag.service'
-import { OutboxModel, RuleModel } from '../main/models/marketing.model'
+import { OutboxModel } from '../main/models/marketing.model'
 import { isolatedConfig, memoryDb } from '../main/test/helpers'
-import type { Rule } from '@shared/marketing'
 
 describe('ContactService (marketing)', () => {
   let db: DataSource
@@ -100,41 +99,6 @@ describe('ContactService (marketing)', () => {
       c.id
     ])
     await expect(contacts.promote(c.id)).rejects.toThrow(/ya está en el pipeline/)
-  })
-
-  it('las reglas se aplican al añadir tags a mano (encadenadas y con promoción)', async () => {
-    const stamp = new Date().toISOString()
-    const rule = (
-      id: string,
-      triggerTag: string,
-      actions: Rule['actions'],
-      position = 0
-    ): Rule => ({
-      id,
-      name: id,
-      position,
-      active: true,
-      triggerTag,
-      actions,
-      createdAt: stamp,
-      updatedAt: stamp
-    })
-    await db.getRepository(RuleModel).save([
-      rule('r1', 'webinar', [{ type: 'add_tag', tag: 'nurture' }]),
-      rule('r2', 'nurture', [
-        { type: 'fire_event', event: 'nurture.start' },
-        { type: 'promote', stage: '' }
-      ])
-    ])
-    const c = await contacts.create({ email: 'ana@x.com' })
-    await contacts.subscribe(c.id)
-    await contacts.tag(c.id, { add: ['webinar'] })
-
-    const detail = await contacts.get(c.id)
-    expect(detail.tags.map((t) => t.slug).sort()).toEqual(['nurture', 'webinar'])
-    expect(detail.prospectId).not.toBeNull()
-    const events = (await outbox()).filter((j) => j.kind === 'event').map((j) => j.payload.event)
-    expect(events).toEqual(['lead.created', 'tag.webinar', 'tag.nurture', 'nurture.start'])
   })
 
   it('cambiar el email de un suscrito encola la baja del email anterior', async () => {

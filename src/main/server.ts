@@ -23,6 +23,9 @@ import type { WorkspaceService } from './services/workspace.service'
 import { WorkspaceController } from './controllers/workspace.controller'
 import { workspaceRoutes } from './routes/workspace.routes'
 import { marketingRoutes } from './routes/marketing.routes'
+import type { AutomationsApi } from '@shared/automations'
+import { AutomationController } from './controllers/automation.controller'
+import { automationRoutes } from './routes/automation.routes'
 import { requireToken } from './middlewares/auth.middleware'
 import { notifyOnWrite } from './middlewares/notify.middleware'
 import { errorHandler, notFound } from './middlewares/error.middleware'
@@ -39,6 +42,7 @@ export function startServer(
     consultora: Consultora
     marketing: Marketing
     workspace: WorkspaceService
+    automations: AutomationsApi
   },
   dir: string,
   onChange: () => void
@@ -70,6 +74,7 @@ export function startServer(
   )
   app.use('/marketing', marketingRoutes(new MarketingController(services.marketing)))
   app.use('/workspace', workspaceRoutes(new WorkspaceController(services.workspace)))
+  app.use('/automations', automationRoutes(new AutomationController(services.automations)))
   app.use(notFound)
   app.use(errorHandler)
 

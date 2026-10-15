@@ -38,6 +38,7 @@ import { DeleteClientModal } from '../organisms/DeleteClientModal'
 import { NotePicker } from '../../components/NotePicker'
 import { notesApi } from '../../lib/api'
 import { Authorship } from '../organisms/orgs/Authorship'
+import { AutomationsSection } from '../organisms/automation/AutomationsSection'
 import { EntityActivity } from '../organisms/activity/EntityActivity'
 
 const EDITABLE = /\.(md|txt|csv|json)$/i
@@ -438,6 +439,7 @@ export function Client({
           </List>
         )}
       </Section>
+      <AutomationsSection subject="client" subjectId={c.id} go={go} />
       <EntityActivity entity="clients" id={id} />
     </Page>
   )

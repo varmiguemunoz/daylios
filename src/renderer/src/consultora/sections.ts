@@ -24,8 +24,8 @@ export type Section =
   | 'meetings'
   | 'pipeline'
   | 'tags'
+  | 'automations'
   | 'sources'
-  | 'rules'
   | 'sequences'
   | 'newsletters'
   | 'settings'
@@ -44,12 +44,12 @@ export const SECTIONS: SectionLink[] = [
   { id: 'contacts', label: 'Contactos', icon: Users },
   { id: 'meetings', label: 'Reuniones', icon: CalendarClock },
   { id: 'pipeline', label: 'Pipeline', icon: SquareKanban },
-  { id: 'tags', label: 'Tags', icon: TagsIcon }
+  { id: 'tags', label: 'Tags', icon: TagsIcon },
+  { id: 'automations', label: 'Automatizaciones', icon: Workflow }
 ]
 
 export const EMAIL_SECTIONS: SectionLink[] = [
   { id: 'sources', label: 'Fuentes', icon: Waypoints },
-  { id: 'rules', label: 'Reglas', icon: Workflow },
   { id: 'sequences', label: 'Secuencias', icon: MailPlus },
   { id: 'newsletters', label: 'Newsletters', icon: Newspaper }
 ]

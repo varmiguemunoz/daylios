@@ -24,7 +24,7 @@ import {
   type ContactStatus,
   type FieldValue
 } from '@shared/marketing'
-import { runRules } from '@shared/automation'
+import { emit } from '../automations/events'
 import { ContactModel } from '../models/contact.model'
 import { ClientModel } from '../models/client.model'
 import { ProspectModel } from '../models/prospect.model'
@@ -32,7 +32,7 @@ import { ProjectModel } from '../models/project.model'
 import { StageModel } from '../models/stage.model'
 import { PipelineModel } from '../models/pipeline.model'
 import { MeetingModel } from '../models/meeting.model'
-import { ContactEventModel, ContactTagModel, RuleModel, TagModel } from '../models/marketing.model'
+import { ContactEventModel, ContactTagModel, TagModel } from '../models/marketing.model'
 import { transactionGuard } from '../guards/transaction.guard'
 import { AppError } from './app.error'
 import { findByRef } from './ref'
@@ -172,6 +172,7 @@ export class ContactService {
         throw new AppError('invalid', 'Indica un nombre o un email.')
       await link(manager, contact, input)
       await manager.getRepository(ContactModel).insert(contact)
+      await emit(manager, 'contact.created', { type: 'contact', id: contact.id }, { source: null })
       return contact
     })
   }
@@ -184,6 +185,7 @@ export class ContactService {
         email: contact.email,
         fields: JSON.stringify(contact.fields)
       }
+      const snapshot = { ...contact, fields: { ...contact.fields } }
 
       if (patch.name !== undefined) contact.name = optionalText(patch.name, 'El nombre', 200)
       if (patch.role !== undefined) contact.role = optionalText(patch.role, 'El rol', 120)
@@ -215,20 +217,17 @@ export class ContactService {
           previousEmail: before.email !== contact.email ? before.email : null
         })
       }
+      const fields = changedFields(snapshot, contact)
+      if (fields.length)
+        await emit(manager, 'contact.updated', { type: 'contact', id: contact.id }, { fields })
       return saved
     })
   }
 
   async remove(id: unknown): Promise<void> {
-    await transactionGuard(this.db, async (manager) => {
-      const contact = await this.find(manager, id)
-      await manager.getRepository(ContactTagModel).delete({ contactId: contact.id })
-      await manager.getRepository(ContactEventModel).delete({ contactId: contact.id })
-      await manager.getRepository(ContactModel).softDelete({ id: contact.id })
-      if (contact.status !== 'none' && contact.email) {
-        await enqueueContactSync(manager, contact.id, { previousEmail: contact.email })
-      }
-    })
+    await transactionGuard(this.db, async (manager) =>
+      removeContact(manager, await this.find(manager, id))
+    )
   }
 
   subscribe(id: unknown): Promise<Contact> {
@@ -253,6 +252,12 @@ export class ContactService {
       contact.updatedAt = now()
       await manager.getRepository(ContactModel).save(contact)
       await logEvent(manager, contact.id, 'subscribed', { source: 'manual' })
+      await emit(
+        manager,
+        'contact.subscribed',
+        { type: 'contact', id: contact.id },
+        { origin: 'manual' }
+      )
       await enqueueContactSync(manager, contact.id, { resubscribe })
       if (first) await enqueueEvent(manager, contact.id, LEAD_CREATED, { source: contact.source })
       return contact
@@ -273,8 +278,7 @@ export class ContactService {
       const contact = await this.find(manager, id)
       await changeTags(manager, contact, {
         add: textList(change.add, 'add'),
-        remove: textList(change.remove, 'remove'),
-        rules: true
+        remove: textList(change.remove, 'remove')
       })
       const [named] = await this.withOrganization([contact])
       const tags = (await tagsByContact(manager, [contact.id])).get(contact.id) ?? []
@@ -381,6 +385,28 @@ export async function setStatus(
   await manager.getRepository(ContactModel).save(contact)
   await logEvent(manager, contact.id, 'status', { status, origin })
   await enqueueContactSync(manager, contact.id)
+  const trigger = STATUS_TRIGGER[status]
+  if (trigger) await emit(manager, trigger, { type: 'contact', id: contact.id }, { origin })
+}
+
+const STATUS_TRIGGER: Partial<
+  Record<ContactStatus, 'contact.subscribed' | 'contact.unsubscribed' | 'contact.bounced'>
+> = {
+  subscribed: 'contact.subscribed',
+  unsubscribed: 'contact.unsubscribed',
+  bounced: 'contact.bounced',
+  complained: 'contact.bounced'
+}
+
+const WATCHED: (keyof Contact)[] = ['name', 'role', 'email', 'phone', 'linkedin', 'source']
+
+export function changedFields(before: Contact, after: Contact): string[] {
+  const out: string[] = WATCHED.filter((key) => before[key] !== after[key]).map(String)
+  const keys = new Set([...Object.keys(before.fields ?? {}), ...Object.keys(after.fields ?? {})])
+  for (const key of keys)
+    if (JSON.stringify(before.fields?.[key]) !== JSON.stringify(after.fields?.[key]))
+      out.push(`fields.${key}`)
+  return out
 }
 
 export async function changeTags(
@@ -389,7 +415,6 @@ export async function changeTags(
   change: {
     add: string[]
     remove: string[]
-    rules: boolean
     remoteDone?: boolean
     extraEvents?: string[]
   }
@@ -399,14 +424,10 @@ export async function changeTags(
   const removeSlugs = change.remove.map(slugify).filter(Boolean)
   const afterRemove = current.filter((slug) => !removeSlugs.includes(slug))
 
-  // Los tags nuevos se crean antes de las reglas para conservar el nombre tal cual se escribió.
   const incoming = (await ensureTags(manager, change.add))
     .map((t) => t.slug)
     .filter((s) => !afterRemove.includes(s))
-  const rules = change.rules ? await manager.getRepository(RuleModel).find() : []
-  const outcome = runRules(rules, afterRemove, incoming)
-
-  const finalTags = outcome.tags
+  const finalTags = [...new Set([...afterRemove, ...incoming])]
   const added = finalTags.filter((s) => !current.includes(s))
   const removed = current.filter((s) => !finalTags.includes(s))
 
@@ -421,17 +442,18 @@ export async function changeTags(
     await logEvent(manager, contact.id, 'tag_added', { tag: slug })
   }
   for (const slug of removed) await logEvent(manager, contact.id, 'tag_removed', { tag: slug })
+  for (const slug of added)
+    await emit(manager, 'contact.tag_added', { type: 'contact', id: contact.id }, { tag: slug })
+  for (const slug of removed)
+    await emit(manager, 'contact.tag_removed', { type: 'contact', id: contact.id }, { tag: slug })
 
   if ((added.length || removed.length) && contact.status !== 'none' && !change.remoteDone) {
     await enqueueContactSync(manager, contact.id)
   }
   if (contact.status === 'subscribed' && !change.remoteDone) {
     for (const slug of added) await enqueueEvent(manager, contact.id, tagEvent(slug))
-    for (const event of [...outcome.events, ...(change.extraEvents ?? [])])
-      await enqueueEvent(manager, contact.id, event)
+    for (const event of change.extraEvents ?? []) await enqueueEvent(manager, contact.id, event)
   }
-  if (outcome.promote !== null && !contact.prospectId)
-    await promoteContact(manager, contact, outcome.promote)
   return { added, removed }
 }
 
@@ -563,5 +585,14 @@ async function prospectInfo(
     stage: stage?.name ?? '',
     stageKind: stage?.kind ?? 'open',
     pipeline: pipeline?.name ?? ''
+  }
+}
+
+export async function removeContact(manager: EntityManager, contact: Contact): Promise<void> {
+  await manager.getRepository(ContactTagModel).delete({ contactId: contact.id })
+  await manager.getRepository(ContactEventModel).delete({ contactId: contact.id })
+  await manager.getRepository(ContactModel).softDelete({ id: contact.id })
+  if (contact.status !== 'none' && contact.email) {
+    await enqueueContactSync(manager, contact.id, { previousEmail: contact.email })
   }
 }

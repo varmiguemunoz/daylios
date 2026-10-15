@@ -3,7 +3,7 @@ import type { HubConfig, HubItem } from '../../../src/shared/hub'
 /** Persistencia del Worker: la config que empuja la app y la cola para la app. */
 export interface HubStore {
   getConfig(): Promise<HubConfig>
-  /** Reemplaza fuentes y reglas; fusiona el mapa de segments (nunca pierde ids). */
+  /** Reemplaza fuentes; fusiona el mapa de segments (nunca pierde ids). */
   putConfig(config: HubConfig): Promise<HubConfig>
   mergeSegments(segments: Record<string, string>): Promise<void>
   enqueue(item: HubItem): Promise<void>
@@ -13,7 +13,7 @@ export interface HubStore {
   count(): Promise<number>
 }
 
-export const EMPTY_CONFIG: HubConfig = { sources: [], rules: [], segments: {} }
+export const EMPTY_CONFIG: HubConfig = { sources: [], segments: {} }
 
 /** D1 (SQLite de Cloudflare). Esquema en schema.sql. */
 export class D1Store implements HubStore {

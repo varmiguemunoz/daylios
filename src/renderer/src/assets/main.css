@@ -711,6 +711,32 @@ textarea.ob-card-text {
   border-radius: 8px;
 }
 
+/* Automatizaciones: árbol de arriba abajo, hilo hairline, el árbol se reacomoda animado. */
+.ob-auto .react-flow__node {
+  transition: transform 240ms var(--ease-out-expo);
+}
+.ob-auto .react-flow__edge-path {
+  stroke: #4a4a4a;
+  stroke-width: 1;
+}
+.ob-auto .is-lit .react-flow__edge-path {
+  stroke: var(--color-ob-accent);
+  stroke-width: 1.5;
+}
+.ob-auto .react-flow__edge-text {
+  fill: var(--color-ob-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+.ob-auto .react-flow__edge-textbg {
+  fill: var(--color-ob-bg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ob-auto .react-flow__node {
+    transition: none;
+  }
+}
+
 /* ======================================================================
    Workspace · tema Obsidian
    Se activa poniendo .theme-obsidian en <body> mientras el workspace está abierto:

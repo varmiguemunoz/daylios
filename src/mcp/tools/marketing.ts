@@ -3,22 +3,6 @@ import { z } from 'zod'
 import { api, tool, query, enc } from '../client'
 
 export function register(server: McpServer): void {
-  const ruleAction = z.discriminatedUnion('type', [
-    z.object({ type: z.literal('add_tag'), tag: z.string().min(1) }),
-    z.object({ type: z.literal('remove_tag'), tag: z.string().min(1) }),
-    z.object({
-      type: z.literal('fire_event'),
-      event: z
-        .string()
-        .regex(/^[a-zA-Z0-9._-]{1,100}$/)
-        .describe('Evento de Resend que puede disparar una secuencia')
-    }),
-    z.object({
-      type: z.literal('promote'),
-      stage: z.string().describe('Etapa del pipeline (id o nombre); "" = primera abierta')
-    })
-  ])
-
   server.registerTool(
     'list_sources',
     {
@@ -28,50 +12,6 @@ export function register(server: McpServer): void {
       inputSchema: {}
     },
     () => tool(() => api('GET', '/marketing/sources'))
-  )
-
-  server.registerTool(
-    'list_rules',
-    {
-      description:
-        'Reglas por tag («cuando entra el tag X → acciones»), en orden. Se aplican al recibir un lead por webhook ' +
-        'y al añadir tags con tag_contact. Las etapas de promote se guardan por id.',
-      inputSchema: {}
-    },
-    () => tool(() => api('GET', '/marketing/rules'))
-  )
-
-  server.registerTool(
-    'save_rule',
-    {
-      description:
-        'Crea una regla (sin "id") o edita una. trigger_tag = tag que la dispara al entrar. Acciones: add_tag, remove_tag, ' +
-        'fire_event (evento de Resend), promote (pasa a pipeline). Las reglas se encadenan (máx. 5 niveles). ' +
-        'Ej.: cuando entra "webinar" → add_tag "nurture" + fire_event "webinar.followup".',
-      inputSchema: {
-        id: z.string().optional(),
-        name: z.string().optional(),
-        trigger_tag: z.string().optional(),
-        actions: z.array(ruleAction).min(1).max(10).optional(),
-        active: z.boolean().optional()
-      }
-    },
-    ({ id, trigger_tag, ...fields }) =>
-      tool(() => {
-        const body = { ...fields, triggerTag: trigger_tag }
-        return id
-          ? api('PATCH', `/marketing/rules/${enc(id)}`, body)
-          : api('POST', '/marketing/rules', body)
-      })
-  )
-
-  server.registerTool(
-    'delete_rule',
-    {
-      description: 'Borra una regla. Para pausarla sin perderla usa save_rule con active: false.',
-      inputSchema: { id: z.string() }
-    },
-    ({ id }) => tool(() => api('DELETE', `/marketing/rules/${enc(id)}`))
   )
 
   // ---- Secuencias (Automations de Resend) ----

@@ -40,7 +40,8 @@ import { Search } from './screens/Search'
 import { Contacts } from './screens/Contacts'
 import { Contact } from './screens/Contact'
 import { Sources } from './screens/Sources'
-import { Rules } from './screens/Rules'
+import { Automations } from './screens/Automations'
+import { AutomationEditor } from './screens/AutomationEditor'
 import { Sequences } from './screens/Sequences'
 import { Newsletters } from './screens/Newsletters'
 import { Tags } from './screens/Tags'
@@ -64,8 +65,9 @@ const LABEL: Record<Screen['name'], string> = {
   tags: 'Tags',
   contacts: 'Contactos',
   contact: 'Contacto',
+  automations: 'Automatizaciones',
+  automation: 'Automatización',
   sources: 'Fuentes',
-  rules: 'Reglas',
   sequences: 'Secuencias',
   newsletters: 'Newsletters',
   note: 'Nota',
@@ -91,8 +93,9 @@ const SECTION_OF: Record<Screen['name'], Section | null> = {
   tags: 'tags',
   contacts: 'contacts',
   contact: 'contacts',
+  automations: 'automations',
+  automation: 'automations',
   sources: 'sources',
-  rules: 'rules',
   sequences: 'sequences',
   newsletters: 'newsletters',
   note: null,
@@ -480,10 +483,12 @@ function ScreenView({
       return <Contacts go={go} />
     case 'contact':
       return <Contact id={screen.id} go={go} back={back} />
+    case 'automations':
+      return <Automations go={go} />
+    case 'automation':
+      return <AutomationEditor id={screen.id} back={back} />
     case 'sources':
       return <Sources go={go} />
-    case 'rules':
-      return <Rules />
     case 'sequences':
       return <Sequences go={go} />
     case 'newsletters':

@@ -120,15 +120,12 @@ export class CreateConsultora1727900000000 implements MigrationInterface {
       true
     )
 
-    // Etapas por defecto, con el query builder de TypeORM (sin SQL a mano).
-    await query.manager
-      .createQueryBuilder()
-      .insert()
-      .into('pipeline_stages')
-      .values(
-        DEFAULT_STAGES.map(([name, kind], position) => ({ id: randomUUID(), name, position, kind }))
+    for (const [position, [name, kind]] of DEFAULT_STAGES.entries()) {
+      await query.query(
+        `INSERT INTO pipeline_stages (id, name, position, kind) VALUES (?, ?, ?, ?)`,
+        [randomUUID(), name, position, kind]
       )
-      .execute()
+    }
   }
 
   async down(query: QueryRunner): Promise<void> {

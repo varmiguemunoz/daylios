@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto'
 import { existsSync, watch, type FSWatcher } from 'fs'
-import { mkdir, rename, stat } from 'fs/promises'
+import { mkdir, readdir, rename, rmdir, stat } from 'fs/promises'
 import { dirname } from 'path'
 import type { DataSource } from 'typeorm'
 import { conflictName, type FileSyncState, type FilesStatus } from '@shared/files'
@@ -156,6 +156,7 @@ export class FileSyncEngine {
         const file = local.get(st.path)
         if (file && (await localHash(file)) === st.synced_hash) {
           await this.deps.trash(toFull(this.deps.root, st.path)).catch(() => undefined)
+          await this.pruneEmpty(dirname(toFull(this.deps.root, st.path)))
           local.delete(st.path)
         }
         await this.forgetState(m.id)
@@ -310,7 +311,20 @@ export class FileSyncEngine {
     const target = toFull(this.deps.root, to)
     if (existsSync(target)) return
     await mkdir(dirname(target), { recursive: true })
-    await rename(toFull(this.deps.root, from), target)
+    const source = toFull(this.deps.root, from)
+    await rename(source, target)
+    await this.pruneEmpty(dirname(source))
+  }
+
+  private async pruneEmpty(dir: string): Promise<void> {
+    const root = toFull(this.deps.root, '')
+    let current = dir
+    while (current.startsWith(root) && current.length > root.length) {
+      const entries = await readdir(current).catch(() => null)
+      if (!entries || entries.length > 0) return
+      await rmdir(current).catch(() => undefined)
+      current = dirname(current)
+    }
   }
 
   private async insertManifest(row: Omit<ManifestRow, 'deleted_at'>): Promise<void> {

@@ -2,7 +2,6 @@ import type { DataSource } from 'typeorm'
 import { TagService } from './services/tag.service'
 import { MarketingSync } from './services/marketing-sync'
 import { SourceService } from './services/source.service'
-import { RuleService } from './services/rule.service'
 import { SequenceService } from './services/sequence.service'
 import { NewsletterService } from './services/newsletter.service'
 import { HubSync } from './services/hub-sync'
@@ -31,7 +30,6 @@ export function createMarketing(
   return {
     tags,
     sources: new SourceService(db, configChanged),
-    rules: new RuleService(db, configChanged),
     sequences: new SequenceService(gateway),
     newsletters: new NewsletterService(db, gateway, tags, () => sync.tick()),
     sync,
@@ -57,7 +55,6 @@ export function createMarketing(
 export interface Marketing {
   tags: TagService
   sources: SourceService
-  rules: RuleService
   sequences: SequenceService
   newsletters: NewsletterService
   sync: MarketingSync

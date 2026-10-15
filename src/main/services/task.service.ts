@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto'
+import { emit } from '../automations/events'
 import {
   Between,
   In,
@@ -190,6 +191,7 @@ export class TaskService implements TasksApi {
   async update(id: string, patch: TaskPatch): Promise<Task> {
     return this.write(async (tasks, manager) => {
       const task = await findOrFail(tasks, id)
+      const wasDone = task.done
       if (patch.title !== undefined) task.title = checkTitle(patch.title)
       if (patch.description !== undefined) task.description = checkDescription(patch.description)
       if (patch.tags !== undefined) task.tags = checkTags(patch.tags)
@@ -208,7 +210,10 @@ export class TaskService implements TasksApi {
         Object.assign(task, await resolveLinks(manager, task, patch))
       }
       if (patch.assignee !== undefined) task.assigneeId = optionalUserId(patch.assignee)
-      return tasks.save(stripExtras(task))
+      const saved = await tasks.save(stripExtras(task))
+      if (!wasDone && task.done)
+        await emit(manager, 'task.completed', { type: 'task', id: task.id }, { tags: task.tags })
+      return saved
     })
   }
 
@@ -641,4 +646,57 @@ function checkDescription(value: unknown): string | null {
     throw new AppError('invalid', `La descripción no puede pasar de ${MAX_DESCRIPTION} caracteres.`)
   }
   return value.trim() ? value : null
+}
+
+export interface AutomatedTaskInput {
+  title: string
+  date: DayKey
+  description: string | null
+  tags: string[]
+  effort: Task['effort']
+  clientId: string | null
+  prospectId: string | null
+}
+
+const shiftDay = (day: DayKey, days: number): DayKey => {
+  const [y, m, d] = day.split('-').map(Number)
+  const date = new Date(y, m - 1, d + days)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}` as DayKey
+}
+
+export async function insertTaskWithRoom(
+  manager: EntityManager,
+  input: AutomatedTaskInput
+): Promise<Task> {
+  const tasks = manager.getRepository(TaskModel)
+  const me = teamUserId()
+  let day = input.date
+  for (let i = 0; i < 60; i++) {
+    const where: FindOptionsWhere<Task> = me
+      ? { date: day, parentId: IsNull(), assigneeId: me }
+      : { date: day, parentId: IsNull() }
+    if ((await tasks.countBy(where)) < DAILY_LIMIT) break
+    day = shiftDay(day, 1)
+  }
+  const task: Task = {
+    id: randomUUID(),
+    title: checkTitle(input.title),
+    date: day,
+    done: false,
+    position: await nextPosition(tasks, day),
+    createdAt: new Date().toISOString(),
+    completedAt: null,
+    carriedFrom: null,
+    description: input.description ? checkDescription(input.description) : null,
+    tags: checkTags(input.tags),
+    effort: input.effort,
+    parentId: null,
+    status: 'todo',
+    clientId: input.clientId,
+    projectId: null,
+    prospectId: input.prospectId,
+    assigneeId: me
+  }
+  await tasks.insert(task)
+  return task
 }

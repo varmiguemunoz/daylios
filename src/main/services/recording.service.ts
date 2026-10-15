@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto'
+import { emit } from '../automations/events'
 import { execFile } from 'child_process'
 import { createWriteStream, type WriteStream } from 'fs'
 import { copyFile, mkdir, mkdtemp, readdir, rm, stat } from 'fs/promises'
@@ -301,9 +302,17 @@ export class RecordingService {
   }
 
   private async patch(id: string, fields: Partial<Meeting>): Promise<void> {
-    await transactionGuard(this.db, (manager) =>
-      manager.getRepository(MeetingModel).update({ id }, { ...fields, updatedAt: now() })
-    )
+    await transactionGuard(this.db, async (manager) => {
+      await manager.getRepository(MeetingModel).update({ id }, { ...fields, updatedAt: now() })
+      if (fields.status !== 'ready') return
+      const meeting = await manager.getRepository(MeetingModel).findOneBy({ id })
+      await emit(
+        manager,
+        'meeting.ready',
+        { type: 'meeting', id },
+        { clientId: meeting?.clientId ?? null }
+      )
+    })
     this.onChange()
   }
 }

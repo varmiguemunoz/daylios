@@ -1,4 +1,3 @@
-import { runRules } from '../../../src/shared/automation'
 import {
   LEAD_CREATED,
   cleanTags,
@@ -121,7 +120,7 @@ async function toResend(
     segments
   }
   const bySegment = new Map(Object.entries(config.segments).map(([slug, id]) => [id, slug]))
-  let outcome = runRules(config.rules, [], incoming)
+  let outcome = arriving([], incoming)
   const g = deps.gateway
   if (!g) {
     result.error = 'El hub no tiene RESEND_API_KEY.'
@@ -135,7 +134,7 @@ async function toResend(
       current = (await g.contactSegments(lead.email))
         .map((s) => bySegment.get(s.id) ?? (s.name.startsWith('tag:') ? s.name.slice(4) : null))
         .filter((s): s is string => Boolean(s))
-      outcome = runRules(config.rules, current, incoming)
+      outcome = arriving(current, incoming)
     } else {
       await g.createContact({ email: lead.email, ...splitName(lead.name), unsubscribed: false })
       result.created = true
@@ -167,14 +166,16 @@ async function toResend(
   return { ...pick(outcome), resend: result }
 }
 
-const pick = (
-  o: ReturnType<typeof runRules>
-): Pick<HubLeadItem, 'added' | 'removed' | 'events' | 'promote'> => ({
-  added: o.added,
-  removed: o.removed,
-  events: o.events,
-  promote: o.promote
+type Outcome = Pick<HubLeadItem, 'added' | 'removed' | 'events' | 'promote'>
+
+const arriving = (current: string[], incoming: string[]): Outcome => ({
+  added: [...new Set(incoming)].filter((t) => !current.includes(t)),
+  removed: [],
+  events: [],
+  promote: null
 })
+
+const pick = (o: Outcome): Outcome => o
 
 // ---- Webhooks de Resend ----
 
@@ -248,7 +249,6 @@ async function admin(request: Request, url: URL, path: string, deps: HubDeps): P
     const health: HubHealth = {
       ok: true,
       sources: config.sources.length,
-      rules: config.rules.length,
       queued: await deps.store.count(),
       resend: Boolean(deps.gateway),
       webhooks: Boolean(deps.verifyWebhook)
@@ -272,13 +272,12 @@ async function admin(request: Request, url: URL, path: string, deps: HubDeps): P
   if (path === '/admin/config' && request.method === 'PUT') {
     const body = await readBody(request, 512 * 1024)
     const config = body ? (JSON.parse(body) as Partial<HubConfig>) : null
-    if (!config || !Array.isArray(config.sources) || !Array.isArray(config.rules)) {
+    if (!config || !Array.isArray(config.sources)) {
       return json({ error: 'Config inválida.' }, 400)
     }
     return json(
       await deps.store.putConfig({
         sources: config.sources,
-        rules: config.rules,
         segments: config.segments ?? {},
         ...(Array.isArray(config.audience) ? { audience: config.audience } : {})
       })

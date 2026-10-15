@@ -2,7 +2,9 @@ import { randomUUID } from 'crypto'
 import { In, type DataSource, type EntityManager } from 'typeorm'
 import { slugify, type Tag, type TagRef, type TagSummary, type TagUsage } from '@shared/marketing'
 import { ContactModel } from '../models/contact.model'
-import { ContactTagModel, LeadSourceModel, RuleModel, TagModel } from '../models/marketing.model'
+import { usesRef } from '@shared/automations'
+import { AutomationModel } from '../models/automation.model'
+import { ContactTagModel, LeadSourceModel, TagModel } from '../models/marketing.model'
 import { enqueueContactSync, enqueueSegmentDelete } from './outbox'
 import { transactionGuard } from '../guards/transaction.guard'
 import { AppError } from './app.error'
@@ -68,11 +70,11 @@ export class TagService {
     await transactionGuard(this.db, async (manager) => {
       const tag = await findTag(manager, slug)
       const usage = await usageOf(manager, tag)
-      const active = usage.rules.filter((r) => r.active)
+      const active = usage.automations.filter((r) => r.active)
       if (active.length) {
         throw new AppError(
           'invalid',
-          `Lo usan las reglas: ${active.map((r) => r.name).join(', ')}. Cámbialas o páusalas antes de borrar «${tag.name}».`
+          `Lo usan las automatizaciones: ${active.map((r) => r.name).join(', ')}. Cámbialas o páusalas antes de borrar «${tag.name}».`
         )
       }
       const sources = manager.getRepository(LeadSourceModel)
@@ -98,10 +100,8 @@ async function findTag(manager: EntityManager, slug: unknown): Promise<Tag> {
 }
 
 async function usageOf(manager: EntityManager, tag: Tag): Promise<TagUsage> {
-  const rules = (await manager.getRepository(RuleModel).find()).filter(
-    (r) =>
-      r.triggerTag === tag.slug ||
-      r.actions.some((a) => (a.type === 'add_tag' || a.type === 'remove_tag') && a.tag === tag.slug)
+  const automations = (await manager.getRepository(AutomationModel).find()).filter((a) =>
+    usesRef(a.draft, 'tag', tag.slug)
   )
   const sources = (await manager.getRepository(LeadSourceModel).find())
     .filter((s) => s.defaultTags.includes(tag.slug))
@@ -109,7 +109,11 @@ async function usageOf(manager: EntityManager, tag: Tag): Promise<TagUsage> {
   return {
     slug: tag.slug,
     contacts: await manager.getRepository(ContactTagModel).countBy({ tagId: tag.id }),
-    rules: rules.map((r) => ({ id: r.id, name: r.name, active: r.active })),
+    automations: automations.map((a) => ({
+      id: a.id,
+      name: a.name,
+      active: a.status === 'active'
+    })),
     sources
   }
 }

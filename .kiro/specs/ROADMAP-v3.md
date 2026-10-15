@@ -22,6 +22,8 @@ Se implementa en orden; cada módulo se aprueba antes de empezar.
 - Tags audiencia: aprobado.
 - **Módulo 7 aplazado** a una sesión propia (automatizaciones tipo GHL). El bus de eventos de
   `foundations` también pasa al 7 (sin consumidor no se construye). Las Reglas siguen como hoy.
+  Hecho el 14 oct 2026 en `.kiro/specs/automations`: lienzo en árbol con arrastrar y soltar, que
+  reemplaza a las Reglas.
 - Pulsación para arrastrar el pipeline: **500 ms** (no 2 s).
 - Redespliegue del Worker: aprobado (lo pide el módulo 2 por `audience`).
 
@@ -36,7 +38,7 @@ Se implementa en orden; cada módulo se aprueba antes de empezar.
 | 4   | `clients-admin`        | Arreglo 2: borrar clientes y proyectos, editar y borrar documentos   | 3          |
 | 5   | `contacts-ux`          | Arreglo 3: filtros en panel, ficha nueva, contacto → prospecto       | 0, 2, 6\*  |
 | 6   | `multi-pipeline`       | Arreglo 4: varios pipelines, columnas/lista, editor, navegación      | 0          |
-| 7   | `internal-automations` | Arreglo 5: **aplazado** a sesión propia                              | 0, 2, 6    |
+| 7   | `automations`          | Arreglo 5: hecho en `.kiro/specs/automations`, reemplaza a Reglas    | 0, 2, 6    |
 | 8   | `mcp-full-coverage`    | Arreglo 6: Claude puede hacer todo lo que hace la UI                 | todos      |
 | 9   | `task-detail-minimal`  | Detalle sin ruido: editor sin modos, panel lateral, subtareas en Hoy | 1          |
 
@@ -71,7 +73,8 @@ se ejecutan aquí: los corre el dueño).
 ## Cambios de producto (PRODUCT.md / DESIGN.md)
 
 - PRODUCT.md: entran subtareas, búsqueda mínima de notas (para relacionarlas), varios pipelines y un
-  constructor **lineal** de automatizaciones (lista vertical de pasos, no lienzo).
+  constructor de automatizaciones. Al final fue un lienzo en árbol como el de GHL, por decisión del
+  dueño (ver `.kiro/specs/automations`).
 - DESIGN.md: nuevos componentes Drawer, Modal, control segmentado, botón de filtros, fila de
   subtarea, tarjeta de paso de automatización, tablero/lista de pipeline.
 

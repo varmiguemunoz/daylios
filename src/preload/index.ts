@@ -3,6 +3,11 @@ import type { TasksApi } from '../shared/tasks'
 import type { NotesApi } from '../shared/notes'
 import type { ConsultoraApi, StopInfo } from '../shared/consultora'
 import type { MarketingApi } from '../shared/marketing'
+import {
+  AUTOMATION_METHODS,
+  type AutomationsApi,
+  type AutomationsBridge
+} from '../shared/automations/api'
 import type { WorkspaceApi } from '../shared/workspace'
 import type { DashboardApi } from '../shared/metrics'
 import type { EditionApi } from '../shared/edition'
@@ -273,11 +278,6 @@ const marketing: MarketingApi = {
   rotateSourceSecret: callMarketing('rotateSourceSecret'),
   removeSource: callMarketing('removeSource'),
   testHub: callMarketing('testHub'),
-  listRules: callMarketing('listRules'),
-  createRule: callMarketing('createRule'),
-  updateRule: callMarketing('updateRule'),
-  removeRule: callMarketing('removeRule'),
-  reorderRules: callMarketing('reorderRules'),
   listSequences: callMarketing('listSequences'),
   setSequenceStatus: callMarketing('setSequenceStatus'),
   listNewsletters: callMarketing('listNewsletters'),
@@ -327,13 +327,23 @@ const ui = {
 }
 
 function on(
-  channel: 'window:shown' | 'data:changed' | 'voice:start' | 'voice:stop',
+  channel: 'window:shown' | 'data:changed' | 'voice:start' | 'voice:stop' | 'automations:changed',
   cb: () => void
 ): () => void {
   const listener = (): void => cb()
   ipcRenderer.on(channel, listener)
   return () => ipcRenderer.removeListener(channel, listener)
 }
+
+const callAutomations =
+  (method: keyof AutomationsApi) =>
+  (...args: unknown[]) =>
+    ipcRenderer.invoke(`automations:${method}`, ...args)
+
+const automations = {
+  ...Object.fromEntries(AUTOMATION_METHODS.map((m) => [m, callAutomations(m)])),
+  onChanged: (cb: () => void) => on('automations:changed', cb)
+} as AutomationsBridge
 
 contextBridge.exposeInMainWorld('api', {
   ui,
@@ -350,6 +360,7 @@ contextBridge.exposeInMainWorld('api', {
   workspace,
   consultora,
   marketing,
+  automations,
   recording,
   permissions,
   voice,

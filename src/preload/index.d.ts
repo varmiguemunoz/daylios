@@ -2,6 +2,7 @@ import type { TasksApi } from '../shared/tasks'
 import type { Note, NotesApi, VoiceResult } from '../shared/notes'
 import type { ConsultoraApi, Meeting, StopInfo } from '../shared/consultora'
 import type { MarketingApi } from '../shared/marketing'
+import type { AutomationsBridge } from '../shared/automations/api'
 import type { WorkspaceApi } from '../shared/workspace'
 import type { UiStateApi } from '../shared/ui-state'
 import type { DashboardApi } from '../shared/metrics'
@@ -33,6 +34,7 @@ declare global {
       workspace: WorkspaceApi
       consultora: ConsultoraApi
       marketing: MarketingApi
+      automations: AutomationsBridge
       recording: {
         start: () => Promise<Meeting>
         chunk: (id: string, data: Uint8Array) => Promise<void>

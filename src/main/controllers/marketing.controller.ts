@@ -42,23 +42,6 @@ export class MarketingController {
     res.json(await this.m.sync.status())
   }
 
-  rules = async (_req: Request, res: Response): Promise<void> => {
-    res.json(await this.m.rules.list())
-  }
-
-  createRule = async (req: Request, res: Response): Promise<void> => {
-    res.status(201).json(await this.m.rules.create(req.body ?? {}))
-  }
-
-  updateRule = async (req: Request, res: Response): Promise<void> => {
-    res.json(await this.m.rules.update(String(req.params.id), req.body ?? {}))
-  }
-
-  removeRule = async (req: Request, res: Response): Promise<void> => {
-    await this.m.rules.remove(String(req.params.id))
-    res.json({ ok: true })
-  }
-
   sequences = async (_req: Request, res: Response): Promise<void> => {
     res.json(await this.m.sequences.list())
   }

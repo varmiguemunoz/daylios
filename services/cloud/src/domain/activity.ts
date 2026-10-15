@@ -22,7 +22,8 @@ const TRACKED = new Set<ActivityEntity>([
   'contacts',
   'tasks',
   'pipelines',
-  'file_manifest'
+  'file_manifest',
+  'automations'
 ])
 
 const NOISE = new Set([
@@ -110,13 +111,20 @@ export async function describeChange(
     } else if (entity === 'file_manifest' && changed('hash')) {
       out.push(draft('updated'))
     }
+    if (entity === 'automations' && changed('version_number') && next.version_number) {
+      out.push(draft('published', { detail: `v${String(next.version_number)}` }))
+    } else if (entity === 'automations' && changed('status') && next.status === 'paused') {
+      out.push(draft('paused'))
+    }
   }
   const assignee = text(next.assignee_id)
   if (changed('assignee_id') && UUID.test(assignee)) {
     out.push(draft('assigned', { targetId: assignee }))
   }
   if (prev && alive && !out.length && entity !== 'file_manifest') {
-    if (Object.keys(m.fields).some((k) => !NOISE.has(k) && changed(k))) out.push(draft('updated'))
+    const keys =
+      entity === 'automations' ? ['name'] : Object.keys(m.fields).filter((k) => !NOISE.has(k))
+    if (keys.some(changed)) out.push(draft('updated'))
   }
   return out
 }
