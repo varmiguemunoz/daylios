@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   Background,
   BackgroundVariant,
@@ -14,21 +14,22 @@ import {
   type EdgeTypes,
   type FinalConnectionState,
   type NodeChange,
+  type NodePositionChange,
   type NodeTypes,
   type OnBeforeDelete,
   type Viewport
 } from '@xyflow/react'
 import '@xyflow/react/dist/base.css'
-import { Circle, Diamond, Square } from 'lucide-react'
+import { Circle, Diamond, Lock, Square } from 'lucide-react'
 import type { CanvasEdge, CanvasFile, CanvasNode, ShapeKind } from '@shared/canvas'
-import { groupAround } from '@shared/canvas-groups'
+import { groupAround, type Rect } from '@shared/canvas-groups'
 import { IMAGE_EXT, dirName, extOf } from '@shared/workspace'
 import { NotePicker } from '../../../components/NotePicker'
-import { useContextMenu } from '../../../ui'
+import { useContextMenu, type MenuEntry } from '../../../ui'
 import { errorMessage, notesApi } from '../../../lib/api'
 import { DRAG_TYPE, prefs, ws } from '../lib'
 import { uiState } from '../../../lib/ui-state'
-import { BoardContext } from './context'
+import { BoardContext, EditingContext, createEditingStore } from './context'
 import {
   ARROW,
   canvasOf,
@@ -38,6 +39,7 @@ import {
   newFileNode,
   newGroup,
   newId,
+  newLink,
   newShape,
   toFlowNode,
   type BoardEdge,
@@ -47,6 +49,7 @@ import { useHistory } from './history'
 import {
   carry,
   copySelection,
+  moveTo,
   passengers,
   pasteClip,
   restack,
@@ -61,6 +64,16 @@ import { ObsidianEdge } from './ObsidianEdge'
 import { CardNode, ShapeNode, TextNode } from './nodes/CardNodes'
 import { GroupNode } from './nodes/GroupNode'
 import { FileNode, ImageNode, LinkNode, NoteNode } from './nodes/FileNodes'
+import { PdfNode } from './nodes/PdfNode'
+import { align, distribute, type AlignMode } from './align'
+import { boundsOf, intersects, lockAxis, snapToObjects, type Guide, type Point } from './snap'
+import { ALIGN_ITEMS, edgeItems, nodeItems, paneItems } from './menus'
+import { useBoardKeys, useModifiers } from './useBoardKeys'
+import { FIT, GRID, MAX_ZOOM, MIN_ZOOM, PASTE_OFFSET, SNAP_PX } from './viewport'
+import { LinkModal } from './LinkModal'
+import { SnapGuides } from './SnapGuides'
+import { ZoomVar } from './ZoomVar'
+import { ShortcutsModal } from './ShortcutsModal'
 
 const NODE_TYPES: NodeTypes = {
   card: CardNode,
@@ -69,25 +82,23 @@ const NODE_TYPES: NodeTypes = {
   group: GroupNode,
   image: ImageNode,
   note: NoteNode,
+  pdf: PdfNode,
   file: FileNode,
   link: LinkNode
 }
 const EDGE_TYPES: EdgeTypes = { ob: ObsidianEdge }
 
 const MINIMAP_KEY = 'ws.board.minimap'
-const GRID = 20
-const FIT = { padding: 0.15, duration: 200 }
+const SNAP_GRID_KEY = 'ws.board.snapGrid'
+const SNAP_OBJECTS_KEY = 'ws.board.snapObjects'
+const NO_GUIDES: Guide[] = []
+const EDITABLE = new Set(['card', 'text', 'shape', 'group'])
+const TEXTUAL = new Set(['card', 'text', 'shape'])
 const OPPOSITE: Record<string, string> = {
   top: 'bottom',
   bottom: 'top',
   left: 'right',
   right: 'left'
-}
-const ARROWS: Record<string, [number, number]> = {
-  ArrowLeft: [-1, 0],
-  ArrowRight: [1, 0],
-  ArrowUp: [0, -1],
-  ArrowDown: [0, 1]
 }
 
 interface BoardCanvasProps {
@@ -109,6 +120,17 @@ interface BoardCanvasProps {
 
 const clean = (nodes: BoardNode[]): BoardNode[] =>
   nodes.map((n) => ({ ...n, selected: false, dragging: false }))
+
+const deselected = <T extends { selected?: boolean }>(list: T[]): T[] =>
+  list.map((x) => (x.selected ? { ...x, selected: false } : x))
+
+const noteName = (text: string): string =>
+  (
+    text
+      .split('\n')
+      .map((l) => l.replace(/^#+\s*/, '').trim())
+      .find(Boolean) ?? 'Tarjeta'
+  ).slice(0, 60)
 
 const cosmetic = (c: NodeChange<BoardNode>): boolean =>
   c.type === 'select' || (c.type === 'dimensions' && c.resizing === undefined && !c.setAttributes)
@@ -141,6 +163,7 @@ export function BoardCanvas({
   onError,
   viewportKey
 }: BoardCanvasProps): React.JSX.Element {
+  const readOnlyKey = `${viewportKey}:ro`
   // Se vuelve al zoom y posición de la última vez; sin recuerdo, se encuadra todo.
   const [savedViewport] = useState(() => {
     const v = uiState.get<Viewport | null>(viewportKey, null)
@@ -150,25 +173,41 @@ export function BoardCanvas({
   })
   const [nodes, setNodes] = useState<BoardNode[]>(initial.nodes)
   const [edges, setEdges] = useState<BoardEdge[]>(initial.edges)
-  const [editingId, setEditing] = useState<string | null>(null)
-  const [picking, setPicking] = useState<{ x: number; y: number } | null>(null)
+  const [editing] = useState(createEditingStore)
+  const [picking, setPicking] = useState<Point | null>(null)
+  const [linking, setLinking] = useState<Point | null>(null)
   const [minimap, setMinimap] = useState(() => prefs.get(MINIMAP_KEY) === '1')
-  const [free, setFree] = useState(false) // ⌥ pulsado: colocar sin rejilla
+  const [snapGrid, setSnapGrid] = useState(() => prefs.get(SNAP_GRID_KEY) !== '0')
+  const [snapObjects, setSnapObjects] = useState(() => prefs.get(SNAP_OBJECTS_KEY) !== '0')
+  const [readOnly, setReadOnly] = useState(() => uiState.get<boolean>(readOnlyKey, false) === true)
+  const [guides, setGuides] = useState<Guide[]>(NO_GUIDES)
+  const [labelingId, setLabelingId] = useState<string | null>(null)
+  const [help, setHelp] = useState(false)
   const [groupDelete, setGroupDelete] = useState<{
     count: number
     resolve: (choice: 'cancel' | 'group' | 'all') => void
   } | null>(null)
   const wrapper = useRef<HTMLDivElement>(null)
   const clip = useRef<Clip | null>(null)
-  const riders = useRef(new Map<string, { x: number; y: number }>())
-  const dragStart = useRef({ x: 0, y: 0 })
+  const riders = useRef(new Map<string, Point>())
+  const starts = useRef(new Map<string, Point>())
+  const sizes = useRef(new Map<string, { width: number; height: number }>())
+  const targets = useRef<Rect[]>([])
+  const lastPos = useRef(new Map<string, Point>())
+  const lead = useRef<Point | null>(null)
+  const leadId = useRef<string | null>(null)
+  const cloning = useRef(false)
+  const pointer = useRef<Point | null>(null)
   const resizing = useRef(false)
   const flow = useReactFlow<BoardNode, BoardEdge>()
   const menu = useContextMenu()
+  const { free, mods } = useModifiers()
 
   const latest = useRef({ nodes, edges })
+  const settings = useRef({ free, snapObjects })
   useLayoutEffect(() => {
     latest.current = { nodes, edges }
+    settings.current = { free, snapObjects }
   })
 
   // El padre pide el canvas solo cuando va a guardar.
@@ -189,6 +228,60 @@ export function BoardCanvas({
   )
   const { checkpoint } = history
 
+  const visibleRect = useCallback((): Rect => {
+    const box = wrapper.current?.getBoundingClientRect()
+    if (!box) return { x: -Infinity, y: -Infinity, width: Infinity, height: Infinity }
+    const a = flow.screenToFlowPosition({ x: box.left, y: box.top })
+    const b = flow.screenToFlowPosition({ x: box.right, y: box.bottom })
+    return { x: a.x, y: a.y, width: b.x - a.x, height: b.y - a.y }
+  }, [flow])
+
+  const dragChanges = useCallback(
+    (changes: NodeChange<BoardNode>[]): NodeChange<BoardNode>[] => {
+      const moving = changes.filter(
+        (c): c is NodePositionChange =>
+          c.type === 'position' && Boolean(c.position) && starts.current.has(c.id)
+      )
+      if (!moving.length) return changes
+      if (!moving.some((c) => c.dragging))
+        return changes.map((c) => {
+          const at = c.type === 'position' ? lastPos.current.get(c.id) : undefined
+          return at ? { ...c, position: at } : c
+        })
+      const head = moving.find((c) => c.id === leadId.current) ?? moving[0]
+      const first = starts.current.get(head.id)!
+      let delta = { x: head.position!.x - first.x, y: head.position!.y - first.y }
+      if (mods.current.shift) delta = lockAxis(delta)
+      const placed = (d: Point): Rect[] =>
+        moving.map((c) => {
+          const start = starts.current.get(c.id)!
+          const size = sizes.current.get(c.id) ?? { width: 0, height: 0 }
+          return { x: start.x + d.x, y: start.y + d.y, ...size }
+        })
+      if (!settings.current.free && settings.current.snapObjects && targets.current.length) {
+        const snap = snapToObjects(
+          boundsOf(placed(delta)),
+          targets.current,
+          SNAP_PX / flow.getZoom()
+        )
+        delta = { x: delta.x + snap.dx, y: delta.y + snap.dy }
+        setGuides(snap.guides.length ? snap.guides : NO_GUIDES)
+      }
+      lead.current = delta
+      lastPos.current = new Map(
+        moving.map((c) => {
+          const start = starts.current.get(c.id)!
+          return [c.id, { x: start.x + delta.x, y: start.y + delta.y }]
+        })
+      )
+      return changes.map((c) => {
+        const at = c.type === 'position' ? lastPos.current.get(c.id) : undefined
+        return at ? { ...c, position: at } : c
+      })
+    },
+    [flow, mods]
+  )
+
   // ---- cambios de React Flow ----
 
   const onNodesChange = useCallback(
@@ -198,13 +291,16 @@ export function BoardCanvas({
       if (resize && !resizing.current) checkpoint()
       const resized = resizing.current && !resize
       resizing.current = Boolean(resize)
+      const applied = starts.current.size ? dragChanges(changes) : changes
+      const delta = lead.current
       setNodes((ns) => {
-        const next = applyNodeChanges(changes, ns)
+        let next = applyNodeChanges(applied, ns)
+        if (delta && riders.current.size) next = carry(next, riders.current, delta)
         return resized ? restack(next) : next
       })
       if (!changes.every(cosmetic)) onDirty()
     },
-    [checkpoint, onDirty]
+    [checkpoint, onDirty, dragChanges]
   )
 
   const onEdgesChange = useCallback(
@@ -231,14 +327,14 @@ export function BoardCanvas({
       if (!list.length) return
       checkpoint()
       setNodes((ns) => [
-        ...ns.map((n) => ({ ...n, selected: false })),
+        ...deselected(ns),
         ...list.map((n) => ({ ...toFlowNode(n), selected: true }))
       ])
       if (extraEdges.length) setEdges((es) => [...es, ...extraEdges])
-      if (edit) setEditing(list[0].id)
+      if (edit) editing.set(list[0].id)
       onDirty()
     },
-    [checkpoint, onDirty]
+    [checkpoint, onDirty, editing]
   )
 
   // Soltar una conexión en el vacío crea una tarjeta conectada, lista para escribir (como Obsidian).
@@ -268,28 +364,56 @@ export function BoardCanvas({
 
   // ---- grupos: lo que está dentro se mueve con ellos ----
 
-  const onNodeDragStart = useCallback(
-    (_: unknown, node: BoardNode, dragged: BoardNode[]) => {
-      checkpoint()
-      dragStart.current = { ...node.position }
-      riders.current = passengers(latest.current.nodes, new Set(dragged.map((n) => n.id)))
+  const cloneBack = useCallback(
+    (origin: Map<string, Point>) => {
+      const { nodes: ns, edges: es } = latest.current
+      const copy = copySelection(ns, es)
+      if (!copy) return
+      const pasted = pasteClip(copy, { x: 0, y: 0 })
+      setNodes([...moveTo(deselected(ns), origin), ...pasted.nodes])
+      setEdges([...deselected(es), ...pasted.edges])
+      onDirty()
     },
-    [checkpoint]
+    [onDirty]
   )
 
-  const onNodeDrag = useCallback((_: unknown, node: BoardNode) => {
-    if (!riders.current.size) return
-    const delta = {
-      x: node.position.x - dragStart.current.x,
-      y: node.position.y - dragStart.current.y
-    }
-    setNodes((ns) => carry(ns, riders.current, delta))
-  }, [])
+  const onNodeDragStart = useCallback(
+    (event: MouseEvent | TouchEvent, node: BoardNode, dragged: BoardNode[]) => {
+      checkpoint()
+      leadId.current = node.id
+      const all = latest.current.nodes
+      const ids = new Set(dragged.map((n) => n.id))
+      starts.current = new Map(dragged.map((n) => [n.id, { ...n.position }]))
+      sizes.current = new Map(
+        dragged.map((n) => {
+          const c = canvasOf(n)
+          return [n.id, { width: c.width, height: c.height }]
+        })
+      )
+      riders.current = passengers(all, ids)
+      const skip = new Set([...ids, ...riders.current.keys()])
+      const view = visibleRect()
+      targets.current = all
+        .filter((n) => !skip.has(n.id))
+        .map(canvasOf)
+        .filter((r) => intersects(r, view))
+      lead.current = null
+      cloning.current = event.altKey || mods.current.alt
+    },
+    [checkpoint, visibleRect, mods]
+  )
 
   const onNodeDragStop = useCallback(() => {
+    const origin = cloning.current ? new Map([...starts.current, ...riders.current]) : null
+    starts.current = new Map()
     riders.current = new Map()
+    lastPos.current = new Map()
+    lead.current = null
+    cloning.current = false
+    setGuides(NO_GUIDES)
+    if (origin) requestAnimationFrame(() => cloneBack(origin))
     onDirty()
-  }, [onDirty])
+  }, [onDirty, cloneBack])
 
   // Borrar un grupo con contenido pregunta qué hacer.
   const onBeforeDelete: OnBeforeDelete<BoardNode, BoardEdge> = useCallback(
@@ -318,13 +442,13 @@ export function BoardCanvas({
 
   // ---- acciones ----
 
-  const center = (): { x: number; y: number } => {
+  const center = (): Point => {
     const box = wrapper.current?.getBoundingClientRect()
     if (!box) return { x: 0, y: 0 }
     return flow.screenToFlowPosition({ x: box.left + box.width / 2, y: box.top + box.height / 2 })
   }
 
-  const placeFiles = async (paths: string[], at: { x: number; y: number }): Promise<void> => {
+  const placeFiles = async (paths: string[], at: Point): Promise<void> => {
     if (!paths.length) return
     try {
       const items = await ws.upload(folderId, paths)
@@ -349,25 +473,27 @@ export function BoardCanvas({
     addNodes([newGroup(groupAround(picked.map(canvasOf)))], [], true)
   }
 
+  const emptyGroup = (at: Point, centered: boolean): void =>
+    addNodes(
+      [
+        newGroup({
+          x: Math.round(centered ? at.x - 200 : at.x),
+          y: Math.round(centered ? at.y - 150 : at.y),
+          width: 400,
+          height: 300
+        })
+      ],
+      [],
+      true
+    )
+
   const add = (kind: AddKind, anchor: HTMLElement | null, at = center(), dropped = false): void => {
     if (kind === 'card') addNodes([newCard(at)], [], true)
     else if (kind === 'note') setPicking(at)
     else if (kind === 'media') void ws.pickFiles().then((paths) => placeFiles(paths, at))
     else if (kind === 'group') {
       if (!dropped && latest.current.nodes.some((n) => n.selected)) groupSelection()
-      else
-        addNodes(
-          [
-            newGroup({
-              x: Math.round(at.x - 200),
-              y: Math.round(at.y - 150),
-              width: 400,
-              height: 300
-            })
-          ],
-          [],
-          true
-        )
+      else emptyGroup(at, true)
     } else if (anchor) {
       const shape = (s: ShapeKind): void => addNodes([newShape(at, s)], [], true)
       menu.openFrom(anchor, [
@@ -421,12 +547,12 @@ export function BoardCanvas({
       edges: latest.current.edges.filter((e) => e.selected)
     })
 
-  const paste = (offset = 40): void => {
+  const paste = (offset: Point): void => {
     if (!clip.current) return
-    const pasted = pasteClip(clip.current, { x: offset, y: offset })
+    const pasted = pasteClip(clip.current, offset)
     checkpoint()
-    setNodes((ns) => [...ns.map((n) => ({ ...n, selected: false })), ...pasted.nodes])
-    setEdges((es) => [...es.map((e) => ({ ...e, selected: false })), ...pasted.edges])
+    setNodes((ns) => [...deselected(ns), ...pasted.nodes])
+    setEdges((es) => [...deselected(es), ...pasted.edges])
     // Pegar varias veces seguidas escalona las copias.
     clip.current = {
       nodes: pasted.nodes.map(canvasOf),
@@ -438,6 +564,32 @@ export function BoardCanvas({
       }))
     }
     onDirty()
+  }
+
+  const pasteAtPointer = (): void => {
+    if (!clip.current?.nodes.length) return
+    const p = pointer.current
+    const box = wrapper.current?.getBoundingClientRect()
+    const inside =
+      p && box && p.x >= box.left && p.x <= box.right && p.y >= box.top && p.y <= box.bottom
+    if (!inside) return paste({ x: PASTE_OFFSET, y: PASTE_OFFSET })
+    const at = flow.screenToFlowPosition(p)
+    const area = boundsOf(clip.current.nodes)
+    paste({
+      x: Math.round(at.x - (area.x + area.width / 2)),
+      y: Math.round(at.y - (area.y + area.height / 2))
+    })
+  }
+
+  const copy = (): void => {
+    clip.current = copySelection(latest.current.nodes, latest.current.edges) ?? clip.current
+  }
+
+  const duplicate = (): void => {
+    const picked = copySelection(latest.current.nodes, latest.current.edges)
+    if (!picked) return
+    clip.current = picked
+    paste({ x: GRID * 2, y: GRID * 2 })
   }
 
   const nudge = (dx: number, dy: number): void => {
@@ -455,80 +607,193 @@ export function BoardCanvas({
     onDirty()
   }
 
+  const arrange = (mode: AlignMode | 'x' | 'y'): void => {
+    const picked = latest.current.nodes.filter((n) => n.selected).map(canvasOf)
+    const moves = mode === 'x' || mode === 'y' ? distribute(picked, mode) : align(picked, mode)
+    if (!moves.size) return
+    checkpoint()
+    setNodes((ns) => moveTo(ns, moves))
+    onDirty()
+  }
+
+  const fit = (): void => void flow.fitView(FIT)
+
   const zoomToSelection = (): void => {
     const picked = latest.current.nodes.filter((n) => n.selected)
     if (picked.length) void flow.fitView({ ...FIT, nodes: picked.map((n) => ({ id: n.id })) })
   }
 
-  // ---- teclado (no mientras se escribe) ----
+  const selectOnlyNode = (id: string): void => {
+    setNodes((ns) =>
+      ns.map((n) => (n.selected === (n.id === id) ? n : { ...n, selected: n.id === id }))
+    )
+    setEdges(deselected)
+  }
 
-  useEffect(() => {
-    const typing = (t: EventTarget | null): boolean => {
-      const el = t as HTMLElement | null
-      return Boolean(
-        el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
-      )
+  const selectOnlyEdge = (id: string): void => {
+    setNodes(deselected)
+    setEdges((es) =>
+      es.map((e) => (e.selected === (e.id === id) ? e : { ...e, selected: e.id === id }))
+    )
+  }
+
+  const convertToNote = async (node: BoardNode): Promise<void> => {
+    const text = node.data.canvas.text ?? ''
+    try {
+      const item = await ws.createNote(folderId, noteName(text), text)
+      patch(node.id, { type: 'file', file: item.path, text: undefined, daylios: undefined })
+      onError(null)
+    } catch (e) {
+      onError(errorMessage(e))
     }
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Alt') setFree(e.type === 'keydown')
-      if (e.type !== 'keydown' || typing(e.target) || document.querySelector('[role="dialog"]'))
-        return
-      const mod = e.metaKey || e.ctrlKey
-      const key = e.key.toLowerCase()
-      const step = e.shiftKey ? 10 : 1
-      const run = (fn: () => void): void => {
-        e.preventDefault()
-        fn()
-      }
-      if (e.key.startsWith('Arrow') && !mod) {
-        const [dx, dy] = ARROWS[e.key] ?? [0, 0]
-        return run(() => nudge(dx * step, dy * step))
-      }
-      if (e.key === 'Escape')
-        return run(() =>
-          setNodes((ns) => ns.map((n) => (n.selected ? { ...n, selected: false } : n)))
-        )
-      if (e.shiftKey && e.code === 'Digit1') return run(() => void flow.fitView(FIT))
-      if (e.shiftKey && e.code === 'Digit2') return run(zoomToSelection)
-      if (!mod) return
-      if (key === 'z') return run(e.shiftKey ? history.redo : history.undo)
-      if (key === 'a') return run(() => setNodes((ns) => ns.map((n) => ({ ...n, selected: true }))))
-      if (key === 'g') return run(groupSelection)
-      if (key === 'c') {
-        clip.current = copySelection(latest.current.nodes, latest.current.edges) ?? clip.current
-        return
-      }
-      if (key === 'x') {
-        clip.current = copySelection(latest.current.nodes, latest.current.edges) ?? clip.current
-        return run(removeSelected)
-      }
-      if (key === 'v' && clip.current) return run(() => paste())
-      if (key === 'd') {
-        const copy = copySelection(latest.current.nodes, latest.current.edges)
-        if (!copy) return
-        return run(() => {
-          clip.current = copy
-          paste(GRID * 2)
-        })
-      }
-      if (key === '=' || key === '+') return run(() => void flow.zoomIn({ duration: 150 }))
-      if (key === '-') return run(() => void flow.zoomOut({ duration: 150 }))
-      if (key === '0') return run(() => void flow.zoomTo(1, { duration: 150 }))
+  }
+
+  const toggleReadOnly = (): void => {
+    const next = !readOnly
+    setReadOnly(next)
+    uiState.set(readOnlyKey, next)
+    editing.set(null)
+    setLabelingId(null)
+  }
+
+  const toggleSnapGrid = (): void => {
+    setSnapGrid(!snapGrid)
+    prefs.set(SNAP_GRID_KEY, snapGrid ? '0' : '1')
+  }
+
+  const toggleSnapObjects = (): void => {
+    setSnapObjects(!snapObjects)
+    prefs.set(SNAP_OBJECTS_KEY, snapObjects ? '0' : '1')
+  }
+
+  const openSettings = (anchor: HTMLElement): void =>
+    menu.openFrom(anchor, [
+      { label: 'Ajustar a la rejilla', checked: snapGrid, onSelect: toggleSnapGrid },
+      { label: 'Ajustar a objetos', checked: snapObjects, onSelect: toggleSnapObjects },
+      { label: 'Solo lectura', checked: readOnly, onSelect: toggleReadOnly }
+    ])
+
+  const pickBackground = async (group: BoardNode): Promise<void> => {
+    try {
+      const paths = (await ws.pickFiles()).filter((p) => IMAGE_EXT.includes(extOf(p)))
+      if (!paths.length) return
+      const [item] = await ws.upload(folderId, paths.slice(0, 1))
+      patch(group.id, {
+        background: item.path,
+        backgroundStyle: group.data.canvas.backgroundStyle ?? 'cover'
+      })
+      onError(null)
+    } catch (e) {
+      onError(errorMessage(e))
     }
-    const reset = (): void => setFree(false)
-    window.addEventListener('keydown', onKey)
-    window.addEventListener('keyup', onKey)
-    window.addEventListener('blur', reset)
-    return () => {
-      window.removeEventListener('keydown', onKey)
-      window.removeEventListener('keyup', onKey)
-      window.removeEventListener('blur', reset)
-    }
+  }
+
+  const openBackgroundMenu = (anchor: HTMLElement): void => {
+    const group = latest.current.nodes.find((n) => n.selected && n.type === 'group')
+    if (!group) return
+    const current = group.data.canvas
+    const fit = (style: 'cover' | 'ratio' | 'repeat', label: string): MenuEntry => ({
+      label,
+      checked: (current.backgroundStyle ?? 'cover') === style,
+      onSelect: () => patch(group.id, { backgroundStyle: style })
+    })
+    menu.openFrom(anchor, [
+      { label: 'Elegir imagen', onSelect: () => void pickBackground(group) },
+      ...(current.background
+        ? [
+            null,
+            fit('cover', 'Cubrir'),
+            fit('ratio', 'Ajustar'),
+            fit('repeat', 'Repetir'),
+            null,
+            {
+              label: 'Quitar fondo',
+              danger: true,
+              onSelect: () => patch(group.id, { background: undefined, backgroundStyle: undefined })
+            }
+          ]
+        : [])
+    ])
+  }
+
+  const openAlignMenu = (anchor: HTMLElement): void =>
+    menu.openFrom(
+      anchor,
+      ALIGN_ITEMS.flatMap((item, i) => [
+        ...(i === 6 ? [null] : []),
+        { label: item.label, onSelect: () => arrange(item.mode) }
+      ])
+    )
+
+  const onNodeContextMenu = (e: React.MouseEvent, node: BoardNode): void => {
+    e.preventDefault()
+    const already = node.selected
+    if (!already) selectOnlyNode(node.id)
+    const count = already ? latest.current.nodes.filter((n) => n.selected).length : 1
+    const file = node.data.canvas.file
+    const editable = EDITABLE.has(node.type ?? '')
+    menu.openAt(
+      e,
+      nodeItems({
+        readOnly,
+        count,
+        canEdit: readOnly ? Boolean(file) : editable || Boolean(file),
+        canConvert: TEXTUAL.has(node.type ?? '') && Boolean(node.data.canvas.text?.trim()),
+        canGroup: count > 1 || node.type !== 'group',
+        zoom: zoomToSelection,
+        edit: () => (editable && !readOnly ? editing.set(node.id) : file && onOpenPath(file)),
+        convert: () => void convertToNote(node),
+        cut: () => {
+          copy()
+          removeSelected()
+        },
+        copy,
+        duplicate,
+        group: groupSelection,
+        remove: removeSelected
+      })
+    )
+  }
+
+  const onEdgeContextMenu = (e: React.MouseEvent, edge: BoardEdge): void => {
+    e.preventDefault()
+    selectOnlyEdge(edge.id)
+    menu.openAt(
+      e,
+      edgeItems({
+        readOnly,
+        label: () => setLabelingId(edge.id),
+        follow: () => void flow.fitView({ ...FIT, nodes: [{ id: edge.target }] }),
+        remove: () => void flow.deleteElements({ edges: [edge] })
+      })
+    )
+  }
+
+  useBoardKeys({
+    readOnly,
+    nudge,
+    deselect: () => setNodes(deselected),
+    fit,
+    zoomToSelection,
+    undo: history.undo,
+    redo: history.redo,
+    selectAll: () => setNodes((ns) => ns.map((n) => (n.selected ? n : { ...n, selected: true }))),
+    group: groupSelection,
+    copy,
+    cut: () => {
+      copy()
+      removeSelected()
+    },
+    paste: pasteAtPointer,
+    duplicate,
+    zoomIn: () => void flow.zoomIn({ duration: 150 }),
+    zoomOut: () => void flow.zoomOut({ duration: 150 }),
+    zoomReset: () => void flow.zoomTo(1, { duration: 150 })
   })
 
   const actions = useMemo(
-    () => ({ patch, openPath: onOpenPath, base: dirName(path), editingId, setEditing }),
-    [patch, onOpenPath, path, editingId]
+    () => ({ patch, openPath: onOpenPath, base: dirName(path), setEditing: editing.set, readOnly }),
+    [patch, onOpenPath, path, editing, readOnly]
   )
 
   const accepts = (e: React.DragEvent): boolean => {
@@ -537,7 +802,7 @@ export function BoardCanvas({
   }
 
   const onDrop = (e: React.DragEvent): void => {
-    if (!accepts(e)) return
+    if (readOnly || !accepts(e)) return
     e.preventDefault()
     const at = flow.screenToFlowPosition({ x: e.clientX, y: e.clientY })
     const card = e.dataTransfer.getData(CARD_DRAG) as AddKind
@@ -560,191 +825,239 @@ export function BoardCanvas({
     )
   }
 
+  const edgeMenuFor = !selectedNodes.length && selectedEdges.length === 1 ? selectedEdges[0] : null
+
   return (
     <BoardContext.Provider value={actions}>
-      <div
-        ref={wrapper}
-        className="ob-canvas relative size-full"
-        onDoubleClick={(e) => {
-          if (!(e.target as HTMLElement).classList.contains('react-flow__pane')) return
-          addNodes([newCard(flow.screenToFlowPosition({ x: e.clientX, y: e.clientY }))], [], true)
-        }}
-        onDragOver={(e) => {
-          if (!accepts(e)) return
-          e.preventDefault()
-          e.dataTransfer.dropEffect = 'copy'
-        }}
-        onDrop={onDrop}
-      >
-        <ReactFlow<BoardNode, BoardEdge>
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={NODE_TYPES}
-          edgeTypes={EDGE_TYPES}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onConnectEnd={onConnectEnd}
-          onNodeDragStart={onNodeDragStart}
-          onNodeDrag={onNodeDrag}
-          onNodeDragStop={onNodeDragStop}
-          onBeforeDelete={onBeforeDelete}
-          onPaneContextMenu={(e) => {
-            e.preventDefault()
-            const at = flow.screenToFlowPosition({ x: e.clientX, y: e.clientY })
-            menu.openAt(e as React.MouseEvent, [
-              { label: 'Añadir tarjeta', onSelect: () => add('card', null, at) },
-              { label: 'Añadir nota de la bóveda', onSelect: () => add('note', null, at) },
-              { label: 'Añadir imagen o archivo', onSelect: () => add('media', null, at) },
-              {
-                label: 'Grupo vacío',
-                onSelect: () =>
-                  addNodes(
-                    [
-                      newGroup({
-                        x: Math.round(at.x),
-                        y: Math.round(at.y),
-                        width: 400,
-                        height: 300
-                      })
-                    ],
-                    [],
-                    true
-                  )
-              },
-              null,
-              ...(clip.current ? [{ label: 'Pegar', onSelect: () => paste() }] : []),
-              { label: 'Encuadrar todo', onSelect: () => void flow.fitView(FIT) }
-            ])
+      <EditingContext.Provider value={editing}>
+        <div
+          ref={wrapper}
+          className="ob-canvas relative size-full"
+          onMouseMove={(e) => {
+            pointer.current = { x: e.clientX, y: e.clientY }
           }}
-          connectionMode={ConnectionMode.Loose}
-          connectionRadius={28}
-          defaultEdgeOptions={{ type: 'ob', markerEnd: ARROW }}
-          connectionLineStyle={{ stroke: 'var(--color-ob-accent)', strokeWidth: 2 }}
-          colorMode="dark"
-          deleteKeyCode={['Backspace', 'Delete']}
-          multiSelectionKeyCode="Shift"
-          selectionKeyCode={null}
-          selectionOnDrag
-          panOnDrag={[1, 2]}
-          panOnScroll
-          zoomOnDoubleClick={false}
-          elevateNodesOnSelect={false}
-          disableKeyboardA11y
-          snapToGrid={!free}
-          snapGrid={[GRID, GRID]}
-          minZoom={0.1}
-          maxZoom={3}
-          fitView={!savedViewport && initial.nodes.length > 0}
-          defaultViewport={savedViewport ?? undefined}
-          onMoveEnd={(_, viewport) =>
-            uiState.set(viewportKey, {
-              x: Math.round(viewport.x),
-              y: Math.round(viewport.y),
-              zoom: Math.round(viewport.zoom * 1000) / 1000
-            })
-          }
-          fitViewOptions={{ padding: 0.15 }}
-          onlyRenderVisibleElements
-          proOptions={{ hideAttribution: true }}
+          onDoubleClick={(e) => {
+            if (readOnly || !(e.target as HTMLElement).classList.contains('react-flow__pane'))
+              return
+            addNodes([newCard(flow.screenToFlowPosition({ x: e.clientX, y: e.clientY }))], [], true)
+          }}
+          onDragOver={(e) => {
+            if (readOnly || !accepts(e)) return
+            e.preventDefault()
+            e.dataTransfer.dropEffect = 'copy'
+          }}
+          onDrop={onDrop}
         >
-          <Background variant={BackgroundVariant.Dots} gap={GRID} size={1} color="#3a3a3a" />
-          {minimap && (
-            <MiniMap
-              pannable
-              zoomable
-              position="bottom-right"
-              nodeColor={(n) => (n.type === 'group' ? 'transparent' : '#4a4a4a')}
-              nodeStrokeColor={(n) => (n.type === 'group' ? '#5a5a5a' : 'transparent')}
-              maskColor="rgb(30 30 30 / 0.75)"
-              bgColor="#262626"
-            />
-          )}
-          <SelectionMenu
-            nodes={selectedNodes}
-            onDelete={removeSelected}
-            onColor={(color) => patchSelected(() => ({ color }))}
-            onZoom={zoomToSelection}
-            onGroup={groupSelection}
-            onShape={(shape) =>
-              patchSelected((n) =>
-                n.daylios?.kind === 'shape'
-                  ? { daylios: { ...n.daylios, kind: 'shape', shape } }
-                  : {}
+          <ReactFlow<BoardNode, BoardEdge>
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={NODE_TYPES}
+            edgeTypes={EDGE_TYPES}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onConnectEnd={onConnectEnd}
+            onNodeDragStart={onNodeDragStart}
+            onNodeDragStop={onNodeDragStop}
+            onSelectionDragStart={(e, picked) => onNodeDragStart(e.nativeEvent, picked[0], picked)}
+            onSelectionDragStop={onNodeDragStop}
+            onBeforeDelete={onBeforeDelete}
+            onNodeContextMenu={onNodeContextMenu}
+            onEdgeContextMenu={onEdgeContextMenu}
+            onEdgeDoubleClick={(_, edge) => {
+              if (readOnly) return
+              selectOnlyEdge(edge.id)
+              setLabelingId(edge.id)
+            }}
+            onPaneContextMenu={(e) => {
+              e.preventDefault()
+              const at = flow.screenToFlowPosition({ x: e.clientX, y: e.clientY })
+              menu.openAt(
+                e as React.MouseEvent,
+                paneItems({
+                  readOnly,
+                  canPaste: Boolean(clip.current),
+                  snapGrid,
+                  snapObjects,
+                  addCard: () => add('card', null, at),
+                  addNote: () => add('note', null, at),
+                  addMedia: () => add('media', null, at),
+                  addLink: () => setLinking(at),
+                  addGroup: () => emptyGroup(at, false),
+                  paste: pasteAtPointer,
+                  toggleSnapGrid,
+                  toggleSnapObjects,
+                  toggleReadOnly,
+                  fit
+                })
               )
+            }}
+            connectionMode={ConnectionMode.Loose}
+            connectionRadius={28}
+            defaultEdgeOptions={{ type: 'ob', markerEnd: ARROW }}
+            connectionLineStyle={{
+              stroke: 'var(--color-ob-accent)',
+              strokeWidth: 'calc(2px * var(--ob-inv, 1))'
+            }}
+            colorMode="dark"
+            deleteKeyCode={readOnly ? null : ['Backspace', 'Delete']}
+            multiSelectionKeyCode="Shift"
+            selectionKeyCode={null}
+            selectionOnDrag
+            panOnDrag={[1, 2]}
+            panOnScroll
+            zoomOnDoubleClick={false}
+            elevateNodesOnSelect={false}
+            disableKeyboardA11y
+            nodesDraggable={!readOnly}
+            nodesConnectable={!readOnly}
+            snapToGrid={snapGrid && !free}
+            snapGrid={[GRID, GRID]}
+            minZoom={MIN_ZOOM}
+            maxZoom={MAX_ZOOM}
+            fitView={!savedViewport && initial.nodes.length > 0}
+            defaultViewport={savedViewport ?? undefined}
+            onMoveEnd={(_, viewport) =>
+              uiState.set(viewportKey, {
+                x: Math.round(viewport.x),
+                y: Math.round(viewport.y),
+                zoom: Math.round(viewport.zoom * 10000) / 10000
+              })
             }
-          />
-          {!selectedNodes.length && selectedEdges.length === 1 && (
-            <Panel position="top-center">
-              <EdgeMenu
-                key={selectedEdges[0].id}
-                edge={selectedEdges[0]}
-                onDelete={removeSelected}
-                onArrows={(mode) =>
-                  patchEdge(selectedEdges[0].id, (e) => ({
-                    ...e,
-                    markerEnd: mode === 'none' ? undefined : ARROW,
-                    markerStart: mode === 'both' ? ARROW : undefined
-                  }))
-                }
-                onLabel={(label) =>
-                  patchEdge(selectedEdges[0].id, (e) => ({ ...e, label: label || undefined }))
-                }
-                onColor={(color) =>
-                  patchEdge(selectedEdges[0].id, (e) => {
-                    const canvas = { ...e.data!.canvas, color }
-                    if (!color) delete canvas.color
-                    return { ...e, data: { canvas } }
-                  })
-                }
+            fitViewOptions={{ padding: FIT.padding }}
+            onlyRenderVisibleElements
+            proOptions={{ hideAttribution: true }}
+          >
+            <ZoomVar target={wrapper} />
+            <SnapGuides guides={guides} />
+            <Background variant={BackgroundVariant.Dots} gap={GRID} size={0.7} color="#333333" />
+            {minimap && (
+              <MiniMap
+                pannable
+                zoomable
+                position="bottom-right"
+                nodeColor={(n) => (n.type === 'group' ? 'transparent' : '#4a4a4a')}
+                nodeStrokeColor={(n) => (n.type === 'group' ? '#5a5a5a' : 'transparent')}
+                maskColor="rgb(30 30 30 / 0.75)"
+                bgColor="#262626"
+              />
+            )}
+            <SelectionMenu
+              nodes={selectedNodes}
+              readOnly={readOnly}
+              onDelete={removeSelected}
+              onColor={(color) => patchSelected(() => ({ color }))}
+              onZoom={zoomToSelection}
+              onGroup={groupSelection}
+              onAlign={openAlignMenu}
+              onBackground={openBackgroundMenu}
+              onShape={(shape) =>
+                patchSelected((n) =>
+                  n.daylios?.kind === 'shape'
+                    ? { daylios: { ...n.daylios, kind: 'shape', shape } }
+                    : {}
+                )
+              }
+            />
+            {edgeMenuFor && !readOnly && (
+              <Panel position="top-center">
+                <EdgeMenu
+                  key={edgeMenuFor.id}
+                  edge={edgeMenuFor}
+                  labeling={labelingId === edgeMenuFor.id}
+                  onLabeling={(on) => setLabelingId(on ? edgeMenuFor.id : null)}
+                  onDelete={removeSelected}
+                  onArrows={(mode) =>
+                    patchEdge(edgeMenuFor.id, (e) => ({
+                      ...e,
+                      markerEnd: mode === 'none' ? undefined : ARROW,
+                      markerStart: mode === 'both' ? ARROW : undefined
+                    }))
+                  }
+                  onLabel={(label) =>
+                    patchEdge(edgeMenuFor.id, (e) => ({ ...e, label: label || undefined }))
+                  }
+                  onColor={(color) =>
+                    patchEdge(edgeMenuFor.id, (e) => {
+                      const canvas = { ...e.data!.canvas, color }
+                      if (!color) delete canvas.color
+                      return { ...e, data: { canvas } }
+                    })
+                  }
+                />
+              </Panel>
+            )}
+            <Panel position="top-right">
+              <CanvasControls
+                minimap={minimap}
+                canUndo={!readOnly && history.canUndo}
+                canRedo={!readOnly && history.canRedo}
+                onZoomIn={() => void flow.zoomIn({ duration: 150 })}
+                onZoomOut={() => void flow.zoomOut({ duration: 150 })}
+                onReset={() => void flow.zoomTo(1, { duration: 150 })}
+                onFit={fit}
+                onSettings={openSettings}
+                onHelp={() => setHelp(true)}
+                onUndo={history.undo}
+                onRedo={history.redo}
+                onMinimap={() => {
+                  setMinimap(!minimap)
+                  prefs.set(MINIMAP_KEY, minimap ? '0' : '1')
+                }}
               />
             </Panel>
-          )}
-          <Panel position="top-right">
-            <CanvasControls
-              minimap={minimap}
-              canUndo={history.canUndo}
-              canRedo={history.canRedo}
-              onZoomIn={() => void flow.zoomIn({ duration: 150 })}
-              onZoomOut={() => void flow.zoomOut({ duration: 150 })}
-              onFit={() => void flow.fitView(FIT)}
-              onUndo={history.undo}
-              onRedo={history.redo}
-              onMinimap={() => {
-                setMinimap(!minimap)
-                prefs.set(MINIMAP_KEY, minimap ? '0' : '1')
+            <Panel position="bottom-center">
+              {readOnly ? (
+                <button
+                  type="button"
+                  onClick={toggleReadOnly}
+                  title="Salir de solo lectura"
+                  className="ob-toolbar gap-2 px-3 text-[13px] text-ob-muted transition-colors hover:text-ob-text"
+                >
+                  <Lock size={14} />
+                  Solo lectura
+                </button>
+              ) : (
+                <CardToolbar onAdd={(kind, anchor) => add(kind, anchor)} />
+              )}
+            </Panel>
+          </ReactFlow>
+          <NotePicker
+            open={picking !== null}
+            noteId=""
+            exclude={[]}
+            notesOnly
+            onClose={() => setPicking(null)}
+            onPick={(target) => {
+              const at = picking ?? center()
+              setPicking(null)
+              notesApi
+                .get(target.id)
+                .then((note) => note.path && addNodes([newFileNode(note.path, at, false)]))
+                .catch((e) => onError(errorMessage(e)))
+            }}
+          />
+          {linking && (
+            <LinkModal
+              onCancel={() => setLinking(null)}
+              onAdd={(url) => {
+                addNodes([newLink(url, linking)])
+                setLinking(null)
               }}
             />
-          </Panel>
-          <Panel position="bottom-center">
-            <CardToolbar onAdd={(kind, anchor) => add(kind, anchor)} />
-          </Panel>
-        </ReactFlow>
-        <NotePicker
-          open={picking !== null}
-          noteId=""
-          exclude={[]}
-          notesOnly
-          onClose={() => setPicking(null)}
-          onPick={(target) => {
-            const at = picking ?? center()
-            setPicking(null)
-            notesApi
-              .get(target.id)
-              .then((note) => note.path && addNodes([newFileNode(note.path, at, false)]))
-              .catch((e) => onError(errorMessage(e)))
-          }}
-        />
-        {groupDelete && (
-          <GroupDeleteModal
-            count={groupDelete.count}
-            onCancel={() => groupDelete.resolve('cancel')}
-            onGroupOnly={() => groupDelete.resolve('group')}
-            onAll={() => groupDelete.resolve('all')}
-          />
-        )}
-        {menu.element}
-      </div>
+          )}
+          {help && <ShortcutsModal onClose={() => setHelp(false)} />}
+          {groupDelete && (
+            <GroupDeleteModal
+              count={groupDelete.count}
+              onCancel={() => groupDelete.resolve('cancel')}
+              onGroupOnly={() => groupDelete.resolve('group')}
+              onAll={() => groupDelete.resolve('all')}
+            />
+          )}
+          {menu.element}
+        </div>
+      </EditingContext.Provider>
     </BoardContext.Provider>
   )
 }

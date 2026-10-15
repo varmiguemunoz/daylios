@@ -25,7 +25,7 @@ export const ObsidianEdge = memo(function ObsidianEdge({
     targetPosition
   })
   const color = colorValue(data?.canvas.color)
-  const stroke = selected ? 'var(--color-ob-accent)' : (color ?? '#8c8c8c')
+  const stroke = selected ? 'var(--color-ob-accent)' : (color ?? 'var(--ob-canvas-color)')
   return (
     <>
       <BaseEdge
@@ -33,14 +33,16 @@ export const ObsidianEdge = memo(function ObsidianEdge({
         path={path}
         markerEnd={markerEnd}
         markerStart={markerStart}
-        interactionWidth={18}
-        style={{ stroke, strokeWidth: selected ? 3 : 2 }}
+        interactionWidth={24}
+        style={{ stroke, strokeWidth: `calc(${selected ? 3 : 2}px * var(--ob-inv, 1))` }}
       />
       {typeof label === 'string' && label && (
         <EdgeLabelRenderer>
           <div
             className="ob-edge-label nodrag nopan"
-            style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
+            style={{
+              transform: `translate(${labelX}px, ${labelY}px) translate(-50%, -50%) scale(var(--ob-inv, 1))`
+            }}
           >
             {label}
           </div>

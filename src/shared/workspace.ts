@@ -56,6 +56,13 @@ export interface SearchHit {
   snippet: string
 }
 
+export const PREVIEW_MAX_BYTES = 50 * 1024 * 1024
+
+export interface FileBytes {
+  size: number
+  data: Uint8Array | null
+}
+
 export interface BoardContent {
   item: WorkspaceItem
   json: string
@@ -100,6 +107,8 @@ export interface WorkspaceApi {
   readBoard(id: string): Promise<BoardContent>
 
   writeBoard(id: string, json: string, expected?: string): Promise<BoardContent>
+
+  fileBytes(path: string): Promise<FileBytes>
 
   reveal(id: string): Promise<void>
 

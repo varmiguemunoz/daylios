@@ -1,5 +1,15 @@
 import { useStore } from '@xyflow/react'
-import { Map as MapIcon, Maximize, Minus, Plus, Redo2, Undo2 } from 'lucide-react'
+import {
+  CircleHelp,
+  Map as MapIcon,
+  Maximize,
+  Minus,
+  Plus,
+  Redo2,
+  RotateCw,
+  Settings,
+  Undo2
+} from 'lucide-react'
 
 interface CanvasControlsProps {
   minimap: boolean
@@ -7,7 +17,10 @@ interface CanvasControlsProps {
   canRedo: boolean
   onZoomIn: () => void
   onZoomOut: () => void
+  onReset?: () => void
   onFit: () => void
+  onSettings?: (anchor: HTMLElement) => void
+  onHelp?: () => void
   onUndo: () => void
   onRedo: () => void
   onMinimap: () => void
@@ -21,7 +34,7 @@ function Control({
   children
 }: {
   label: string
-  onClick: () => void
+  onClick: (e: React.MouseEvent<HTMLButtonElement>) => void
   disabled?: boolean
   pressed?: boolean
   children: React.ReactNode
@@ -46,6 +59,13 @@ export function CanvasControls(p: CanvasControlsProps): React.JSX.Element {
   const zoom = useStore((s) => s.transform[2])
   return (
     <div className="flex flex-col gap-2">
+      {p.onSettings && (
+        <div className="ob-controls">
+          <Control label="Ajustes del board" onClick={(e) => p.onSettings?.(e.currentTarget)}>
+            <Settings size={15} />
+          </Control>
+        </div>
+      )}
       <div className="ob-controls">
         <Control label="Acercar · ⌘=" onClick={p.onZoomIn}>
           <Plus size={16} />
@@ -53,11 +73,16 @@ export function CanvasControls(p: CanvasControlsProps): React.JSX.Element {
         <span className="py-0.5 text-center text-[11px] text-ob-faint tabular-nums">
           {Math.round(zoom * 100)}%
         </span>
-        <Control label="Alejar · ⌘−" onClick={p.onZoomOut}>
-          <Minus size={16} />
-        </Control>
+        {p.onReset && (
+          <Control label="Zoom al 100 % · ⌘0" onClick={p.onReset}>
+            <RotateCw size={15} />
+          </Control>
+        )}
         <Control label="Encuadrar todo · ⇧1" onClick={p.onFit}>
           <Maximize size={15} />
+        </Control>
+        <Control label="Alejar · ⌘−" onClick={p.onZoomOut}>
+          <Minus size={16} />
         </Control>
       </div>
       <div className="ob-controls">
@@ -76,6 +101,11 @@ export function CanvasControls(p: CanvasControlsProps): React.JSX.Element {
         >
           <MapIcon size={15} />
         </Control>
+        {p.onHelp && (
+          <Control label="Atajos del board" onClick={p.onHelp}>
+            <CircleHelp size={15} />
+          </Control>
+        )}
       </div>
     </div>
   )

@@ -1,6 +1,30 @@
 import { useCallback, useRef, useState } from 'react'
 
-const LIMIT = 60
+export const HISTORY_LIMIT = 60
+
+export interface HistoryStack<T> {
+  past: T[]
+  future: T[]
+}
+
+export const emptyHistory = <T>(): HistoryStack<T> => ({ past: [], future: [] })
+
+export function record<T>(h: HistoryStack<T>, snapshot: T, limit = HISTORY_LIMIT): HistoryStack<T> {
+  return { past: [...h.past, snapshot].slice(-limit), future: [] }
+}
+
+export function back<T>(h: HistoryStack<T>, current: T): [HistoryStack<T>, T] | null {
+  if (!h.past.length) return null
+  return [{ past: h.past.slice(0, -1), future: [...h.future, current] }, h.past[h.past.length - 1]]
+}
+
+export function forward<T>(h: HistoryStack<T>, current: T): [HistoryStack<T>, T] | null {
+  if (!h.future.length) return null
+  return [
+    { past: [...h.past, current], future: h.future.slice(0, -1) },
+    h.future[h.future.length - 1]
+  ]
+}
 
 export function useHistory<T>(
   current: () => T,
@@ -12,34 +36,27 @@ export function useHistory<T>(
   canUndo: boolean
   canRedo: boolean
 } {
-  const past = useRef<T[]>([])
-  const future = useRef<T[]>([])
-  // Solo para que los botones sepan si hay algo que deshacer.
+  const stack = useRef<HistoryStack<T>>(emptyHistory())
   const [sizes, setSizes] = useState({ past: 0, future: 0 })
-  const sync = (): void => setSizes({ past: past.current.length, future: future.current.length })
+  const commit = useCallback((next: HistoryStack<T>) => {
+    stack.current = next
+    setSizes({ past: next.past.length, future: next.future.length })
+  }, [])
 
-  const checkpoint = useCallback(() => {
-    past.current.push(current())
-    if (past.current.length > LIMIT) past.current.shift()
-    future.current = []
-    sync()
-  }, [current])
+  const checkpoint = useCallback(() => commit(record(stack.current, current())), [commit, current])
 
-  const undo = useCallback(() => {
-    const previous = past.current.pop()
-    if (previous === undefined) return
-    future.current.push(current())
-    restore(previous)
-    sync()
-  }, [current, restore])
+  const move = useCallback(
+    (step: typeof back) => {
+      const result = step(stack.current, current())
+      if (!result) return
+      commit(result[0])
+      restore(result[1])
+    },
+    [commit, current, restore]
+  )
 
-  const redo = useCallback(() => {
-    const next = future.current.pop()
-    if (next === undefined) return
-    past.current.push(current())
-    restore(next)
-    sync()
-  }, [current, restore])
+  const undo = useCallback(() => move(back), [move])
+  const redo = useCallback(() => move(forward), [move])
 
   return { checkpoint, undo, redo, canUndo: sizes.past > 0, canRedo: sizes.future > 0 }
 }

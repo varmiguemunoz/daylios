@@ -1,5 +1,6 @@
 import { memo } from 'react'
 import { Handle, NodeResizer, Position } from '@xyflow/react'
+import { useBoard } from '../context'
 
 const SIDES = [
   { id: 'top', position: Position.Top },
@@ -19,16 +20,18 @@ export const NodeChrome = memo(function NodeChrome({
   minWidth?: number
   minHeight?: number
 }): React.JSX.Element {
+  const { readOnly } = useBoard()
   return (
     <>
       <NodeResizer
-        isVisible={selected}
+        isVisible={selected && !readOnly}
         minWidth={minWidth}
         minHeight={minHeight}
         lineClassName="ob-resize-line"
         handleClassName="ob-resize-handle"
       />
       {connectable &&
+        !readOnly &&
         SIDES.map((s) => (
           <Handle key={s.id} id={s.id} type="source" position={s.position} className="ob-handle" />
         ))}

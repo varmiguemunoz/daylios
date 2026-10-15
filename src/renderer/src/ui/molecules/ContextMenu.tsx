@@ -1,5 +1,6 @@
 import { useCallback, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { Check } from 'lucide-react'
 import { useOverlay } from '../organisms/overlay'
 
 export interface MenuAction {
@@ -9,6 +10,7 @@ export interface MenuAction {
 
   danger?: boolean
   disabled?: boolean
+  checked?: boolean
 }
 
 export type MenuEntry = MenuAction | null
@@ -75,6 +77,8 @@ function ContextMenu({
     buttons[next]?.focus()
   }
 
+  const column = items.some((i) => i && (i.icon || i.checked !== undefined))
+
   return createPortal(
     <div
       className="fixed inset-0 z-[60]"
@@ -104,7 +108,8 @@ function ContextMenu({
             <button
               key={item.label}
               type="button"
-              role="menuitem"
+              role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
+              aria-checked={item.checked}
               disabled={item.disabled}
               onClick={() => {
                 onClose()
@@ -116,9 +121,9 @@ function ContextMenu({
                   : 'text-milk hover:bg-hairline focus-visible:bg-hairline'
               }`}
             >
-              {item.icon && (
+              {column && (
                 <span className="grid w-4 shrink-0 place-items-center text-milk-soft">
-                  {item.icon}
+                  {item.checked ? <Check size={15} /> : item.icon}
                 </span>
               )}
               {item.label}

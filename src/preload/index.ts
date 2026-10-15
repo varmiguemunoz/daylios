@@ -185,6 +185,7 @@ const workspace: WorkspaceApi = {
   attach: callWorkspace('attach'),
   readBoard: callWorkspace('readBoard'),
   writeBoard: callWorkspace('writeBoard'),
+  fileBytes: callWorkspace('fileBytes'),
   reveal: callWorkspace('reveal'),
   openExternal: callWorkspace('openExternal')
 }

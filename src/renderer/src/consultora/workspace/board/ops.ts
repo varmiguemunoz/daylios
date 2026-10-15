@@ -83,3 +83,24 @@ export function pasteClip(
     )
   }
 }
+
+export function moveTo(
+  nodes: BoardNode[],
+  targets: Map<string, { x: number; y: number }>
+): BoardNode[] {
+  if (!targets.size) return nodes
+  const all = nodes.map(canvasOf)
+  const moves = new Map(targets)
+  for (const group of all) {
+    const to = targets.get(group.id)
+    if (group.type !== 'group' || !to) continue
+    const dx = to.x - group.x
+    const dy = to.y - group.y
+    for (const child of childrenOf(group, all))
+      if (!moves.has(child.id)) moves.set(child.id, { x: child.x + dx, y: child.y + dy })
+  }
+  return nodes.map((n) => {
+    const to = moves.get(n.id)
+    return to ? { ...n, position: { ...to } } : n
+  })
+}

@@ -15,7 +15,8 @@ export default defineConfig(
       '.agents',
       '.claude',
       '.github/skills',
-      '.kiro/skills'
+      '.kiro/skills',
+      '.impeccable/.kiro/skills'
     ]
   },
   tseslint.configs.recommended,

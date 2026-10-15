@@ -121,6 +121,12 @@ export class Vault {
     }
   }
 
+  async readBytes(rel: string, max: number): Promise<{ size: number; data: Uint8Array | null }> {
+    const full = await this.safe(rel)
+    const { size } = await stat(full)
+    return { size, data: size > max ? null : new Uint8Array(await readFile(full)) }
+  }
+
   async readText(rel: string): Promise<string> {
     return readFile(await this.safe(rel), 'utf8')
   }

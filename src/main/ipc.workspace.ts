@@ -41,6 +41,7 @@ export function registerWorkspaceIpc(
   write('upload', (folderId: string | null, paths: string[]) => w.upload(folderId, paths))
   write('attach', (noteId: string, name: string, data: Uint8Array) => w.attach(noteId, name, data))
   read('readBoard', (id: string) => w.readBoard(id))
+  read('fileBytes', (path: string) => w.fileBytes(path))
   // Sin aviso: el board abierto es quien escribe; avisar recargaría las demás ventanas en cada cambio.
   read('writeBoard', (id: string, json: string, expected?: string) =>
     w.writeBoard(id, json, expected)

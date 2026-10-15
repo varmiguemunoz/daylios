@@ -482,17 +482,23 @@ The Consultora window puts `theme-obsidian` on `body` while it is open (since W6
 
 ### Boards (Obsidian canvas)
 
-- React Flow with only `base.css`. Every visual lives in `.ob-canvas` in main.css. No shadows on nodes.
-- Background dots every 20px in `#3a3a3a`. Snap to the 20px grid; hold ⌥ to place freely.
-- Cards: 2px `#4a4a4a` border, 8px radius, document background, 12 by 20 padding, 16px markdown. Colors are the six Obsidian canvas colors: border in the color, background tinted 8%. Selected = 2px accent ring.
-- Below 45% zoom card text turns into grey bars, one per line. Only that boolean is read from the store, so nodes repaint only when crossing the threshold.
-- Groups: 2px border, 8px radius, faint tint, label above the top left in 18px semibold. Everything fully inside a group moves with it. ⌘G groups the selection. Deleting a group with content asks: only the frame, or frame and content.
-- Connection points: 14px circles outside each side, visible on hover. Dropping a connection on empty space creates a connected card ready to type. Edges are 2px bezier curves in `#8c8c8c`, accent when selected, labels on the document background.
-- Resize from any edge, no visible handles.
-- Bottom center toolbar: card, vault note, image or file, shape, group. Card and group can be dragged onto the canvas. Explorer items dropped on the canvas embed without copying.
-- Top right controls: zoom in, percentage, zoom out, fit, undo, redo, minimap.
-- Selection menu floats above the selection: delete, color, zoom to selection, group, shape. A single edge gets: delete, color, no arrows, end arrow, both arrows, label.
-- Keys: ⌘A, ⌘C, ⌘X, ⌘V, ⌘D, ⌘G, ⌘Z, ⇧⌘Z, arrows 1px, ⇧ arrows 10px, ⇧1 fit, ⇧2 zoom to selection, ⌘0 100%.
+Values measured on Obsidian, see `.impeccable/.kiro/specs/canvas-improvement/research-obsidian.md`.
+
+- React Flow with only `base.css`. Every visual lives in `.ob-canvas` in main.css. Board tokens: `--ob-canvas-bg #1c1c1c`, `--ob-canvas-dots #333333`, `--ob-canvas-color #7e7e7e`, `--ob-card-label #666666`.
+- No shadow on cards, a deliberate difference with Obsidian: with hundreds of cards it costs frames.
+- Zoom from 6.25% to 200%. Background dots every 20px, radius 0.7. Snap to the 20px grid and to other cards with accent guides; ⌃ while dragging places freely. Both snaps toggle from the background menu or the gear.
+- Cards: 1px `--ob-canvas-color` border, 8px radius, canvas background, 16px padding (Obsidian uses 0 by 16 plus the paragraph margin, same visual result), 16px text on 24px lines. Colors are the six Obsidian canvas colors: border and inner line in the color at 70%, background tinted 8%. Selected = accent border plus 2px accent ring. Focus outline hidden on nodes; selection is the indicator.
+- Below 45% zoom card text turns into grey bars, one per line. Only that boolean is read from the store.
+- Text editing: double click edits the markdown in place. A format bar under the card offers bold and italic, written as markdown so Obsidian shows them, plus font Sans, Serif or Mono, size from 12 to 40, alignment and line spacing 1.2, 1.5 or 2. Those four live in `daylios.style`; Obsidian ignores them. ⌘B and ⌘I work while typing, Esc or clicking out saves, ⌘Z undoes a style change.
+- Groups: 2px border, 8px radius, faint tint, optional background image cover, fit or repeat. Label above the top left, 22.5px regular, `#b3b3b3`, grey 10% chip, 4px radius. Everything fully inside a group moves with it.
+- Edges: bezier curves 2px on screen at any zoom, 24px click area, `--ob-canvas-color`, accent when selected. Labels 15px on screen, canvas background, 8px padding, keep line breaks. Double click edits the label.
+- Marquee: accent 10% fill, 2px accent border. Multiple selection box: 3px accent at 30%.
+- Connection points: 14px circles outside each side, visible on hover. Dropping a connection on empty space creates a connected card ready to type.
+- Bottom center toolbar, 4px radius, `#282828`: card, vault note, image or file, shape, group. In read only it becomes a «Solo lectura» chip that exits the mode.
+- Top right controls, 4px radius: gear with snaps and read only; zoom in, percentage, zoom to 100%, fit, zoom out; undo, redo; minimap, shortcuts.
+- Selection menu: delete, color, zoom to selection, group, align with six alignments and two distributions, shape, group background.
+- Context menus on background, card and edge, same entries as Obsidian plus the DayliOS ones. Convertir en nota turns a text card into a vault note.
+- Keys: arrows 20, ⇧ arrows 100, ⇧ drag one axis, ⌥ drag clones, ⌃ drag free, ⌘C ⌘X ⌘V pastes at the pointer, ⌘D, ⌘G, ⌘Z, ⇧⌘Z or ⌘Y, ⇧1 fit, ⇧2 zoom to selection, ⌘0 100%.
 - Saving: the canvas only marks itself dirty; the file is serialized once, 500ms after the last change.
 
 ### Tasks board (Consultora)

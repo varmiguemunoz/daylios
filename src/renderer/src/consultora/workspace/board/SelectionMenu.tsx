@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { NodeToolbar, Position } from '@xyflow/react'
 import {
+  AlignStartVertical,
   ArrowLeftRight,
   ArrowRight,
   Circle,
   Diamond,
   Group,
+  Image as ImageIcon,
   Minus,
   Palette,
   Scan,
@@ -87,6 +89,9 @@ interface SelectionMenuProps {
   onZoom: () => void
   onGroup: () => void
   onShape: (shape: ShapeKind) => void
+  onAlign: (anchor: HTMLElement) => void
+  onBackground: (anchor: HTMLElement) => void
+  readOnly: boolean
 }
 
 export function SelectionMenu({
@@ -95,7 +100,10 @@ export function SelectionMenu({
   onColor,
   onZoom,
   onGroup,
-  onShape
+  onShape,
+  onAlign,
+  onBackground,
+  readOnly
 }: SelectionMenuProps): React.JSX.Element | null {
   const [palette, setPalette] = useState(false)
   const dragging = nodes.some((n) => n.dragging)
@@ -110,27 +118,59 @@ export function SelectionMenu({
   return (
     <NodeToolbar nodeId={nodes.map((n) => n.id)} isVisible position={Position.Top} offset={14}>
       <div role="toolbar" aria-label="Selección" className="ob-menu">
-        <Tool label="Borrar · ⌫" onClick={onDelete} danger>
-          <Trash2 size={16} />
-        </Tool>
-        <Tool label="Color" onClick={() => setPalette(!palette)} active={palette}>
-          <Palette size={16} />
-        </Tool>
-        {palette && <ColorRow current={current} onColor={onColor} />}
-        <Tool label="Encuadrar selección · ⇧2" onClick={onZoom}>
-          <Scan size={16} />
-        </Tool>
-        {canGroup && (
-          <Tool label="Crear grupo · ⌘G" onClick={onGroup}>
-            <Group size={16} />
+        {readOnly ? (
+          <Tool label="Encuadrar selección · ⇧2" onClick={onZoom}>
+            <Scan size={16} />
           </Tool>
-        )}
-        {allShapes &&
-          SHAPES.map(({ shape: s, label, Icon }) => (
-            <Tool key={s} label={label} onClick={() => onShape(s)} active={shape === s}>
-              <Icon size={15} />
+        ) : (
+          <>
+            <Tool label="Borrar · ⌫" onClick={onDelete} danger>
+              <Trash2 size={16} />
             </Tool>
-          ))}
+            <Tool label="Color" onClick={() => setPalette(!palette)} active={palette}>
+              <Palette size={16} />
+            </Tool>
+            {palette && <ColorRow current={current} onColor={onColor} />}
+            <Tool label="Encuadrar selección · ⇧2" onClick={onZoom}>
+              <Scan size={16} />
+            </Tool>
+            {canGroup && (
+              <Tool label="Crear grupo · ⌘G" onClick={onGroup}>
+                <Group size={16} />
+              </Tool>
+            )}
+            {nodes.length === 1 && nodes[0].type === 'group' && (
+              <button
+                type="button"
+                aria-label="Fondo del grupo"
+                title="Fondo del grupo"
+                aria-haspopup="menu"
+                onClick={(e) => onBackground(e.currentTarget)}
+                className="ob-tool"
+              >
+                <ImageIcon size={16} />
+              </button>
+            )}
+            {nodes.length > 1 && (
+              <button
+                type="button"
+                aria-label="Alinear"
+                title="Alinear"
+                aria-haspopup="menu"
+                onClick={(e) => onAlign(e.currentTarget)}
+                className="ob-tool"
+              >
+                <AlignStartVertical size={16} />
+              </button>
+            )}
+            {allShapes &&
+              SHAPES.map(({ shape: s, label, Icon }) => (
+                <Tool key={s} label={label} onClick={() => onShape(s)} active={shape === s}>
+                  <Icon size={15} />
+                </Tool>
+              ))}
+          </>
+        )}
       </div>
     </NodeToolbar>
   )
@@ -143,6 +183,8 @@ export const arrowMode = (e: BoardEdge): ArrowMode =>
 
 interface EdgeMenuProps {
   edge: BoardEdge
+  labeling: boolean
+  onLabeling: (on: boolean) => void
   onArrows: (mode: ArrowMode) => void
   onLabel: (label: string) => void
   onColor: (color: string | undefined) => void
@@ -151,12 +193,13 @@ interface EdgeMenuProps {
 
 export function EdgeMenu({
   edge,
+  labeling,
+  onLabeling,
   onArrows,
   onLabel,
   onColor,
   onDelete
 }: EdgeMenuProps): React.JSX.Element {
-  const [labeling, setLabeling] = useState(false)
   const [palette, setPalette] = useState(false)
   const label = typeof edge.label === 'string' ? edge.label : ''
   const mode = arrowMode(edge)
@@ -190,7 +233,7 @@ export function EdgeMenu({
           placeholder="Rótulo"
           onBlur={(e) => {
             onLabel(e.target.value.trim())
-            setLabeling(false)
+            onLabeling(false)
           }}
           onKeyDown={(e) => {
             e.stopPropagation()
@@ -199,7 +242,7 @@ export function EdgeMenu({
           className="h-7 w-36 rounded-[4px] bg-ob-bg px-2 text-[13px] text-ob-text outline-none"
         />
       ) : (
-        <Tool label="Rótulo" onClick={() => setLabeling(true)}>
+        <Tool label="Rótulo" onClick={() => onLabeling(true)}>
           <Type size={16} />
         </Tool>
       )}

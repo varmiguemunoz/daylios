@@ -32,6 +32,14 @@ describe('WorkspaceService', () => {
     expect(listing.crumbs.map((c) => c.name)).toEqual(['Workspace', 'Archivo'])
   })
 
+  it('lee los bytes de un archivo de la bóveda y nunca fuera de ella', async () => {
+    writeFileSync(join(root, 'doc.pdf'), Buffer.from('%PDF-1.4'))
+    const file = await ws.fileBytes('doc.pdf')
+    expect(file.size).toBe(8)
+    expect(Buffer.from(file.data!).toString()).toBe('%PDF-1.4')
+    await expect(ws.fileBytes('../fuera.pdf')).rejects.toThrow()
+  })
+
   it('no se mueve una carpeta dentro de sí misma ni se repiten nombres', async () => {
     const a = await ws.createFolder(null, 'A')
     const b = await ws.createFolder(a.id, 'B')

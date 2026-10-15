@@ -2,6 +2,7 @@ import { memo, useEffect, useMemo, useState } from 'react'
 import type { NodeProps } from '@xyflow/react'
 import { ExternalLink, File as FileIcon, FileText, Globe } from 'lucide-react'
 import { baseName, dirName, displayName, vaultUrl } from '@shared/workspace'
+import { sectionOf } from '@shared/note-section'
 import { Markdown } from '../../../../components/Markdown'
 import { notesApi } from '../../../../lib/api'
 import { ws } from '../../lib'
@@ -9,9 +10,16 @@ import { colorValue, type BoardNode } from '../flow'
 import { useBoard } from '../context'
 import { NodeChrome } from './NodeChrome'
 import { TextPlaceholder, useZoomedOut } from './CardText'
-import { tint } from './CardNodes'
+import { cardProps } from './CardNodes'
+import { sameNode } from './sameNode'
 
-function FileTitle({ path, onOpen }: { path: string; onOpen: () => void }): React.JSX.Element {
+export function FileTitle({
+  path,
+  onOpen
+}: {
+  path: string
+  onOpen: () => void
+}): React.JSX.Element {
   return (
     <button
       type="button"
@@ -50,7 +58,7 @@ export const ImageNode = memo(function ImageNode({
       </div>
     </>
   )
-})
+}, sameNode)
 
 export const NoteNode = memo(function NoteNode({
   data,
@@ -77,17 +85,18 @@ export const NoteNode = memo(function NoteNode({
     }
   }, [path])
 
+  const subpath = typeof data.canvas.subpath === 'string' ? data.canvas.subpath : undefined
+  const shown = useMemo(() => (body ? sectionOf(body, subpath) : ''), [body, subpath])
   const rendered = useMemo(
-    () => (body ? <Markdown text={body} imageBase={dirName(path)} /> : null),
-    [body, path]
+    () => (shown ? <Markdown text={shown} imageBase={dirName(path)} /> : null),
+    [shown, path]
   )
 
   return (
     <>
       <NodeChrome selected={selected} />
       <div
-        className="ob-card ob-embed"
-        style={tint(colorValue(data.canvas.color))}
+        {...cardProps(colorValue(data.canvas.color), 'ob-card ob-embed')}
         onDoubleClick={() => openPath(path)}
       >
         <FileTitle path={path} onOpen={() => openPath(path)} />
@@ -95,7 +104,7 @@ export const NoteNode = memo(function NoteNode({
           {missing ? (
             <span className="text-ob-faint">No se encontró la nota.</span>
           ) : zoomedOut ? (
-            <TextPlaceholder text={body ?? ''} />
+            <TextPlaceholder text={shown} />
           ) : (
             <div className="ob-card-md nowheel">{rendered}</div>
           )}
@@ -103,7 +112,7 @@ export const NoteNode = memo(function NoteNode({
       </div>
     </>
   )
-})
+}, sameNode)
 
 export const FileNode = memo(function FileNode({
   data,
@@ -116,8 +125,10 @@ export const FileNode = memo(function FileNode({
     <>
       <NodeChrome selected={selected} />
       <div
-        className="ob-card grid place-items-center gap-2 text-center"
-        style={tint(colorValue(data.canvas.color))}
+        {...cardProps(
+          colorValue(data.canvas.color),
+          'ob-card grid place-items-center gap-2 text-center'
+        )}
         onDoubleClick={() => openPath(path)}
       >
         <div className="flex flex-col items-center gap-2 px-4">
@@ -127,13 +138,14 @@ export const FileNode = memo(function FileNode({
       </div>
     </>
   )
-})
+}, sameNode)
 
 export const LinkNode = memo(function LinkNode({
   data,
   selected
 }: NodeProps<BoardNode>): React.JSX.Element {
   const url = data.canvas.url ?? ''
+  const zoomedOut = useZoomedOut()
   const host = (() => {
     try {
       return new URL(url).host
@@ -141,26 +153,45 @@ export const LinkNode = memo(function LinkNode({
       return url
     }
   })()
+  const live = /^https:\/\//i.test(url) && !zoomedOut
   return (
     <>
       <NodeChrome selected={selected} />
-      <div
-        className="ob-card flex flex-col justify-center gap-1 px-4"
-        style={tint(colorValue(data.canvas.color))}
-      >
-        <span className="flex items-center gap-1.5 text-[14px] font-semibold text-ob-text">
-          <Globe size={14} className="text-ob-muted" />
-          {host}
-        </span>
-        <a
-          href={url}
-          target="_blank"
-          rel="noreferrer"
-          className="nodrag truncate text-[13px] text-ob-accent hover:underline"
-        >
-          {url}
-        </a>
+      <div {...cardProps(colorValue(data.canvas.color), 'ob-card')}>
+        <div className="flex h-9 shrink-0 items-center gap-2 border-b border-ob-border px-3">
+          <Globe size={14} className="shrink-0 text-ob-muted" />
+          <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ob-text">
+            {host}
+          </span>
+          <a
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            title="Abrir en el navegador"
+            aria-label="Abrir en el navegador"
+            className="nodrag shrink-0 text-ob-muted hover:text-ob-text"
+          >
+            <ExternalLink size={14} />
+          </a>
+        </div>
+        <div className="relative min-h-0 flex-1">
+          {live ? (
+            <iframe
+              src={url}
+              title={host}
+              sandbox="allow-scripts allow-same-origin allow-forms"
+              referrerPolicy="no-referrer"
+              loading="lazy"
+              className="nodrag nowheel size-full border-0 bg-white"
+            />
+          ) : (
+            <div className="flex size-full items-center px-4">
+              <span className="truncate text-[13px] text-ob-accent">{url}</span>
+            </div>
+          )}
+          {!selected && <div aria-hidden className="absolute inset-0" />}
+        </div>
       </div>
     </>
   )
-})
+}, sameNode)

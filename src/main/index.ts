@@ -1,3 +1,4 @@
+import { fromApp } from './vault-guard'
 import {
   app,
   BrowserWindow,
@@ -348,6 +349,8 @@ async function start(): Promise<void> {
 
 function serveVault(workspace: WorkspaceService): void {
   protocol.handle('vault', async (request) => {
+    if (!fromApp(request, process.env['ELECTRON_RENDERER_URL']))
+      return new Response('Prohibido', { status: 403 })
     try {
       const url = new URL(request.url)
       const rel = decodeURIComponent(url.pathname.replace(/^\/+/, ''))

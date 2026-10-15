@@ -1,11 +1,25 @@
+import { normalizeStyle, type TextStyle } from './canvas-style'
+
 export type CanvasColor = '1' | '2' | '3' | '4' | '5' | '6' | string
 export type NodeType = 'text' | 'file' | 'link' | 'group'
 export type ShapeKind = 'rect' | 'ellipse' | 'diamond'
 export type Side = 'top' | 'right' | 'bottom' | 'left'
 
 export interface DayliosNodeMeta {
-  kind: 'sticky' | 'text' | 'shape'
+  kind?: 'sticky' | 'text' | 'shape'
   shape?: ShapeKind
+  style?: TextStyle
+}
+
+export function withStyle(
+  meta: DayliosNodeMeta | undefined,
+  style: TextStyle | undefined
+): DayliosNodeMeta | undefined {
+  const next: DayliosNodeMeta = { ...meta }
+  const clean = normalizeStyle(style)
+  if (clean) next.style = clean
+  else delete next.style
+  return Object.keys(next).length ? next : undefined
 }
 
 export interface CanvasNode {
@@ -20,6 +34,8 @@ export interface CanvasNode {
   file?: string
   url?: string
   label?: string
+  background?: string
+  backgroundStyle?: 'cover' | 'ratio' | 'repeat'
   daylios?: DayliosNodeMeta
   [extra: string]: unknown
 }
@@ -68,6 +84,11 @@ export function parseCanvas(json: string): CanvasFile {
     const node = n as CanvasNode
     if (!node || typeof node.id !== 'string' || !NODE_TYPES.includes(node.type)) continue
     if (![node.x, node.y, node.width, node.height].every(num)) continue
+    if (node.daylios && typeof node.daylios === 'object') {
+      const meta = withStyle(node.daylios, node.daylios.style)
+      if (meta) node.daylios = meta
+      else delete node.daylios
+    }
     outNodes.push(node)
   }
   const ids = new Set(outNodes.map((n) => n.id))
@@ -223,7 +244,7 @@ export function applyBoardOps(
         if (op.color === null) delete node.color
         else if (op.color !== undefined) node.color = op.color
         if (op.shape && node.daylios?.kind === 'shape')
-          node.daylios = { kind: 'shape', shape: op.shape }
+          node.daylios = { ...node.daylios, kind: 'shape', shape: op.shape }
         for (const k of ['x', 'y', 'width', 'height'] as const) {
           const v = op[k]
           if (typeof v === 'number' && Number.isFinite(v)) node[k] = Math.round(v)

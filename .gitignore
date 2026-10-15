@@ -9,3 +9,6 @@ out
 # Configuración local de la nube (MAIN_VITE_*). Ver .env.example.
 .env
 .env.local
+
+# Resultados locales del arnés de rendimiento
+scripts/perf/results

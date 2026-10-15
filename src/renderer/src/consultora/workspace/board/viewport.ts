@@ -1,0 +1,10 @@
+export const MIN_ZOOM = 0.0625
+export const MAX_ZOOM = 2
+export const DETAIL_ZOOM = 0.45
+export const GRID = 20
+export const NUDGE = 20
+export const NUDGE_BIG = 100
+export const SNAP_PX = 10
+export const PASTE_OFFSET = 40
+export const FIT = { padding: 0.15, duration: 200 }
+export const LIVE_EDGES = 200

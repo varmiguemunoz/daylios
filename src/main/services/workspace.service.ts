@@ -8,6 +8,7 @@ import {
   ATTACHMENTS,
   CONFLICT_MESSAGE,
   MAX_UPLOAD,
+  PREVIEW_MAX_BYTES,
   QUICK_NOTES,
   baseName,
   dirName,
@@ -21,6 +22,7 @@ import {
   type DeleteImpact,
   type ExplorerTree,
   type FolderListing,
+  type FileBytes,
   type FolderNode,
   type SearchHit,
   type WorkspaceInfo,
@@ -336,6 +338,10 @@ export class WorkspaceService {
       const link = relativePath(dirName(note.path), path).replace(/ /g, '%20')
       return { item, link }
     })
+  }
+
+  fileBytes(path: string): Promise<FileBytes> {
+    return this.vault.readBytes(path, PREVIEW_MAX_BYTES)
   }
 
   async readBoard(id: string): Promise<BoardContent> {

@@ -10,7 +10,8 @@ import {
 import { groupZ } from '@shared/canvas-groups'
 import { IMAGE_EXT, extOf } from '@shared/workspace'
 
-export type FlowKind = 'card' | 'text' | 'shape' | 'image' | 'note' | 'file' | 'link' | 'group'
+export type FlowKind =
+  'card' | 'text' | 'shape' | 'image' | 'note' | 'pdf' | 'file' | 'link' | 'group'
 
 export interface BoardNodeData extends Record<string, unknown> {
   canvas: CanvasNode
@@ -45,7 +46,7 @@ export function flowKind(n: CanvasNode): FlowKind {
   if (n.type === 'file') {
     const ext = extOf(n.file ?? '')
     if (IMAGE_EXT.includes(ext)) return 'image'
-    return ext === '.md' ? 'note' : 'file'
+    return ext === '.md' ? 'note' : ext === '.pdf' ? 'pdf' : 'file'
   }
   const kind = n.daylios?.kind
   return kind === 'shape' ? 'shape' : kind === 'text' ? 'text' : 'card'
@@ -58,7 +59,7 @@ function bestSides(a: CanvasNode, b: CanvasNode): [Side, Side] {
   return dy > 0 ? ['bottom', 'top'] : ['top', 'bottom']
 }
 
-export const ARROW = { type: MarkerType.ArrowClosed, width: 16, height: 16, color: '#8c8c8c' }
+export const ARROW = { type: MarkerType.ArrowClosed, width: 16, height: 16, color: '#7e7e7e' }
 
 export function toFlowNode(n: CanvasNode): BoardNode {
   return {
@@ -160,6 +161,10 @@ export function newShape(p: { x: number; y: number }, shape: ShapeKind): CanvasN
 
 export function newFileNode(path: string, p: { x: number; y: number }, image: boolean): CanvasNode {
   return { id: newId(), type: 'file', file: path, ...(image ? at(p, 400, 280) : at(p, 400, 400)) }
+}
+
+export function newLink(url: string, p: { x: number; y: number }): CanvasNode {
+  return { id: newId(), type: 'link', url, ...at(p, 400, 300) }
 }
 
 export function newGroup(rect: {
