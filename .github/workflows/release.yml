@@ -43,7 +43,11 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            services/cloud/package-lock.json
       - run: npm ci
+      - run: npm ci --prefix services/cloud
       - run: npm run check
       - run: npm test
       - run: npm run release:mac
@@ -57,7 +61,11 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            services/cloud/package-lock.json
       - run: npm ci
+      - run: npm ci --prefix services/cloud
       - run: npm run check
       - run: npm test
       - run: npm run release:win
