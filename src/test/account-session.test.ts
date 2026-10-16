@@ -23,7 +23,7 @@ describe('sesión cifrada', () => {
     const a = new SecureSessionStorage(path, cipher())
     a.setItem('daylios-auth', '{"access_token":"secreto"}')
     expect(readFileSync(path, 'utf8')).not.toContain('secreto')
-    expect(statSync(path).mode & 0o777).toBe(0o600)
+    if (process.platform !== 'win32') expect(statSync(path).mode & 0o777).toBe(0o600)
     expect(new SecureSessionStorage(path, cipher()).getItem('daylios-auth')).toContain('secreto')
   })
 
