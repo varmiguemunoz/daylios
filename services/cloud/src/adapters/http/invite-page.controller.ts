@@ -1,7 +1,7 @@
 import { Controller, Get, Header, Inject, Param } from '@nestjs/common'
 import { ACCOUNT_PROTOCOL } from '@shared/account'
 import { INVITE_PATH } from '@shared/organizations'
-import { escapeHtml } from '../mail/resend-mailer'
+import { escapeHtml } from '../../application/invite-mail'
 
 export const DOWNLOAD_URL = Symbol('DownloadUrl')
 

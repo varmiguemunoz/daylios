@@ -8,6 +8,37 @@ export class MarketingController {
     res.json(await this.m.sync.status())
   }
 
+  outreachStatus = async (_req: Request, res: Response): Promise<void> => {
+    res.json(await this.m.outreachStatus())
+  }
+
+  outreachSequences = async (_req: Request, res: Response): Promise<void> => {
+    res.json(await this.m.listOutreachSequences())
+  }
+
+  outreachSequence = async (req: Request, res: Response): Promise<void> => {
+    res.json(await this.m.outreach.get(String(req.params.id)))
+  }
+
+  saveOutreachSequence = async (req: Request, res: Response): Promise<void> => {
+    res.json(await this.m.saveOutreachSequence(req.body ?? {}))
+  }
+
+  outreachSequenceStatus = async (req: Request, res: Response): Promise<void> => {
+    const body = req.body ?? {}
+    res.json(
+      await this.m.setOutreachSequenceStatus(String(req.params.id), body.enabled, body.confirm)
+    )
+  }
+
+  enrollOutreach = async (req: Request, res: Response): Promise<void> => {
+    res.json(await this.m.enrollOutreach(req.body ?? {}))
+  }
+
+  pollOutreach = async (_req: Request, res: Response): Promise<void> => {
+    res.json(await this.m.pollOutreach())
+  }
+
   sources = async (_req: Request, res: Response): Promise<void> => {
     // Sin secretos: Claude no los necesita para nada.
     res.json((await this.m.sources.list()).map((s) => ({ ...s, secret: undefined })))

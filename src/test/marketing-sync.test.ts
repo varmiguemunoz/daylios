@@ -6,6 +6,7 @@ import { MarketingSync } from '../main/services/marketing-sync'
 import { OutboxModel, TagModel } from '../main/models/marketing.model'
 import { ContactModel } from '../main/models/contact.model'
 import { FakeResend } from '../main/test/fake-resend'
+import { routerFor } from '../main/test/email-delivery'
 import { isolatedConfig, memoryDb } from '../main/test/helpers'
 
 describe('MarketingSync (outbox → Resend)', () => {
@@ -19,7 +20,7 @@ describe('MarketingSync (outbox → Resend)', () => {
     db = await memoryDb()
     contacts = new ContactService(db)
     resend = new FakeResend()
-    sync = new MarketingSync(db, () => resend)
+    sync = new MarketingSync(db, routerFor(resend))
   })
   afterEach(() => db.destroy())
 
@@ -129,7 +130,7 @@ describe('MarketingSync (outbox → Resend)', () => {
   })
 
   it('sin API key no hace nada (la cola espera)', async () => {
-    const offline = new MarketingSync(db, () => null)
+    const offline = new MarketingSync(db, routerFor(null))
     const c = await contacts.create({ email: 'ana@x.com' })
     await contacts.subscribe(c.id)
     await offline.tick()

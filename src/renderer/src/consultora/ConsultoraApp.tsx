@@ -43,6 +43,7 @@ import { Sources } from './screens/Sources'
 import { Automations } from './screens/Automations'
 import { AutomationEditor } from './screens/AutomationEditor'
 import { Sequences } from './screens/Sequences'
+import { Outreach } from './screens/Outreach'
 import { Newsletters } from './screens/Newsletters'
 import { Tags } from './screens/Tags'
 import { Note } from './screens/Note'
@@ -69,6 +70,7 @@ const LABEL: Record<Screen['name'], string> = {
   automation: 'Automatización',
   sources: 'Fuentes',
   sequences: 'Secuencias',
+  outreach: 'Outreach',
   newsletters: 'Newsletters',
   note: 'Nota',
   document: 'Documento',
@@ -97,6 +99,7 @@ const SECTION_OF: Record<Screen['name'], Section | null> = {
   automation: 'automations',
   sources: 'sources',
   sequences: 'sequences',
+  outreach: 'outreach',
   newsletters: 'newsletters',
   note: null,
   document: 'clients',
@@ -491,6 +494,8 @@ function ScreenView({
       return <Sources go={go} />
     case 'sequences':
       return <Sequences go={go} />
+    case 'outreach':
+      return <Outreach go={go} />
     case 'newsletters':
       return <Newsletters />
     case 'note':

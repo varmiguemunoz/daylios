@@ -54,7 +54,8 @@ import {
 } from './adapters/http/organizations.controller'
 import { DOWNLOAD_URL, InvitePageController } from './adapters/http/invite-page.controller'
 import { PgOrgRepository } from './adapters/postgres/pg-org.repository'
-import { NoMailer, ResendMailer } from './adapters/mail/resend-mailer'
+import { DeliveryMailer, NoMailer } from './adapters/mail/delivery-mailer'
+import { resendHttpSender } from '@shared/email-delivery/providers/resend/http-sender'
 import { AccountController } from './adapters/http/account.controller'
 import { PgAccountRepository } from './adapters/postgres/pg-account.repository'
 import { SupabaseAdmin } from './adapters/supabase/supabase-admin'
@@ -115,8 +116,8 @@ const useCase = <T>(
     {
       provide: MAILER,
       useFactory: (): Mailer =>
-        config.resendApiKey
-          ? new ResendMailer(config.resendApiKey, config.mailFrom)
+        config.mailProvider === 'resend' && config.resendApiKey
+          ? new DeliveryMailer(resendHttpSender(config.resendApiKey), config.mailFrom)
           : new NoMailer()
     },
     { provide: DOWNLOAD_URL, useValue: config.downloadUrl },

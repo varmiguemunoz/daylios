@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { SequenceService } from '../main/services/sequence.service'
 import { FakeResend } from '../main/test/fake-resend'
+import { routerFor } from '../main/test/email-delivery'
 import { isolatedConfig } from '../main/test/helpers'
 import { saveSettings } from '../main/config'
 
@@ -12,7 +13,7 @@ describe('SequenceService', () => {
     isolatedConfig()
     saveSettings({ fromEmail: 'hola@ejemplo.com', fromName: 'Ali' })
     resend = new FakeResend()
-    sequences = new SequenceService(() => resend)
+    sequences = new SequenceService(routerFor(resend))
   })
 
   const input = {
@@ -83,6 +84,6 @@ describe('SequenceService', () => {
   it('sin remitente o sin API key da un error claro', async () => {
     saveSettings({ fromEmail: '' })
     await expect(sequences.save(input)).rejects.toThrow(/remitente/)
-    await expect(new SequenceService(() => null).list()).rejects.toThrow(/API key/)
+    await expect(new SequenceService(routerFor(null)).list()).rejects.toThrow(/API key/)
   })
 })

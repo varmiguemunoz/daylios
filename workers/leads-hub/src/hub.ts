@@ -1,13 +1,17 @@
 import {
   LEAD_CREATED,
   cleanTags,
-  normalizeEmail,
   parseLeadPayload,
   segmentName,
   sourceTag,
   tagEvent
 } from '../../../src/shared/marketing'
-import { splitName, type ResendGateway } from '../../../src/shared/resend-gateway'
+import {
+  splitName,
+  type DeliveryEvent,
+  type EmailProvider,
+  type PushEventSource
+} from '../../../src/shared/email-delivery'
 import type {
   HubConfig,
   HubHealth,
@@ -27,11 +31,9 @@ import type { HubStore } from './store'
  */
 export interface HubDeps {
   store: HubStore
-  /** null = sin RESEND_API_KEY: solo se encola (la app sincroniza después). */
-  gateway: ResendGateway | null
+  provider: EmailProvider | null
   adminToken: string
-  /** Verifica la firma de un webhook de Resend y devuelve el evento, o lanza. null = no configurado. */
-  verifyWebhook: ((payload: string, headers: Headers) => unknown) | null
+  events: PushEventSource | null
   now?: () => Date
   newId?: () => string
 }
@@ -121,8 +123,9 @@ async function toResend(
   }
   const bySegment = new Map(Object.entries(config.segments).map(([slug, id]) => [id, slug]))
   let outcome = arriving([], incoming)
-  const g = deps.gateway
-  if (!g) {
+  const g = deps.provider?.audience
+  const engine = deps.provider?.sequences
+  if (!g || !engine) {
     result.error = 'El hub no tiene RESEND_API_KEY.'
     return { ...pick(outcome), resend: result }
   }
@@ -131,7 +134,7 @@ async function toResend(
     const remote = await g.findContact(lead.email)
     let current: string[] = []
     if (remote) {
-      current = (await g.contactSegments(lead.email))
+      current = (await g.groupsOf(lead.email))
         .map((s) => bySegment.get(s.id) ?? (s.name.startsWith('tag:') ? s.name.slice(4) : null))
         .filter((s): s is string => Boolean(s))
       outcome = arriving(current, incoming)
@@ -144,20 +147,20 @@ async function toResend(
     // Solo los tags audiencia tienen Segment (sin `audience` = app antigua: todos).
     const isAudience = (slug: string): boolean => !config.audience || config.audience.includes(slug)
     for (const slug of outcome.added.filter(isAudience)) {
-      const id = config.segments[slug] ?? (await g.ensureSegment(segmentName(slug)))
+      const id = config.segments[slug] ?? (await g.ensureGroup(segmentName(slug)))
       segments[slug] = id
-      await g.addToSegment(lead.email, id)
+      await g.addToGroup(lead.email, id)
     }
     for (const slug of outcome.removed) {
       const id = config.segments[slug]
-      if (id) await g.removeFromSegment(lead.email, id)
+      if (id) await g.removeFromGroup(lead.email, id)
     }
     await deps.store.mergeSegments(segments)
 
     if (!result.unsubscribed) {
-      if (result.created) await g.sendEvent(LEAD_CREATED, lead.email, { source: incoming[0] })
-      for (const slug of outcome.added) await g.sendEvent(tagEvent(slug), lead.email)
-      for (const event of outcome.events) await g.sendEvent(event, lead.email)
+      if (result.created) await engine.trigger(LEAD_CREATED, lead.email, { source: incoming[0] })
+      for (const slug of outcome.added) await engine.trigger(tagEvent(slug), lead.email)
+      for (const event of outcome.events) await engine.trigger(event, lead.email)
     }
     result.ok = true
   } catch (error) {
@@ -177,59 +180,38 @@ const arriving = (current: string[], incoming: string[]): Outcome => ({
 
 const pick = (o: Outcome): Outcome => o
 
-// ---- Webhooks de Resend ----
+// ---- Webhooks del proveedor ----
 
 async function resendWebhook(request: Request, deps: HubDeps): Promise<Response> {
-  if (!deps.verifyWebhook) return json({ error: 'Webhook no configurado.' }, 503)
+  if (!deps.events) return json({ error: 'Webhook no configurado.' }, 503)
   const body = await readBody(request)
   if (body === null) return json({ error: 'Demasiado grande.' }, 413)
 
-  let event: { type?: string; data?: Record<string, unknown> }
+  let events: DeliveryEvent[]
   try {
-    event = deps.verifyWebhook(body, request.headers) as typeof event
+    events = deps.events.parse(body, request.headers)
   } catch {
     return json({ error: 'Firma inválida.' }, 401)
   }
 
-  const statuses = toStatuses(event)
-  for (const { email, status } of statuses) {
+  const statuses = events.filter((e): e is DeliveryEvent & { type: HubStatus } =>
+    HUB_STATUSES.includes(e.type as HubStatus)
+  )
+  for (const event of statuses) {
     const item: HubItem = {
       id: deps.newId?.() ?? crypto.randomUUID(),
       kind: 'status',
       receivedAt: (deps.now?.() ?? new Date()).toISOString(),
-      email,
-      status,
-      event: String(event.type)
+      email: event.email,
+      status: event.type,
+      event: String(event.detail?.event ?? event.type)
     }
     await deps.store.enqueue(item)
   }
   return json({ ok: true, queued: statuses.length })
 }
 
-/** Traduce un webhook de Resend a cambios de estado. Los demás tipos se ignoran. */
-export function toStatuses(event: { type?: string; data?: Record<string, unknown> }): {
-  email: string
-  status: HubStatus
-}[] {
-  const d = event.data ?? {}
-  const emails = (value: unknown): string[] =>
-    (Array.isArray(value) ? value : [value])
-      .filter((v): v is string => typeof v === 'string')
-      .map(normalizeEmail)
-
-  if (event.type === 'contact.updated' && d.unsubscribed === true) {
-    return emails(d.email).map((email) => ({ email, status: 'unsubscribed' }))
-  }
-  if (event.type === 'email.bounced') {
-    // Solo los rebotes permanentes: uno temporal (buzón lleno) no invalida el email.
-    const bounce = (d.bounce ?? {}) as { type?: string }
-    if (bounce.type && !/permanent/i.test(bounce.type)) return []
-    return emails(d.to).map((email) => ({ email, status: 'bounced' }))
-  }
-  if (event.type === 'email.complained')
-    return emails(d.to).map((email) => ({ email, status: 'complained' }))
-  return []
-}
+const HUB_STATUSES: HubStatus[] = ['unsubscribed', 'bounced', 'complained']
 
 // ---- Admin (la app) ----
 
@@ -250,8 +232,8 @@ async function admin(request: Request, url: URL, path: string, deps: HubDeps): P
       ok: true,
       sources: config.sources.length,
       queued: await deps.store.count(),
-      resend: Boolean(deps.gateway),
-      webhooks: Boolean(deps.verifyWebhook)
+      resend: Boolean(deps.provider),
+      webhooks: Boolean(deps.events)
     }
     return json(health)
   }

@@ -14,7 +14,96 @@ export function register(server: McpServer): void {
     () => tool(() => api('GET', '/marketing/sources'))
   )
 
-  // ---- Secuencias (Automations de Resend) ----
+  // ---- Outreach en frío (proveedor del rol outreach, p. ej. Apollo) ----
+  server.registerTool(
+    'get_outreach_status',
+    {
+      description:
+        'Estado del outreach en frío: proveedor asignado, si está configurado, tope diario, inscritos hoy, ' +
+        'cuántos quedan hoy, si existe el pie legal y la última consulta de respuestas.',
+      inputSchema: {}
+    },
+    () => tool(() => api('GET', '/marketing/outreach/status'))
+  )
+
+  server.registerTool(
+    'list_outreach_sequences',
+    {
+      description: 'Secuencias de outreach en frío del proveedor de outreach, con estado y enlace.',
+      inputSchema: {}
+    },
+    () => tool(() => api('GET', '/marketing/outreach/sequences'))
+  )
+
+  server.registerTool(
+    'save_outreach_sequence',
+    {
+      description:
+        'Crea (sin "id") o reescribe una secuencia de outreach en frío. Siempre queda inactiva. ' +
+        'El primer email necesita asunto; los siguientes necesitan espera y, sin asunto, responden en el mismo hilo. ' +
+        'Se añade el pie legal de Ajustes a cada email. Máximo 10 emails, cortos y en texto sencillo.',
+      inputSchema: {
+        id: z.string().optional(),
+        name: z.string().min(1).max(120),
+        emails: z
+          .array(
+            z.object({
+              wait: z
+                .string()
+                .optional()
+                .describe('Espera antes de este email: "3 days", "1 week"'),
+              subject: z.string().max(200),
+              html: z.string().min(1).describe('HTML sencillo del email')
+            })
+          )
+          .min(1)
+          .max(10)
+      }
+    },
+    (args) => tool(() => api('POST', '/marketing/outreach/sequences', args))
+  )
+
+  server.registerTool(
+    'set_outreach_sequence_status',
+    {
+      description:
+        'Activa o pausa una secuencia de outreach. Activar envía correos reales desde los buzones conectados: ' +
+        'pide confirmación explícita a la persona y pasa confirm: true solo si la dio.',
+      inputSchema: { id: z.string(), enabled: z.boolean(), confirm: z.boolean().optional() }
+    },
+    ({ id, enabled, confirm }) =>
+      tool(() =>
+        api('POST', `/marketing/outreach/sequences/${enc(id)}/status`, { enabled, confirm })
+      )
+  )
+
+  server.registerTool(
+    'enroll_outreach',
+    {
+      description:
+        'Inscribe contactos de Alisuite en una secuencia de outreach. Respeta el tope diario: lo que no cabe ' +
+        'vuelve en "deferred" para inscribirlo otro día. Descarta a quien se dio de baja, rebotó o se quejó.',
+      inputSchema: {
+        sequenceId: z.string(),
+        contactIds: z.array(z.string()).min(1).max(500),
+        labels: z.array(z.string()).optional()
+      }
+    },
+    (args) => tool(() => api('POST', '/marketing/outreach/enroll', args))
+  )
+
+  server.registerTool(
+    'poll_outreach_replies',
+    {
+      description:
+        'Trae ya las respuestas, rebotes y bajas del outreach. Las bajas suprimen al contacto en todo el email; ' +
+        'las respuestas con interés crean una tarea.',
+      inputSchema: {}
+    },
+    () => tool(() => api('POST', '/marketing/outreach/poll'))
+  )
+
+  // ---- Secuencias de marketing (proveedor del rol marketing, Resend por defecto) ----
   server.registerTool(
     'list_sequences',
     {
@@ -251,7 +340,8 @@ export function register(server: McpServer): void {
     'get_marketing_status',
     {
       description:
-        'Estado de la sincronización: Resend y hub configurados, trabajos pendientes y con error, última descarga.',
+        'Estado del email: proveedor asignado a cada rol (transaccional, marketing, outreach) y si está configurado, ' +
+        'hub, trabajos pendientes y con error, última descarga.',
       inputSchema: {}
     },
     () => tool(() => api('GET', '/marketing/status'))

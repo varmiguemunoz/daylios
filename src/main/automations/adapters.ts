@@ -1,7 +1,6 @@
 import { Notification } from 'electron'
-import { ResendError } from '@shared/resend-gateway'
+import { DeliveryUsageError, EmailProviderError, type DeliveryRouter } from '@shared/email-delivery'
 import { config } from '../config'
-import { resendFromConfig } from '../services/resend.provider'
 import {
   ExternalError,
   NotConfigured,
@@ -46,22 +45,41 @@ export const macNotifier: NotifierPort = {
   }
 }
 
-export const resendEmail: EmailPort = {
-  async send({ to, subject, html }) {
-    const gateway = resendFromConfig()
-    const from = config.from()
-    if (!gateway || !from) throw new NotConfigured('Resend no está configurado en este equipo.')
-    try {
-      await gateway.sendEmail({ from, to, replyTo: config.replyTo() || undefined, subject, html })
-    } catch (err) {
-      const status = err instanceof ResendError ? err.status : null
-      const retryable = status === null || status === 429 || status >= 500
-      throw new ExternalError(err instanceof Error ? err.message : String(err), retryable)
-    }
-  },
-  ownerEmail: () => config.ownerEmail() || null
+export function deliveryEmail(router: DeliveryRouter): EmailPort {
+  return {
+    async send({ to, subject, html, idempotencyKey, role }) {
+      const from = config.from()
+      let sender
+      try {
+        sender = router.sender(role ?? 'marketing')
+      } catch (err) {
+        if (err instanceof DeliveryUsageError) throw new NotConfigured(err.message)
+        throw err
+      }
+      if (!from) throw new NotConfigured('Falta el remitente en Ajustes, Email.')
+      try {
+        await sender.send({
+          from,
+          to,
+          replyTo: config.replyTo() || undefined,
+          subject,
+          html,
+          idempotencyKey
+        })
+      } catch (err) {
+        const retryable = err instanceof EmailProviderError ? err.retryable : true
+        throw new ExternalError(err instanceof Error ? err.message : String(err), retryable)
+      }
+    },
+    ownerEmail: () => config.ownerEmail() || null
+  }
 }
 
-export function createPorts(): Ports {
-  return { email: resendEmail, http: fetchHttp, notifier: macNotifier, clock: systemClock }
+export function createPorts(router: DeliveryRouter): Ports {
+  return {
+    email: deliveryEmail(router),
+    http: fetchHttp,
+    notifier: macNotifier,
+    clock: systemClock
+  }
 }

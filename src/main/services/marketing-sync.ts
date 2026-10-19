@@ -1,13 +1,20 @@
 import { In, LessThanOrEqual, type DataSource } from 'typeorm'
+import { DELIVERY_ROLES } from '@shared/email-delivery'
 import { segmentName, type MarketingStatus } from '@shared/marketing'
-import { ResendError, splitName, type ResendGateway } from '@shared/resend-gateway'
+import {
+  EmailProviderError,
+  splitName,
+  type AudienceStore,
+  type DeliveryRouter,
+  type EmailProvider,
+  type SequenceEngine
+} from '@shared/email-delivery'
 import { ContactModel } from '../models/contact.model'
 import { ContactTagModel, OutboxModel, TagModel, type OutboxJob } from '../models/marketing.model'
 import { transactionGuard } from '../guards/transaction.guard'
 import { now } from './fields'
 import { onEnqueue } from './outbox'
 import { setStatus } from './contact.service'
-import type { GatewayProvider } from './resend.provider'
 
 const BACKOFF_MIN = [1, 5, 30, 120, 360]
 const TICK_MS = 60_000
@@ -26,7 +33,7 @@ export class MarketingSync {
 
   constructor(
     private readonly db: DataSource,
-    private readonly gateway: GatewayProvider,
+    private readonly router: DeliveryRouter,
     private readonly onChange: () => void = () => {}
   ) {}
 
@@ -69,7 +76,8 @@ export class MarketingSync {
     const pending = await repo.count()
     const failing = await repo.createQueryBuilder('j').where('j.attempts > 0').getCount()
     return {
-      resendConfigured: Boolean(this.gateway()),
+      email: DELIVERY_ROLES.map((role) => this.router.describe(role)),
+      resendConfigured: Boolean(this.router.find('marketing')),
       hubConfigured: this.hubConfigured(),
       pending,
       failing,
@@ -88,18 +96,20 @@ export class MarketingSync {
         this.lastError = `Hub: ${message(e)}`
       }
     }
-    const gateway = this.gateway()
-    if (gateway) {
+    const provider = this.router.find('marketing')
+    if (provider) {
       try {
-        changed = await this.drain(gateway)
+        changed = await this.drain(provider)
       } catch (e) {
-        this.lastError = `Resend: ${message(e)}`
+        this.lastError = `${provider.label}: ${message(e)}`
       }
     }
     if (changed) this.onChange()
   }
 
-  private async drain(gateway: ResendGateway): Promise<boolean> {
+  private async drain(provider: EmailProvider): Promise<boolean> {
+    const audience = this.router.audience('marketing')
+    const engine = this.router.sequences('marketing')
     const repo = this.db.getRepository(OutboxModel)
     const jobs = await repo.find({
       where: { nextAt: LessThanOrEqual(now()) },
@@ -110,10 +120,10 @@ export class MarketingSync {
     let postponedNow = false
     for (const job of jobs) {
       try {
-        if (job.kind === 'contact') await this.syncContact(gateway, job)
+        if (job.kind === 'contact') await this.syncContact(audience, job)
         else if (job.kind === 'segment_delete')
-          await gateway.deleteSegment(String(job.payload.segmentId))
-        else await this.sendEvent(gateway, job)
+          await audience.deleteGroup(String(job.payload.segmentId))
+        else await this.sendEvent(engine, job)
         await transactionGuard(this.db, (m) => m.getRepository(OutboxModel).delete({ id: job.id }))
         changed = true
         this.lastError = null
@@ -123,9 +133,9 @@ export class MarketingSync {
           if (e.until <= now()) postponedNow = true
           continue
         }
-        await this.fail(job, e)
+        await this.fail(job, e, provider.label)
         changed = true
-        if (e instanceof ResendError && e.fatal) break // la key no sirve: no insistir con el resto
+        if (e instanceof EmailProviderError && e.fatal) break
       }
     }
     // Lote lleno, o un evento esperaba a un contacto que ya se sincronizó: otra vuelta.
@@ -133,9 +143,9 @@ export class MarketingSync {
     return changed
   }
 
-  private async fail(job: OutboxJob, error: unknown): Promise<void> {
+  private async fail(job: OutboxJob, error: unknown, label: string): Promise<void> {
     const text = message(error).slice(0, 500)
-    this.lastError = `Resend: ${text}`
+    this.lastError = `${label}: ${text}`
     const delay = BACKOFF_MIN[Math.min(job.attempts, BACKOFF_MIN.length - 1)] * 60_000
     await transactionGuard(this.db, async (m) => {
       await m.getRepository(OutboxModel).update(
@@ -150,40 +160,39 @@ export class MarketingSync {
     })
   }
 
-  private async syncContact(gateway: ResendGateway, job: OutboxJob): Promise<void> {
+  private async syncContact(audience: AudienceStore, job: OutboxJob): Promise<void> {
     const contact = await this.db.getRepository(ContactModel).findOneBy({ id: job.ref })
     const previous = ((job.payload.previousEmails as string[]) ?? []).filter(
       (e) => e !== contact?.email
     )
     for (const email of previous) {
-      if (await gateway.findContact(email))
-        await gateway.updateContact(email, { unsubscribed: true })
+      if (await audience.findContact(email))
+        await audience.updateContact(email, { unsubscribed: true })
     }
     if (!contact || contact.status === 'none' || !contact.email) return
 
     const email = contact.email
-    const desired = await this.segmentsFor(gateway, contact.id)
+    const desired = await this.segmentsFor(audience, contact.id)
     const names = splitName(contact.name)
     const unsubscribed = contact.status !== 'subscribed'
-    const remote = await gateway.findContact(email)
+    const remote = await audience.findContact(email)
     if (!remote) {
-      await gateway.createContact({ email, ...names, unsubscribed, segmentIds: desired })
+      await audience.createContact({ email, ...names, unsubscribed, groupIds: desired })
     } else {
       if (remote.unsubscribed && !unsubscribed && !job.payload.resubscribe) {
-        // Se dio de baja en Resend (enlace del email) antes de que llegara el aviso: manda Resend.
         await transactionGuard(this.db, async (m) => {
           const fresh = await m.getRepository(ContactModel).findOneBy({ id: contact.id })
           if (fresh) await setStatus(m, fresh, 'unsubscribed', 'resend')
         })
         return
       }
-      await gateway.updateContact(email, { ...names, unsubscribed })
-      const current = await gateway.contactSegments(email)
+      await audience.updateContact(email, { ...names, unsubscribed })
+      const current = await audience.groupsOf(email)
       for (const id of desired)
-        if (!current.some((s) => s.id === id)) await gateway.addToSegment(email, id)
+        if (!current.some((s) => s.id === id)) await audience.addToGroup(email, id)
       for (const s of current) {
         if (s.name.startsWith('tag:') && !desired.includes(s.id))
-          await gateway.removeFromSegment(email, s.id)
+          await audience.removeFromGroup(email, s.id)
       }
     }
     await transactionGuard(this.db, (m) =>
@@ -191,7 +200,7 @@ export class MarketingSync {
     )
   }
 
-  private async segmentsFor(gateway: ResendGateway, contactId: string): Promise<string[]> {
+  private async segmentsFor(audience: AudienceStore, contactId: string): Promise<string[]> {
     const links = await this.db.getRepository(ContactTagModel).findBy({ contactId })
     if (!links.length) return []
     const tags = await this.db
@@ -200,7 +209,7 @@ export class MarketingSync {
     const ids: string[] = []
     for (const tag of tags) {
       if (!tag.segmentId) {
-        tag.segmentId = await gateway.ensureSegment(segmentName(tag.slug))
+        tag.segmentId = await audience.ensureGroup(segmentName(tag.slug))
         await transactionGuard(this.db, (m) =>
           m.getRepository(TagModel).update({ id: tag.id }, { segmentId: tag.segmentId })
         )
@@ -210,14 +219,14 @@ export class MarketingSync {
     return ids
   }
 
-  private async sendEvent(gateway: ResendGateway, job: OutboxJob): Promise<void> {
+  private async sendEvent(engine: SequenceEngine, job: OutboxJob): Promise<void> {
     const contact = await this.db.getRepository(ContactModel).findOneBy({ id: job.ref })
     if (!contact || contact.status !== 'subscribed' || !contact.email) return
     const pendingSync = await this.db
       .getRepository(OutboxModel)
       .findOneBy({ kind: 'contact', ref: contact.id })
     if (pendingSync) throw new Postpone(pendingSync.attempts > 0 ? pendingSync.nextAt : now())
-    await gateway.sendEvent(
+    await engine.trigger(
       String(job.payload.event),
       contact.email,
       (job.payload.payload as Record<string, unknown>) ?? {}

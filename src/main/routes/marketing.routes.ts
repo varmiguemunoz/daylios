@@ -4,6 +4,13 @@ import type { MarketingController } from '../controllers/marketing.controller'
 export function marketingRoutes(c: MarketingController): Router {
   return Router()
     .get('/status', c.status)
+    .get('/outreach/status', c.outreachStatus)
+    .get('/outreach/sequences', c.outreachSequences)
+    .post('/outreach/sequences', c.saveOutreachSequence)
+    .get('/outreach/sequences/:id', c.outreachSequence)
+    .post('/outreach/sequences/:id/status', c.outreachSequenceStatus)
+    .post('/outreach/enroll', c.enrollOutreach)
+    .post('/outreach/poll', c.pollOutreach)
     .get('/sources', c.sources)
     .post('/sources', c.createSource)
     .patch('/sources/:slug', c.updateSource)

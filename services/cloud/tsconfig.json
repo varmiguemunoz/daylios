@@ -25,7 +25,9 @@
     "../../src/shared/files.ts",
     "../../src/shared/hlc.ts",
     "../../src/shared/sync-merge.ts",
-    "../../src/shared/sync-protocol.ts"
+    "../../src/shared/sync-protocol.ts",
+    "../../src/shared/email-delivery/index.ts",
+    "../../src/shared/email-delivery/providers/resend/http-sender.ts"
   ],
   "exclude": ["src/**/*.test.ts"]
 }

@@ -28,6 +28,9 @@ export type ContactEventType =
   | 'tag_removed'
   | 'promoted' // pasó a pipeline
   | 'sync_error'
+  | 'outreach_enrolled'
+  | 'outreach_skipped'
+  | 'outreach_reply'
 
 export interface ContactEvent {
   id: string
@@ -148,7 +151,64 @@ export interface NewsletterContext {
 
 // ---- Estado de la sincronización ----
 
+export interface EmailRoleStatus {
+  role: 'transactional' | 'marketing' | 'outreach'
+  provider: string | null
+  label: string | null
+  configured: boolean
+}
+
+export interface EmailProviderSummary {
+  id: string
+  label: string
+  configured: boolean
+  coldOutreach: boolean
+  sender: 'domain' | 'mailbox'
+  capabilities: string[]
+  roles: EmailRoleStatus['role'][]
+}
+
+export interface OutreachSequenceInput {
+  id?: string
+  name: string
+  emails: { wait?: string; subject: string; html: string }[]
+}
+
+export interface OutreachEnrollInput {
+  sequenceId: string
+  contactIds: string[]
+  labels?: string[]
+}
+
+export interface OutreachEnrollResult {
+  enrolled: number
+  rejectedByProvider: number
+  skipped: { id: string; reason: string }[]
+  deferred: string[]
+  remainingToday: number
+}
+
+export interface OutreachStatus extends EmailRoleStatus {
+  dailyCap: number
+  sentToday: number
+  remainingToday: number
+  hasFooter: boolean
+  cursor: string | null
+  lastPollAt?: string | null
+  lastError?: string | null
+}
+
+export interface OutreachSequence {
+  id: string
+  name: string
+  enabled: boolean
+  emails: number
+  createdAt: string
+  url: string
+}
+
 export interface MarketingStatus {
+  email: EmailRoleStatus[]
   resendConfigured: boolean
   hubConfigured: boolean
 
@@ -174,6 +234,18 @@ export interface MarketingApi {
 
   syncNow(): Promise<MarketingStatus>
   testResend(): Promise<{ ok: boolean; message: string }>
+  emailProviders(): Promise<EmailProviderSummary[]>
+  testProvider(id: string): Promise<{ ok: boolean; message: string }>
+  outreachStatus(): Promise<OutreachStatus>
+  listOutreachSequences(): Promise<OutreachSequence[]>
+  saveOutreachSequence(input: OutreachSequenceInput): Promise<OutreachSequence>
+  setOutreachSequenceStatus(
+    id: string,
+    enabled: boolean,
+    confirm: boolean
+  ): Promise<OutreachSequence>
+  enrollOutreach(input: OutreachEnrollInput): Promise<OutreachEnrollResult>
+  pollOutreach(): Promise<OutreachStatus>
 
   listSources(): Promise<LeadSource[]>
   createSource(input: LeadSourceInput): Promise<LeadSource>

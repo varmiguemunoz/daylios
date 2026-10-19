@@ -19,7 +19,13 @@ export class ExternalError extends Error {
 }
 
 export interface EmailPort {
-  send(input: { to: string; subject: string; html: string; idempotencyKey: string }): Promise<void>
+  send(input: {
+    to: string
+    subject: string
+    html: string
+    idempotencyKey: string
+    role?: 'transactional' | 'marketing'
+  }): Promise<void>
   ownerEmail(): string | null
 }
 

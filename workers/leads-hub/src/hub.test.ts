@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { handle, sha256, toStatuses, type HubDeps } from './hub'
+import { handle, sha256, type HubDeps } from './hub'
 import { MemoryStore } from './store'
 import { FakeResend } from '../../../src/main/test/fake-resend'
+import {
+  resendProvider,
+  resendWebhookEvents,
+  toStatuses
+} from '../../../src/shared/email-delivery/providers/resend'
 import type { HubLeadItem, HubStatusItem } from '../../../src/shared/hub'
 
 const BASE = 'https://hub.test'
@@ -18,12 +23,12 @@ describe('leads-hub', () => {
     resend = new FakeResend()
     deps = {
       store,
-      gateway: resend,
+      provider: resendProvider(resend),
       adminToken: ADMIN,
-      verifyWebhook: (payload, headers) => {
+      events: resendWebhookEvents((payload, headers) => {
         if (headers.get('svix-signature') !== 'ok') throw new Error('bad')
         return JSON.parse(payload)
-      }
+      })
     }
     await store.putConfig({
       sources: [
@@ -160,7 +165,7 @@ describe('leads-hub', () => {
   })
 
   it('sin RESEND_API_KEY solo encola', async () => {
-    deps.gateway = null
+    deps.provider = null
     await lead({ email: 'a@x.com' })
     expect((store.items[0] as HubLeadItem).resend).toMatchObject({ ok: false, created: false })
   })

@@ -46,8 +46,10 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             services/cloud/package-lock.json
+            workers/leads-hub/package-lock.json
       - run: npm ci
       - run: npm ci --prefix services/cloud
+      - run: npm ci --prefix workers/leads-hub
       - run: npm run check
       - run: npm test
       - run: npm run release:mac
@@ -64,8 +66,10 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             services/cloud/package-lock.json
+            workers/leads-hub/package-lock.json
       - run: npm ci
       - run: npm ci --prefix services/cloud
+      - run: npm ci --prefix workers/leads-hub
       - run: npm run check
       - run: npm test
       - run: npm run release:win

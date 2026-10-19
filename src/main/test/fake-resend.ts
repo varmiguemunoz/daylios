@@ -1,14 +1,14 @@
 import { randomUUID } from 'crypto'
-import {
-  ResendError,
-  type AutomationDraft,
-  type RemoteAutomation,
-  type RemoteAutomationDetail,
-  type RemoteContact,
-  type ResendGateway
-} from '@shared/resend-gateway'
+import type {
+  ResendAutomation as RemoteAutomation,
+  ResendAutomationDetail as RemoteAutomationDetail,
+  ResendAutomationDraft as AutomationDraft,
+  ResendClient,
+  ResendContact as RemoteContact
+} from '@shared/email-delivery/providers/resend/api'
+import { resendError } from '@shared/email-delivery/providers/resend/errors'
 
-export class FakeResend implements ResendGateway {
+export class FakeResend implements ResendClient {
   contacts = new Map<
     string,
     {
@@ -43,7 +43,7 @@ export class FakeResend implements ResendGateway {
     if (this.failure) {
       const code = this.failure
       this.failure = null
-      throw new ResendError(`Fallo simulado (${code})`, code, 500)
+      throw resendError(`Fallo simulado (${code})`, code, 500)
     }
   }
 
@@ -57,7 +57,7 @@ export class FakeResend implements ResendGateway {
     return c ? { id: c.id, email: c.email, unsubscribed: c.unsubscribed } : null
   }
 
-  async createContact(input: Parameters<ResendGateway['createContact']>[0]): Promise<string> {
+  async createContact(input: Parameters<ResendClient['createContact']>[0]): Promise<string> {
     this.hit()
     const id = randomUUID()
     this.contacts.set(input.email, {
@@ -72,11 +72,11 @@ export class FakeResend implements ResendGateway {
 
   async updateContact(
     email: string,
-    patch: Parameters<ResendGateway['updateContact']>[1]
+    patch: Parameters<ResendClient['updateContact']>[1]
   ): Promise<void> {
     this.hit()
     const c = this.contacts.get(email)
-    if (!c) throw new ResendError('Contact not found', 'not_found', 404)
+    if (!c) throw resendError('Contact not found', 'not_found', 404)
     if (patch.unsubscribed !== undefined) c.unsubscribed = patch.unsubscribed
     if (patch.firstName !== undefined) c.firstName = patch.firstName
   }
@@ -126,7 +126,7 @@ export class FakeResend implements ResendGateway {
     return randomUUID()
   }
 
-  async sendBroadcast(input: Parameters<ResendGateway['sendBroadcast']>[0]): Promise<string> {
+  async sendBroadcast(input: Parameters<ResendClient['sendBroadcast']>[0]): Promise<string> {
     this.hit()
     const id = randomUUID()
     this.broadcasts.push({ id, ...input })
@@ -146,7 +146,7 @@ export class FakeResend implements ResendGateway {
   async getAutomation(id: string): Promise<RemoteAutomationDetail> {
     this.hit()
     const a = this.automations.get(id)
-    if (!a) throw new ResendError('Automation not found', 'not_found', 404)
+    if (!a) throw resendError('Automation not found', 'not_found', 404)
     return a
   }
 
@@ -160,7 +160,7 @@ export class FakeResend implements ResendGateway {
   async updateAutomation(id: string, input: Partial<AutomationDraft>): Promise<void> {
     this.hit()
     const a = this.automations.get(id)
-    if (!a) throw new ResendError('Automation not found', 'not_found', 404)
+    if (!a) throw resendError('Automation not found', 'not_found', 404)
     Object.assign(a, input)
   }
 

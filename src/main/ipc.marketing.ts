@@ -24,6 +24,16 @@ export function registerMarketingIpc(m: Marketing, notify: () => void): void {
     return m.sync.status()
   })
   read('testResend', () => m.testResend())
+  read('emailProviders', () => m.emailProviders())
+  read('testProvider', (id: string) => m.testProvider(id))
+  read('outreachStatus', () => m.outreachStatus())
+  read('listOutreachSequences', () => m.listOutreachSequences())
+  write('saveOutreachSequence', (input) => m.saveOutreachSequence(input))
+  write('setOutreachSequenceStatus', (id: string, enabled: boolean, confirm: boolean) =>
+    m.setOutreachSequenceStatus(id, enabled, confirm)
+  )
+  write('enrollOutreach', (input) => m.enrollOutreach(input))
+  write('pollOutreach', () => m.pollOutreach())
 
   read('listSources', () => m.sources.list())
   write('createSource', (input) => m.sources.create(input ?? {}))

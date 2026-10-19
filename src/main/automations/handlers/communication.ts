@@ -14,7 +14,7 @@ export interface NoteWriter {
 const EFFORTS: Effort[] = ['bajo', 'medio', 'alto']
 
 function emailPort(ctx: NodeContext): NonNullable<NodeContext['ports']['email']> {
-  if (!ctx.ports.email) throw new NotConfigured('Resend no está configurado en este equipo.')
+  if (!ctx.ports.email) throw new NotConfigured('El email no está configurado en este equipo.')
   return ctx.ports.email
 }
 
@@ -48,7 +48,13 @@ export function communicationHandlers(notes: NoteWriter): Handlers {
         const subject = ctx.render(param(ctx, 'subject')).trim()
         const html = markdownToHtml(ctx.render(param(ctx, 'body')))
         if (ctx.dryRun) return done({ to: owner, subject })
-        await port.send({ to: owner, subject, html, idempotencyKey: ctx.idempotencyKey })
+        await port.send({
+          to: owner,
+          subject,
+          html,
+          idempotencyKey: ctx.idempotencyKey,
+          role: 'transactional'
+        })
         return done({ to: owner })
       })
     },

@@ -1,5 +1,8 @@
-import { Resend } from 'resend'
-import { createResendGateway } from '../../../src/shared/resend-gateway'
+import {
+  createResendProvider,
+  createResendWebhookVerifier,
+  resendWebhookEvents
+} from '../../../src/shared/email-delivery/providers/resend'
 import { handle } from './hub'
 import { D1Store } from './store'
 
@@ -19,19 +22,10 @@ export default {
     const webhookSecret = env.RESEND_WEBHOOK_SECRET
     return handle(request, {
       store: new D1Store(env.DB),
-      gateway: env.RESEND_API_KEY ? createResendGateway(env.RESEND_API_KEY) : null,
+      provider: env.RESEND_API_KEY ? createResendProvider({ apiKey: env.RESEND_API_KEY }) : null,
       adminToken: env.ADMIN_TOKEN ?? '',
-      verifyWebhook: webhookSecret
-        ? (payload, headers) =>
-            new Resend(env.RESEND_API_KEY ?? 're_unused').webhooks.verify({
-              payload,
-              headers: {
-                id: headers.get('svix-id') ?? '',
-                timestamp: headers.get('svix-timestamp') ?? '',
-                signature: headers.get('svix-signature') ?? ''
-              },
-              webhookSecret
-            })
+      events: webhookSecret
+        ? resendWebhookEvents(createResendWebhookVerifier(webhookSecret, env.RESEND_API_KEY))
         : null
     })
   }

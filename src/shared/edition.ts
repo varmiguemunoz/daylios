@@ -107,7 +107,7 @@ export const NEVER_SYNC = {
     meetings: ['recording_path']
   } as Partial<Record<SyncTable, string[]>>,
 
-  settings: ['openaiApiKey', 'resendApiKey', 'hubAdminToken'],
+  settings: ['openaiApiKey', 'resendApiKey', 'hubAdminToken', 'apolloApiKey'],
 
   device: ['voice-queue', 'recordings-in-progress', 'session-tokens']
 } as const

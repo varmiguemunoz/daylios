@@ -63,7 +63,7 @@ src/renderer/          UI React
 
 Specs (SDD) en `.kiro/specs/`. Consultora: `.kiro/specs/consultora-context/`. Email marketing: `.kiro/specs/email-automations/`.
 
-Tests: `npm test` (Vitest dentro de Electron, porque better-sqlite3 está compilado para su ABI; base SQLite en memoria con las migraciones reales y un Resend falso). Incluye la lógica del Worker `workers/leads-hub`.
+Tests: `npm test` (Vitest dentro de Electron, porque better-sqlite3 está compilado para su ABI; base SQLite en memoria con las migraciones reales y proveedores de email falsos). Incluye la lógica del Worker `workers/leads-hub`.
 
 La app es la única que abre la base de datos. La UI y Claude pasan por el mismo servicio, así que las reglas (techo de 8, validación) son idénticas. Si Claude cambia algo, la ventana se refresca sola.
 
@@ -201,6 +201,15 @@ Claude Cowork ──MCP──▶ DayliOS ──▶ Resend (newsletter diario, se
 - **Secuencias**: Automations de Resend. Se crean en su dashboard o pidiéndoselas a Claude (`save_sequence`). Resend no deja editar una activa: hay que pausarla.
 - **Newsletter**: lo escribe y lo envía Claude (`send_newsletter`). Salvaguardas: pausa global, máximo uno por día, tag con suscritos, copia previa a tu email, enlace de baja obligatorio e historial. Si algún suscrito del tag aún no está sincronizado con Resend, no se envía.
 - **Sin conexión**: todo cambio hacia Resend pasa por una cola local con reintentos (1 min → 6 h). Ajustes → Email muestra lo pendiente.
+
+### Proveedores de email y outreach en frío
+
+El envío pasa por la capa `src/shared/email-delivery`, que separa proveedores por rol: transaccional, marketing y outreach. Por defecto transaccional y marketing usan Resend. El outreach en frío usa Apollo, porque Resend lo prohíbe en su política. Ajustes → Email muestra qué proveedor cubre cada rol. Guía para sumar proveedores en `src/shared/email-delivery/README.md`.
+
+- **Outreach**: pantalla Outreach y herramientas MCP `save_outreach_sequence`, `enroll_outreach`, `set_outreach_sequence_status`, `poll_outreach_replies` y `get_outreach_status`.
+- **Salvaguardas**: secuencias siempre creadas inactivas, activar exige confirmación, tope diario de inscritos, pie legal obligatorio y supresión global de bajas, rebotes y quejas.
+- **Respuestas**: se consultan cada 5 minutos. Una respuesta con interés crea una tarea del día.
+- **Puesta en marcha**: en Apollo conecta buzones de dominios secundarios calentados. En Ajustes → Email pega la API key maestra de Apollo, el pie legal y el tope diario, y asigna Apollo al rol Outreach en frío.
 
 ### Puesta en marcha
 

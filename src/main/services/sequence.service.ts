@@ -4,16 +4,11 @@ import {
   type SequenceInput,
   type SequenceSummary
 } from '@shared/marketing'
-import type {
-  AutomationDraft,
-  AutomationStepDraft,
-  RemoteAutomationDetail,
-  ResendGateway
-} from '@shared/resend-gateway'
+import type { DeliveryRouter, RemoteSequence, SequenceEngine } from '@shared/email-delivery'
 import { config } from '../config'
 import { AppError } from './app.error'
 import { requiredText } from './fields'
-import type { GatewayProvider } from './resend.provider'
+import { delivery, deliveryCall } from './delivery'
 
 const EVENT = /^[a-zA-Z0-9._-]{1,100}$/
 
@@ -24,32 +19,24 @@ export interface SequenceDetail extends SequenceSummary {
 }
 
 export class SequenceService {
-  constructor(private readonly gateway: GatewayProvider) {}
+  constructor(private readonly router: DeliveryRouter) {}
 
   async list(): Promise<SequenceSummary[]> {
-    const g = this.resend()
-    const list = await g.listAutomations()
-    const details = await Promise.all(list.map((a) => g.getAutomation(a.id)))
-    return details.map(summary).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    const list = await this.engine().list()
+    return list.map(summary).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   }
 
   async get(id: unknown): Promise<SequenceDetail> {
     if (typeof id !== 'string' || !id) throw new AppError('invalid', 'Falta el id de la secuencia.')
-    const a = await this.resend().getAutomation(id)
-    return {
-      ...summary(a),
-      steps: a.steps.map((s) => ({
-        key: s.key,
-        type: s.type,
-        wait: s.type === 'delay' ? String(s.config.duration ?? '') : null
-      }))
-    }
+    const detail = await this.engine().get(id)
+    return { ...summary(detail), steps: detail.steps }
   }
 
   async save(input: SequenceInput & { id?: string }): Promise<SequenceSummary> {
-    const g = this.resend()
+    const engine = this.engine()
+    const provider = delivery(() => this.router.use('marketing'))
     const from = config.from()
-    if (!from)
+    if (!from && provider.policy.sender === 'domain')
       throw new AppError(
         'invalid',
         'Configura el remitente en Ajustes → Email antes de crear secuencias.'
@@ -63,45 +50,26 @@ export class SequenceService {
       )
     }
     const emails = validEmails(input.emails)
-
-    if (input.id) {
-      const current = await g.getAutomation(input.id)
-      if (current.status === 'enabled') {
-        throw new AppError(
-          'invalid',
-          'Resend no deja editar una secuencia activa. Páusala primero y vuelve a guardarla.'
-        )
-      }
-    }
-
-    const templates: string[] = []
-    for (const [i, email] of emails.entries()) {
-      templates.push(
-        await g.createTemplate({
-          name: `${name} · ${i + 1}`,
-          subject: email.subject,
-          html: withUnsubscribeFooter(email.html),
-          from
-        })
-      )
-    }
-    const draft = buildDraft(name, event, emails, templates, input.enabled === true)
-    const id = input.id ?? (await g.createAutomation(draft))
-    if (input.id) await g.updateAutomation(input.id, draft)
-    return summary(await g.getAutomation(id))
+    const saved = await deliveryCall(
+      engine.save({
+        id: input.id,
+        name,
+        from: from || undefined,
+        entry: { mode: 'event', event },
+        steps: emails.map((email) => ({ ...email, html: withUnsubscribeFooter(email.html) })),
+        enabled: input.enabled === true
+      })
+    )
+    return summary(saved)
   }
 
   async setStatus(id: unknown, enabled: unknown): Promise<SequenceSummary> {
     if (typeof id !== 'string' || !id) throw new AppError('invalid', 'Falta el id de la secuencia.')
-    const g = this.resend()
-    await g.updateAutomation(id, { status: enabled === true ? 'enabled' : 'disabled' })
-    return summary(await g.getAutomation(id))
+    return summary(await this.engine().setEnabled(id, enabled === true))
   }
 
-  private resend(): ResendGateway {
-    const g = this.gateway()
-    if (!g) throw new AppError('invalid', 'Falta la API key de Resend (Ajustes → Email).')
-    return g
+  private engine(): SequenceEngine {
+    return delivery(() => this.router.sequences('marketing'))
   }
 }
 
@@ -126,39 +94,14 @@ function validEmails(value: unknown): Required<SequenceEmailInput>[] {
   })
 }
 
-export function buildDraft(
-  name: string,
-  event: string,
-  emails: { wait: string }[],
-  templates: string[],
-  enabled: boolean
-): AutomationDraft {
-  const steps: AutomationStepDraft[] = [
-    { key: 'start', type: 'trigger', config: { eventName: event } }
-  ]
-  emails.forEach((email, i) => {
-    if (email.wait)
-      steps.push({ key: `wait_${i + 1}`, type: 'delay', config: { duration: email.wait } })
-    steps.push({
-      key: `email_${i + 1}`,
-      type: 'send_email',
-      config: { template: { id: templates[i] } }
-    })
-  })
-  const connections = steps.slice(1).map((step, i) => ({ from: steps[i].key, to: step.key }))
-  return { name, status: enabled ? 'enabled' : 'disabled', steps, connections }
-}
-
-function summary(a: RemoteAutomationDetail): SequenceSummary {
-  const trigger = a.steps.find((s) => s.type === 'trigger')
-  const event = trigger ? (trigger.config.eventName ?? trigger.config.event_name ?? null) : null
+function summary(a: RemoteSequence): SequenceSummary {
   return {
     id: a.id,
     name: a.name,
-    status: a.status,
-    event: typeof event === 'string' ? event : null,
-    emails: a.steps.filter((s) => s.type === 'send_email').length,
+    status: a.enabled ? 'enabled' : 'disabled',
+    event: a.event,
+    emails: a.emails,
     createdAt: a.createdAt,
-    url: `https://resend.com/automations/${a.id}`
+    url: a.url
   }
 }

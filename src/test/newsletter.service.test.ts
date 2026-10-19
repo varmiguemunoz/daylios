@@ -6,6 +6,7 @@ import { TagService } from '../main/services/tag.service'
 import { MarketingSync } from '../main/services/marketing-sync'
 import { NewsletterModel } from '../main/models/marketing.model'
 import { FakeResend } from '../main/test/fake-resend'
+import { routerFor } from '../main/test/email-delivery'
 import { isolatedConfig, memoryDb } from '../main/test/helpers'
 import { saveSettings } from '../main/config'
 
@@ -19,12 +20,9 @@ describe('NewsletterService', () => {
     saveSettings({ fromEmail: 'hola@ejemplo.com', ownerEmail: 'yo@ejemplo.com' })
     db = await memoryDb()
     resend = new FakeResend()
-    const sync = new MarketingSync(db, () => resend)
-    newsletters = new NewsletterService(
-      db,
-      () => resend,
-      new TagService(db),
-      () => sync.tick()
+    const sync = new MarketingSync(db, routerFor(resend))
+    newsletters = new NewsletterService(db, routerFor(resend), new TagService(db), () =>
+      sync.tick()
     )
 
     const contacts = new ContactService(db)

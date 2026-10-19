@@ -70,7 +70,7 @@ import { initUiState } from './services/ui-state'
 import { registerConsultoraIpc } from './ipc.consultora'
 import { createMarketing } from './marketing'
 import { registerMarketingIpc } from './ipc.marketing'
-import { resendFromConfig } from './services/resend.provider'
+import { deliveryRouter, providerRegistry } from './email'
 import { hubFromConfig } from './services/hub.client'
 import { startServer } from './server'
 import { createMenubarWindow, createTray } from './window'
@@ -331,14 +331,14 @@ async function start(): Promise<void> {
   workspaceShortcut.refresh()
   app.on('will-quit', () => workspaceShortcut.dispose())
   registerConsultoraIpc(consultora, notify, voice, workspaceShortcut)
-  // Email marketing: la cola hacia Resend (y el hub) se sincroniza sola cada minuto y al despertar.
-  const marketing = createMarketing(db, resendFromConfig, hubFromConfig, notify)
+  const marketing = createMarketing(db, deliveryRouter, hubFromConfig, notify, providerRegistry)
   registerMarketingIpc(marketing, notify)
   marketing.sync.start()
+  marketing.outreachSync.start()
   powerMonitor.on('resume', () => void marketing.sync.tick())
   const automations = new AutomationEngine(db, {
     handlers: createHandlers(notes),
-    ports: createPorts(),
+    ports: createPorts(deliveryRouter),
     onRunChange: runsChangedBroadcaster(),
     onAlert: (_id, message) => macNotifier.notify('Automatización', message)
   })

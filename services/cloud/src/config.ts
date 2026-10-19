@@ -4,6 +4,7 @@ export interface CloudConfig {
   databaseUrl: string
   serviceRoleKey: string
   publicUrl: string
+  mailProvider: string
   resendApiKey: string | null
   mailFrom: string
   downloadUrl: string | null
@@ -36,6 +37,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): CloudConfig {
     databaseUrl: need('DATABASE_URL'),
     serviceRoleKey: need('SUPABASE_SERVICE_ROLE_KEY'),
     publicUrl,
+    mailProvider: env.MAIL_PROVIDER?.trim().toLowerCase() || 'resend',
     resendApiKey: env.RESEND_API_KEY?.trim() || null,
     mailFrom: env.MAIL_FROM?.trim() || 'DayliOS <hola@daylios.app>',
     downloadUrl: env.DOWNLOAD_URL?.trim() || null,

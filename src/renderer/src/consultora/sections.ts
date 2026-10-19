@@ -10,6 +10,7 @@ import {
   Tags as TagsIcon,
   Users,
   Waypoints,
+  Send,
   Workflow,
   type LucideIcon
 } from 'lucide-react'
@@ -27,6 +28,7 @@ export type Section =
   | 'automations'
   | 'sources'
   | 'sequences'
+  | 'outreach'
   | 'newsletters'
   | 'settings'
 
@@ -51,6 +53,7 @@ export const SECTIONS: SectionLink[] = [
 export const EMAIL_SECTIONS: SectionLink[] = [
   { id: 'sources', label: 'Fuentes', icon: Waypoints },
   { id: 'sequences', label: 'Secuencias', icon: MailPlus },
+  { id: 'outreach', label: 'Outreach', icon: Send },
   { id: 'newsletters', label: 'Newsletters', icon: Newspaper }
 ]
 

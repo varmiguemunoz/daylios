@@ -16,7 +16,8 @@ import { transactionGuard } from '../guards/transaction.guard'
 import { config, saveSettings } from '../config'
 import { AppError } from './app.error'
 import { now, optionalText, requiredText } from './fields'
-import type { GatewayProvider } from './resend.provider'
+import type { DeliveryRouter } from '@shared/email-delivery'
+import { delivery } from './delivery'
 import type { TagService } from './tag.service'
 
 const MAX_HTML = 500_000
@@ -24,7 +25,7 @@ const MAX_HTML = 500_000
 export class NewsletterService {
   constructor(
     private readonly db: DataSource,
-    private readonly gateway: GatewayProvider,
+    private readonly router: DeliveryRouter,
     private readonly tags: TagService,
 
     private readonly flush: () => Promise<void> = async () => {}
@@ -77,8 +78,10 @@ export class NewsletterService {
         'El newsletter está en pausa (Ajustes o pantalla Newsletters). No se envió nada.'
       )
     }
-    const g = this.gateway()
-    if (!g) throw new AppError('invalid', 'Falta la API key de Resend (Ajustes → Email).')
+    const provider = delivery(() => this.router.use('marketing'))
+    const audience = delivery(() => this.router.audience('marketing'))
+    const broadcasts = delivery(() => this.router.broadcasts('marketing'))
+    const sender = delivery(() => this.router.sender('marketing'))
     const from = config.from()
     if (!from) throw new AppError('invalid', 'Falta el remitente (Ajustes → Email).')
 
@@ -142,18 +145,18 @@ export class NewsletterService {
         : 0
       if (unsynced) {
         throw new Error(
-          `${unsynced} contacto(s) de «${summary.name}» aún no están sincronizados con Resend y se quedarían sin recibirlo`
+          `${unsynced} contacto(s) de «${summary.name}» aún no están sincronizados con ${provider.label} y se quedarían sin recibirlo`
         )
       }
       if (!tag.segmentId) {
-        tag.segmentId = await g.ensureSegment(segmentName(slug))
+        tag.segmentId = await audience.ensureGroup(segmentName(slug))
         await tags.update({ id: tag.id }, { segmentId: tag.segmentId })
       }
 
       // Copia previa al dueño: si no llega, no se envía a la lista.
       const owner = config.ownerEmail()
       if (owner) {
-        await g.sendEmail({
+        await sender.send({
           from,
           to: owner,
           replyTo: config.replyTo() || undefined,
@@ -162,8 +165,8 @@ export class NewsletterService {
         })
       }
 
-      row.broadcastId = await g.sendBroadcast({
-        segmentId: tag.segmentId,
+      const receipt = await broadcasts.send({
+        groupId: tag.segmentId,
         from,
         replyTo: config.replyTo() || undefined,
         subject,
@@ -171,6 +174,7 @@ export class NewsletterService {
         name: `Newsletter ${day} · ${summary.name}`,
         scheduledAt: scheduledAt ?? undefined
       })
+      row.broadcastId = receipt.id
       row.status = scheduledAt ? 'scheduled' : 'sent'
     } catch (error) {
       row.status = 'failed'

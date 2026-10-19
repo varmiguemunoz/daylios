@@ -5,6 +5,13 @@ import { join } from 'path'
 import type { Settings, SettingsInput } from '@shared/consultora'
 import { EDITIONS, type Edition } from '@shared/edition'
 import { NOTIFY_DEFAULTS, NOTIFY_KINDS, type NotifySettings } from '@shared/activity'
+import {
+  DEFAULT_ROLES,
+  DELIVERY_ROLES,
+  DeliveryUsageError,
+  isProviderId,
+  type RoleAssignment
+} from '@shared/email-delivery'
 import { AppError } from './services/app.error'
 
 interface StoredSettings {
@@ -31,6 +38,11 @@ interface StoredSettings {
   hubUrl: string
   hubAdminToken: string
   newsletterPaused: boolean
+  emailRoles: RoleAssignment
+  apolloApiKey: string
+  outreachDailyCap: number
+  outreachFooter: string
+  outreachCursor: string | null
 
   edition: Edition
   /** Id de este Mac en la lista de dispositivos de la cuenta. Se crea una vez. */
@@ -62,6 +74,11 @@ const DEFAULTS: StoredSettings = {
   hubUrl: '',
   hubAdminToken: '',
   newsletterPaused: false,
+  emailRoles: { ...DEFAULT_ROLES },
+  apolloApiKey: '',
+  outreachDailyCap: 30,
+  outreachFooter: '',
+  outreachCursor: null,
   edition: 'local',
   deviceId: '',
   activeOrg: null,
@@ -142,6 +159,11 @@ export const config = {
   hubUrl: (): string => current.hubUrl.replace(/\/+$/, ''),
   hubToken: (): string => current.hubAdminToken,
   newsletterPaused: (): boolean => current.newsletterPaused,
+  emailRoles: (): RoleAssignment => cleanRoles(current.emailRoles),
+  apolloKey: (): string => current.apolloApiKey,
+  outreachDailyCap: (): number => current.outreachDailyCap,
+  outreachFooter: (): string => current.outreachFooter,
+  outreachCursor: (): string | null => current.outreachCursor ?? null,
 
   edition: (): Edition => (EDITIONS.includes(current.edition) ? current.edition : 'local')
 }
@@ -170,7 +192,12 @@ export function publicSettings(): Settings {
     hubUrl: current.hubUrl,
     hasHubToken: Boolean(current.hubAdminToken),
     hubTokenHint: hint(current.hubAdminToken),
-    newsletterPaused: current.newsletterPaused
+    newsletterPaused: current.newsletterPaused,
+    emailRoles: config.emailRoles(),
+    hasApolloKey: Boolean(current.apolloApiKey),
+    apolloKeyHint: hint(current.apolloApiKey),
+    outreachDailyCap: current.outreachDailyCap,
+    outreachFooter: current.outreachFooter
   }
 }
 
@@ -242,15 +269,76 @@ export function saveSettings(input: SettingsInput): Settings {
     next.hubAdminToken = clean(input.hubAdminToken, 'El token del hub', 400)
   }
   if (input.newsletterPaused !== undefined) next.newsletterPaused = input.newsletterPaused === true
+  if (input.apolloApiKey !== undefined)
+    next.apolloApiKey = clean(input.apolloApiKey, 'La API key de Apollo', 400)
+  if (input.outreachDailyCap !== undefined) {
+    const cap = Number(input.outreachDailyCap)
+    if (!Number.isInteger(cap) || cap < 1 || cap > 1000)
+      throw new AppError('invalid', 'El tope diario de outreach va de 1 a 1000.')
+    next.outreachDailyCap = cap
+  }
+  if (input.outreachFooter !== undefined)
+    next.outreachFooter = clean(input.outreachFooter, 'El pie de outreach', 600)
+  if (input.emailRoles !== undefined)
+    next.emailRoles = parseRoles(input.emailRoles, next.emailRoles)
 
+  const previousRoles = config.emailRoles()
   persist(next)
+  const nextRoles = config.emailRoles()
+  if (JSON.stringify(previousRoles) !== JSON.stringify(nextRoles))
+    roleListeners.forEach((listener) => listener(previousRoles, nextRoles))
   return publicSettings()
+}
+
+type RoleListener = (previous: RoleAssignment, next: RoleAssignment) => void
+const roleListeners = new Set<RoleListener>()
+let validateRoles: (roles: RoleAssignment) => void = () => {}
+
+export function onRolesChanged(listener: RoleListener): () => void {
+  roleListeners.add(listener)
+  return () => roleListeners.delete(listener)
+}
+
+export function setRoleValidator(validator: (roles: RoleAssignment) => void): void {
+  validateRoles = validator
+}
+
+function cleanRoles(stored: unknown): RoleAssignment {
+  const source = stored && typeof stored === 'object' ? (stored as Record<string, unknown>) : {}
+  const roles: RoleAssignment = {}
+  for (const role of DELIVERY_ROLES) if (isProviderId(source[role])) roles[role] = source[role]
+  return roles
+}
+
+function parseRoles(input: unknown, previous: RoleAssignment): RoleAssignment {
+  if (!input || typeof input !== 'object' || Array.isArray(input))
+    throw new AppError('invalid', 'Los roles de email deben ser un objeto.')
+  const roles: RoleAssignment = { ...cleanRoles(previous) }
+  for (const [role, value] of Object.entries(input)) {
+    if (!(DELIVERY_ROLES as readonly string[]).includes(role))
+      throw new AppError('invalid', `Rol de email desconocido: «${role}».`)
+    const key = role as keyof RoleAssignment
+    if (value === null || value === '') delete roles[key]
+    else if (isProviderId(value)) roles[key] = value
+    else throw new AppError('invalid', `Proveedor de email desconocido: «${String(value)}».`)
+  }
+  try {
+    validateRoles(roles)
+  } catch (error) {
+    if (error instanceof DeliveryUsageError) throw new AppError('invalid', error.message)
+    throw error
+  }
+  return roles
 }
 
 function persist(next: StoredSettings): void {
   writeFileSync(file, JSON.stringify(next, null, 2), { mode: 0o600 })
   chmodSync(file, 0o600)
   current = next
+}
+
+export function saveOutreachCursor(cursor: string | null): void {
+  if (current.outreachCursor !== cursor) persist({ ...current, outreachCursor: cursor })
 }
 
 /** La edición la cambia la cuenta: Equipo al iniciar sesión, Local al cerrarla. */

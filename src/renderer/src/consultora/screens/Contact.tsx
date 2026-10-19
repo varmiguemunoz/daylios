@@ -412,6 +412,20 @@ function describe(e: ContactEvent): { icon: typeof Mail; text: string; tone: str
     case 'promoted':
       return { icon: UserPlus, text: `Pasó a pipeline como ${d.company}`, tone: 'text-ob-link' }
     case 'sync_error':
-      return { icon: CircleAlert, text: `Error con Resend: ${d.error}`, tone: 'text-ob-red' }
+      return {
+        icon: CircleAlert,
+        text: `Error con el proveedor de email: ${d.error}`,
+        tone: 'text-ob-red'
+      }
+    case 'outreach_enrolled':
+      return { icon: Mail, text: `Inscrito en outreach: ${d.sequence ?? 'secuencia'}`, tone: SOFT }
+    case 'outreach_skipped':
+      return { icon: MailX, text: `No inscrito en outreach: ${d.reason}`, tone: SOFT }
+    case 'outreach_reply':
+      return {
+        icon: Mail,
+        text: `Respondió al outreach${d.class ? `: ${d.class}` : ''}`,
+        tone: 'text-ob-link'
+      }
   }
 }

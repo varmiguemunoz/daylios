@@ -10,6 +10,7 @@ import { marketingRoutes } from '../main/routes/marketing.routes'
 import { errorHandler, notFound } from '../main/middlewares/error.middleware'
 import { ContactService } from '../main/services/contact.service'
 import { FakeResend } from '../main/test/fake-resend'
+import { routerFor } from '../main/test/email-delivery'
 import { isolatedConfig, memoryDb } from '../main/test/helpers'
 import { saveSettings } from '../main/config'
 
@@ -26,7 +27,7 @@ describe('/marketing (API que usa Claude)', () => {
     resend = new FakeResend()
     const marketing = createMarketing(
       db,
-      () => resend,
+      routerFor(resend),
       () => null,
       () => {}
     )
@@ -105,7 +106,7 @@ describe('/marketing (API que usa Claude)', () => {
 
     const marketing = createMarketing(
       db,
-      () => resend,
+      routerFor(resend),
       () => null,
       () => {}
     )

@@ -194,7 +194,7 @@ describe('acciones reales', () => {
     expect(sent[0].html).toContain('RESEND_UNSUBSCRIBE_URL')
   })
 
-  it('el email se omite si el contacto no está suscrito o si Resend no está configurado', async () => {
+  it('el email se omite si el contacto no está suscrito o si el email no está configurado', async () => {
     await publish(chain(trigger('a'), node('e', 'send_email', { subject: 'x', body: 'y' })))
     const c = await contacts.create({ name: 'Sin alta', email: 'b@acme.com' })
     await contacts.tag(c.id, { add: ['a'] })
@@ -209,7 +209,7 @@ describe('acciones reales', () => {
     await contacts.tag(c.id, { remove: ['a'] })
     await contacts.tag(c.id, { add: ['a'] })
     await settle()
-    expect((await steps()).at(-1)?.message).toBe('Resend no está configurado en este equipo.')
+    expect((await steps()).at(-1)?.message).toBe('El email no está configurado en este equipo.')
     expect(sent).toHaveLength(0)
   })
 

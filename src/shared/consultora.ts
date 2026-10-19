@@ -1,3 +1,4 @@
+import type { DeliveryRole, RoleAssignment } from './email-delivery'
 import type { ContactEvent, ContactFields, ContactStatus, TagRef } from './marketing'
 import type { ClientNote } from './notes'
 
@@ -412,6 +413,11 @@ export interface Settings {
   hasHubToken: boolean
   hubTokenHint: string
   newsletterPaused: boolean
+  emailRoles: RoleAssignment
+  hasApolloKey: boolean
+  apolloKeyHint: string
+  outreachDailyCap: number
+  outreachFooter: string
 }
 
 export interface VoiceStatus {
@@ -449,6 +455,10 @@ export interface SettingsInput {
 
   hubAdminToken?: string
   newsletterPaused?: boolean
+  emailRoles?: Partial<Record<DeliveryRole, string | null>>
+  apolloApiKey?: string
+  outreachDailyCap?: number
+  outreachFooter?: string
 }
 
 export type NoteEntity = 'client' | 'project' | 'prospect' | 'meeting'
