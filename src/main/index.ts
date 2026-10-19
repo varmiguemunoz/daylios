@@ -14,6 +14,7 @@ import {
   safeStorage,
   shell
 } from 'electron'
+import { existsSync } from 'fs'
 import { join } from 'path'
 import { pathToFileURL } from 'url'
 import { APP_ID, APP_NAME, DATA_DIR } from '@shared/app'
@@ -134,8 +135,10 @@ async function start(): Promise<void> {
   const dataDir = app.getPath('userData')
   loadConfig(dataDir, platformDefaults(process.platform, app.getPath('desktop')))
   initLoginItem(dataDir)
+  const updateFeed = app.isPackaged && existsSync(join(process.resourcesPath, 'app-update.yml'))
   const updater = new Updater({
-    enabled: app.isPackaged,
+    enabled: updateFeed,
+    disabledReason: app.isPackaged ? 'local-build' : 'unpackaged',
     onState: broadcastUpdate,
     onReady: (version) => {
       if (!Notification.isSupported()) return

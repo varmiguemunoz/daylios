@@ -21,7 +21,8 @@ export const dataDirFor = (
 ): string => join(appDataRoot(platform, home, env), DATA_DIR)
 
 export type UpdateState =
-  | { status: 'disabled' | 'idle' | 'checking' | 'none' }
+  | { status: 'disabled'; reason?: 'unpackaged' | 'local-build' }
+  | { status: 'idle' | 'checking' | 'none' }
   | { status: 'downloading'; version: string; percent: number }
   | { status: 'ready'; version: string }
   | { status: 'error'; message: string }

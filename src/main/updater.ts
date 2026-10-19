@@ -5,6 +5,7 @@ const EVERY = 6 * 60 * 60 * 1000
 
 export interface UpdaterDeps {
   enabled: boolean
+  disabledReason?: 'unpackaged' | 'local-build'
   onState: (state: UpdateState) => void
   onReady: (version: string) => void
 }
@@ -13,7 +14,9 @@ export class Updater {
   private state: UpdateState
 
   constructor(private readonly deps: UpdaterDeps) {
-    this.state = { status: deps.enabled ? 'idle' : 'disabled' }
+    this.state = deps.enabled
+      ? { status: 'idle' }
+      : { status: 'disabled', reason: deps.disabledReason ?? 'unpackaged' }
   }
 
   current(): UpdateState {

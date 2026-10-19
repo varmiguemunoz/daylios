@@ -9,7 +9,9 @@ const app = window.api.app
 function updateText(state: UpdateState): string {
   switch (state.status) {
     case 'disabled':
-      return 'Las actualizaciones automáticas solo funcionan en la app instalada.'
+      return state.reason === 'local-build'
+        ? 'Esta copia se compiló desde el código y no recibe actualizaciones. Instala la versión oficial desde la página de versiones de GitHub.'
+        : 'Las actualizaciones automáticas solo funcionan en la app instalada.'
     case 'checking':
       return 'Buscando actualizaciones…'
     case 'none':
