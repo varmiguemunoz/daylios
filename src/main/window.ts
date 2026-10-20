@@ -1,4 +1,13 @@
-import { BrowserWindow, Menu, Tray, nativeImage, screen, shell, type Rectangle } from 'electron'
+import {
+  app,
+  BrowserWindow,
+  Menu,
+  Tray,
+  nativeImage,
+  screen,
+  shell,
+  type Rectangle
+} from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import trayTemplate from '../../resources/trayTemplate.png?asset'
@@ -41,6 +50,7 @@ export function createMenubarWindow(): BrowserWindow {
 
   // Se cierra al perder el foco, como un popover nativo. Fijada se queda, como una ventana.
   win.on('blur', () => {
+    if (win.isDestroyed()) return
     if (!pinState().pinned && !win.webContents.isDevToolsOpened()) win.hide()
   })
 
@@ -103,7 +113,10 @@ export function createTray(
   const tray = new Tray(image)
   tray.setToolTip('Alisuite')
 
+  const alive = (): boolean => !win.isDestroyed() && !tray.isDestroyed()
+
   const show = (): void => {
+    if (!alive()) return
     const state = pinState()
     const saved =
       state.pinned && state.x !== undefined && state.y !== undefined
@@ -118,7 +131,7 @@ export function createTray(
 
   const menu = Menu.buildFromTemplate([
     { label: 'Abrir Alisuite', click: show },
-    { label: 'Abrir Consultora', click: openConsultora },
+    { label: 'Abrir Consultora', click: () => alive() && openConsultora() },
     { type: 'separator' },
     { label: 'Salir de Alisuite', click: quitWithNotice }
   ])
@@ -126,12 +139,16 @@ export function createTray(
   let hiddenAt = 0
   win.on('hide', () => (hiddenAt = Date.now()))
   tray.on('click', () => {
+    if (!alive()) return
     if (win.isVisible()) win.hide()
     else if (isMac || Date.now() - hiddenAt > 300) show()
   })
-  tray.on('right-click', () => tray.popUpContextMenu(menu))
+  tray.on('right-click', () => alive() && tray.popUpContextMenu(menu))
+  win.on('closed', () => !tray.isDestroyed() && tray.destroy())
+  app.on('will-quit', () => !tray.isDestroyed() && tray.destroy())
 
   const setPinned = (pinned: boolean): MenubarWindowState => {
+    if (!alive()) return pinState()
     const b = win.getBounds()
     const state: MenubarWindowState = pinned
       ? { pinned: true, x: b.x, y: b.y, height: b.height }
@@ -143,6 +160,7 @@ export function createTray(
   }
 
   const unpinAndReset = (): void => {
+    if (!alive()) return
     applyPinned(win, false)
     if (win.isVisible()) placeUnder(win, tray)
   }

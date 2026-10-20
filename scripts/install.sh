@@ -2,7 +2,7 @@
 # Alisuite · instalación como servicio en macOS
 #
 # 1. Compila la app y la copia a /Applications
-# 2. La registra como LaunchAgent: arranca al iniciar sesión y, si se cierra o falla, launchd la vuelve a abrir
+# 2. La registra como LaunchAgent: arranca al iniciar sesión y, si falla, launchd la vuelve a abrir. Salir o actualizar no la reabre
 # 3. Configura el servidor MCP en Claude (claude_desktop_config.json)
 #
 # Uso: npm run service:install   (se puede correr las veces que quieras: reinstala encima)
@@ -97,9 +97,12 @@ cat > "$PLIST" <<PLIST
   <!-- Arranca al iniciar sesión -->
   <key>RunAtLoad</key>
   <true/>
-  <!-- Si se cierra (o falla), launchd la vuelve a abrir -->
+  <!-- Solo si falla: salir o instalar una actualización no la reabre -->
   <key>KeepAlive</key>
-  <true/>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
   <!-- Espera mínima entre reinicios, para no entrar en bucle si algo falla al arrancar -->
   <key>ThrottleInterval</key>
   <integer>10</integer>
@@ -157,7 +160,7 @@ cat <<INFO
   → Consultora: clic derecho en el icono del menubar → «Abrir Consultora».
     En Ajustes pega tu API key de OpenAI y elige la carpeta de clientes.
     La primera grabación pide permisos de Micrófono y Grabación de pantalla.
-  → "Salir" en el menubar cierra la app, pero el servicio la vuelve a abrir en ~10 s.
+  → "Salir" cierra la app. Claude la vuelve a abrir al usar el MCP.
     Para detenerla de verdad: npm run service:uninstall
 
 INFO
