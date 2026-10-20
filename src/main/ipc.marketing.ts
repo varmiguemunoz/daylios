@@ -29,6 +29,10 @@ export function registerMarketingIpc(m: Marketing, notify: () => void): void {
   read('outreachStatus', () => m.outreachStatus())
   read('listOutreachSequences', () => m.listOutreachSequences())
   write('saveOutreachSequence', (input) => m.saveOutreachSequence(input))
+  read('getOutreachSequence', (id: string) => m.getOutreachSequence(id))
+  write('archiveOutreachSequence', (id: string, confirm: boolean) =>
+    m.archiveOutreachSequence(id, confirm)
+  )
   write('setOutreachSequenceStatus', (id: string, enabled: boolean, confirm: boolean) =>
     m.setOutreachSequenceStatus(id, enabled, confirm)
   )
@@ -40,8 +44,6 @@ export function registerMarketingIpc(m: Marketing, notify: () => void): void {
   write('updateSource', (slug: string, patch) => m.sources.update(slug, patch ?? {}))
   write('rotateSourceSecret', (slug: string) => m.sources.rotateSecret(slug))
   write('removeSource', (slug: string) => m.sources.remove(slug))
-  read('listSequences', () => m.sequences.list())
-  write('setSequenceStatus', (id: string, enabled: boolean) => m.sequences.setStatus(id, enabled))
   read('listNewsletters', () => m.newsletters.list())
   read('getNewsletter', (id: string) => m.newsletters.get(id))
   read('newsletterContext', () => m.newsletters.context())

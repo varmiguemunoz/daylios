@@ -26,7 +26,7 @@ describe('MarketingSync (outbox → Resend)', () => {
 
   const jobs = (): Promise<number> => db.getRepository(OutboxModel).count()
 
-  it('crea el contacto con un segment por tag y luego dispara los eventos', async () => {
+  it('crea el contacto con un segment por tag y no dispara eventos', async () => {
     const c = await contacts.create({ name: 'Ana López', email: 'ana@x.com' })
     await contacts.subscribe(c.id)
     await contacts.tag(c.id, { add: ['webinar'] })
@@ -39,7 +39,7 @@ describe('MarketingSync (outbox → Resend)', () => {
     const tag = await db.getRepository(TagModel).findOneByOrFail({ slug: 'webinar' })
     expect(resend.segments.get(tag.segmentId!)).toBe('tag:webinar')
     expect([...remote.segments]).toEqual([tag.segmentId])
-    expect(resend.events.map((e) => e.event)).toEqual(['lead.created', 'tag.webinar'])
+    expect(resend.events).toEqual([])
     expect(await jobs()).toBe(0)
     expect(
       (await db.getRepository(ContactModel).findOneByOrFail({ id: c.id })).syncedAt
@@ -87,7 +87,6 @@ describe('MarketingSync (outbox → Resend)', () => {
     expect((await db.getRepository(ContactModel).findOneByOrFail({ id: c.id })).syncError).toMatch(
       /Fallo/
     )
-    expect(resend.events).toHaveLength(0) // el evento espera al contacto
     expect((await sync.status()).failing).toBe(1)
 
     // Vence el reintento.
@@ -96,7 +95,7 @@ describe('MarketingSync (outbox → Resend)', () => {
       .update({ kind: In(['contact', 'event']) }, { nextAt: new Date(0).toISOString() })
     await sync.tick()
     expect(await jobs()).toBe(0)
-    expect(resend.events.map((e) => e.event)).toEqual(['lead.created'])
+    expect(resend.events).toEqual([])
     expect(
       (await db.getRepository(ContactModel).findOneByOrFail({ id: c.id })).syncError
     ).toBeNull()
@@ -134,7 +133,7 @@ describe('MarketingSync (outbox → Resend)', () => {
     const c = await contacts.create({ email: 'ana@x.com' })
     await contacts.subscribe(c.id)
     await offline.tick()
-    expect(await jobs()).toBe(2)
+    expect(await jobs()).toBe(1)
     expect((await offline.status()).resendConfigured).toBe(false)
   })
 })

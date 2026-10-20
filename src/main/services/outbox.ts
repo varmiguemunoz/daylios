@@ -46,16 +46,6 @@ export async function enqueueContactSync(
   notify()
 }
 
-export async function enqueueEvent(
-  manager: EntityManager,
-  contactId: string,
-  event: string,
-  payload: Record<string, unknown> = {}
-): Promise<void> {
-  await manager.getRepository(OutboxModel).save(job('event', contactId, { event, payload }))
-  notify()
-}
-
 export async function enqueueSegmentDelete(
   manager: EntityManager,
   slug: string,

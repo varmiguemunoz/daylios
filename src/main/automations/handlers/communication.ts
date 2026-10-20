@@ -1,8 +1,6 @@
 import { markdownToHtml } from '@shared/automations'
 import { withUnsubscribeFooter } from '@shared/marketing'
 import type { DayKey, Effort } from '@shared/tasks'
-import { ContactModel } from '../../models/contact.model'
-import { enqueueEvent } from '../../services/outbox'
 import { insertTaskWithRoom } from '../../services/task.service'
 import { NotConfigured, type Handlers, type NodeContext } from '../ports'
 import { clientIdOf, done, guarded, manager, numberParam, param, Skip, today } from './shared'
@@ -59,13 +57,8 @@ export function communicationHandlers(notes: NoteWriter): Handlers {
       })
     },
     start_sequence: {
-      run: guarded(async (ctx) => {
-        const contact = contactRef(ctx)
-        if (!contact.id) throw new Skip('No hay contacto.')
-        const fresh = await manager(ctx).getRepository(ContactModel).findOneBy({ id: contact.id })
-        if (fresh?.status !== 'subscribed') throw new Skip('El contacto no está suscrito.')
-        await enqueueEvent(manager(ctx), fresh.id, param(ctx, 'event'), { origin: 'automation' })
-        return done()
+      run: guarded(async () => {
+        throw new Skip('Las secuencias de Resend se retiraron.')
       })
     },
     create_task: {

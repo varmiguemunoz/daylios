@@ -42,8 +42,8 @@ import { Contact } from './screens/Contact'
 import { Sources } from './screens/Sources'
 import { Automations } from './screens/Automations'
 import { AutomationEditor } from './screens/AutomationEditor'
-import { Sequences } from './screens/Sequences'
 import { Outreach } from './screens/Outreach'
+import { OutreachSequence } from './screens/OutreachSequence'
 import { Newsletters } from './screens/Newsletters'
 import { Tags } from './screens/Tags'
 import { Note } from './screens/Note'
@@ -69,8 +69,8 @@ const LABEL: Record<Screen['name'], string> = {
   automations: 'Automatizaciones',
   automation: 'Automatización',
   sources: 'Fuentes',
-  sequences: 'Secuencias',
   outreach: 'Outreach',
+  'outreach-sequence': 'Secuencia',
   newsletters: 'Newsletters',
   note: 'Nota',
   document: 'Documento',
@@ -98,8 +98,8 @@ const SECTION_OF: Record<Screen['name'], Section | null> = {
   automations: 'automations',
   automation: 'automations',
   sources: 'sources',
-  sequences: 'sequences',
   outreach: 'outreach',
+  'outreach-sequence': 'outreach',
   newsletters: 'newsletters',
   note: null,
   document: 'clients',
@@ -492,10 +492,10 @@ function ScreenView({
       return <AutomationEditor id={screen.id} back={back} />
     case 'sources':
       return <Sources go={go} />
-    case 'sequences':
-      return <Sequences go={go} />
     case 'outreach':
       return <Outreach go={go} />
+    case 'outreach-sequence':
+      return <OutreachSequence key={screen.id ?? 'nueva'} id={screen.id} go={go} />
     case 'newsletters':
       return <Newsletters />
     case 'note':

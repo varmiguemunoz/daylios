@@ -2,7 +2,6 @@ import type { DataSource } from 'typeorm'
 import { TagService } from './services/tag.service'
 import { MarketingSync } from './services/marketing-sync'
 import { SourceService } from './services/source.service'
-import { SequenceService } from './services/sequence.service'
 import { NewsletterService } from './services/newsletter.service'
 import { HubSync } from './services/hub-sync'
 import {
@@ -12,8 +11,13 @@ import {
   type ProviderId,
   type ProviderRegistry
 } from '@shared/email-delivery'
-import type { EmailProviderSummary, OutreachSequence, OutreachStatus } from '@shared/marketing'
-import type { RemoteSequence } from '@shared/email-delivery'
+import type {
+  EmailProviderSummary,
+  OutreachSequence,
+  OutreachSequenceDetail,
+  OutreachStatus
+} from '@shared/marketing'
+import type { RemoteSequence, RemoteSequenceDetail } from '@shared/email-delivery'
 import { onRolesChanged } from './config'
 import { resetAudience } from './services/audience-reset'
 import { OutreachService } from './services/outreach.service'
@@ -55,7 +59,6 @@ export function createMarketing(
   return {
     tags,
     sources: new SourceService(db, configChanged),
-    sequences: new SequenceService(delivery),
     newsletters: new NewsletterService(db, delivery, tags, () => sync.tick()),
     sync,
     hubSync,
@@ -64,6 +67,8 @@ export function createMarketing(
     outreachStatus,
     listOutreachSequences: async () => (await outreach.list()).map(toOutreach),
     saveOutreachSequence: async (input) => toOutreach(await outreach.save(input)),
+    getOutreachSequence: async (id) => toOutreachDetail(await outreach.get(id)),
+    archiveOutreachSequence: (id, confirm) => outreach.archive(id, confirm),
     setOutreachSequenceStatus: async (id, enabled, confirm) =>
       toOutreach(await outreach.setEnabled(id, enabled, confirm)),
     enrollOutreach: (input) => outreach.enroll(input),
@@ -106,7 +111,6 @@ export function createMarketing(
 export interface Marketing {
   tags: TagService
   sources: SourceService
-  sequences: SequenceService
   newsletters: NewsletterService
   sync: MarketingSync
   hubSync: HubSync
@@ -115,6 +119,8 @@ export interface Marketing {
   outreachStatus(): Promise<OutreachStatus>
   listOutreachSequences(): Promise<OutreachSequence[]>
   saveOutreachSequence(input: Parameters<OutreachService['save']>[0]): Promise<OutreachSequence>
+  getOutreachSequence(id: unknown): Promise<OutreachSequenceDetail>
+  archiveOutreachSequence(id: unknown, confirm: unknown): Promise<{ ok: true }>
   setOutreachSequenceStatus(
     id: unknown,
     enabled: unknown,
@@ -152,4 +158,18 @@ const toOutreach = (s: RemoteSequence): OutreachSequence => ({
   emails: s.emails,
   createdAt: s.createdAt,
   url: s.url
+})
+
+const toOutreachDetail = (s: RemoteSequenceDetail): OutreachSequenceDetail => ({
+  ...toOutreach(s),
+  steps: s.steps.map((step, i) => ({
+    id: step.key,
+    touchId: step.touchId,
+    templateId: step.templateId,
+    position: step.position ?? i + 1,
+    wait: step.wait ?? '',
+    subject: step.subject ?? '',
+    html: step.html ?? '',
+    thread: step.thread ?? 'new'
+  }))
 })

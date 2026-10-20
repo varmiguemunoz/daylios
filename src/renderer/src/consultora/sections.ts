@@ -4,7 +4,6 @@ import {
   CalendarClock,
   Library,
   ListChecks,
-  MailPlus,
   Newspaper,
   SquareKanban,
   Tags as TagsIcon,
@@ -27,7 +26,6 @@ export type Section =
   | 'tags'
   | 'automations'
   | 'sources'
-  | 'sequences'
   | 'outreach'
   | 'newsletters'
   | 'settings'
@@ -52,7 +50,6 @@ export const SECTIONS: SectionLink[] = [
 
 export const EMAIL_SECTIONS: SectionLink[] = [
   { id: 'sources', label: 'Fuentes', icon: Waypoints },
-  { id: 'sequences', label: 'Secuencias', icon: MailPlus },
   { id: 'outreach', label: 'Outreach', icon: Send },
   { id: 'newsletters', label: 'Newsletters', icon: Newspaper }
 ]

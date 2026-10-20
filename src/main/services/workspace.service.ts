@@ -30,7 +30,10 @@ import {
 } from '@shared/workspace'
 import {
   EMPTY_CANVAS,
-  applyBoardOps,
+  BOARD_LAYOUTS,
+  describeErrors,
+  planBoardOps,
+  type BoardLayout,
   canvasFileRefs,
   parseCanvas,
   rewriteCanvasFiles,
@@ -51,6 +54,8 @@ import { AppError } from './app.error'
 import { safeName, type DiskEntry, type Vault } from './vault'
 
 const iso = (ms: number): string => new Date(ms).toISOString()
+
+export const MAX_BOARD_OPS = 500
 
 export function toItem(r: WorkspaceRow): WorkspaceItem {
   return {
@@ -380,21 +385,37 @@ export class WorkspaceService {
     }
   }
 
-  editBoard(id: string, ops: BoardOp[]): Promise<{ created: string[]; item: WorkspaceItem }> {
+  editBoard(
+    id: string,
+    ops: BoardOp[],
+    options: { layout?: unknown } = {}
+  ): Promise<{ created: string[]; item: WorkspaceItem; nodes: number; edges: number }> {
     return this.exclusive(async () => {
       const row = await this.rowOrFail(id)
       if (row.kind !== 'board') throw new AppError('invalid', 'Eso no es un board.')
       if (!Array.isArray(ops) || !ops.length)
         throw new AppError('invalid', 'Pasa al menos una operación.')
-      let result: ReturnType<typeof applyBoardOps>
-      try {
-        result = applyBoardOps(parseCanvas(await this.vault.readText(row.path)), ops)
-      } catch (error) {
-        throw new AppError('invalid', (error as Error).message)
-      }
+      if (ops.length > MAX_BOARD_OPS)
+        throw new AppError('invalid', `Máximo ${MAX_BOARD_OPS} operaciones por llamada.`)
+      const layout = options.layout
+      if (layout !== undefined && !BOARD_LAYOUTS.includes(layout as BoardLayout))
+        throw new AppError('invalid', `Layout desconocido. Usa ${BOARD_LAYOUTS.join(', ')}.`)
+      const result = planBoardOps(parseCanvas(await this.vault.readText(row.path)), ops, {
+        layout: layout as BoardLayout | undefined
+      })
+      if (result.errors.length)
+        throw new AppError(
+          'invalid',
+          `No se aplicó ningún cambio. ${result.errors.length} operación(es) con error:\n${describeErrors(result.errors)}`
+        )
       await this.vault.writeText(row.path, serializeCanvas(result.canvas))
       const fresh = await this.refreshOne(row.path)
-      return { created: result.created, item: toItem(fresh) }
+      return {
+        created: result.created,
+        item: toItem(fresh),
+        nodes: result.canvas.nodes.length,
+        edges: result.canvas.edges.length
+      }
     })
   }
 

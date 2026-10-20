@@ -7,6 +7,7 @@ import { MENUBAR_WINDOW_KEY, type MenubarWindowState } from '@shared/ui-state'
 import { uiState } from './services/ui-state'
 import { isMac } from './platform'
 import { placeNearTray } from './tray-placement'
+import { quitWithNotice } from './app-menu'
 
 const WIDTH = 400
 const HEIGHT = 760
@@ -119,7 +120,7 @@ export function createTray(
     { label: 'Abrir Alisuite', click: show },
     { label: 'Abrir Consultora', click: openConsultora },
     { type: 'separator' },
-    { label: 'Salir', role: 'quit' }
+    { label: 'Salir de Alisuite', click: quitWithNotice }
   ])
 
   let hiddenAt = 0

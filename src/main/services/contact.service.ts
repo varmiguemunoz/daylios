@@ -13,12 +13,10 @@ import {
 } from '@shared/consultora'
 import {
   CONTACT_STATUSES,
-  LEAD_CREATED,
   contactLabel,
   isEmail,
   normalizeEmail,
   slugify,
-  tagEvent,
   type ContactEventType,
   type ContactFields,
   type ContactStatus,
@@ -39,7 +37,7 @@ import { findByRef } from './ref'
 import { markdown, now, oneOf, optionalText } from './fields'
 import { brief } from './meeting.helpers'
 import { ensureTags, tagsByContact } from './tag.service'
-import { enqueueContactSync, enqueueEvent } from './outbox'
+import { enqueueContactSync } from './outbox'
 import { insertProspect } from './prospect.service'
 
 const PAGE_SIZE = 50
@@ -244,7 +242,6 @@ export class ContactService {
             : 'Marcó un email como spam: no se puede volver a suscribir.'
         )
       }
-      const first = !contact.consentAt
       const resubscribe = contact.status === 'unsubscribed'
       contact.status = 'subscribed'
       contact.source ??= 'manual'
@@ -259,7 +256,6 @@ export class ContactService {
         { origin: 'manual' }
       )
       await enqueueContactSync(manager, contact.id, { resubscribe })
-      if (first) await enqueueEvent(manager, contact.id, LEAD_CREATED, { source: contact.source })
       return contact
     })
   }
@@ -416,7 +412,6 @@ export async function changeTags(
     add: string[]
     remove: string[]
     remoteDone?: boolean
-    extraEvents?: string[]
   }
 ): Promise<{ added: string[]; removed: string[] }> {
   const links = manager.getRepository(ContactTagModel)
@@ -449,10 +444,6 @@ export async function changeTags(
 
   if ((added.length || removed.length) && contact.status !== 'none' && !change.remoteDone) {
     await enqueueContactSync(manager, contact.id)
-  }
-  if (contact.status === 'subscribed' && !change.remoteDone) {
-    for (const slug of added) await enqueueEvent(manager, contact.id, tagEvent(slug))
-    for (const event of change.extraEvents ?? []) await enqueueEvent(manager, contact.id, event)
   }
   return { added, removed }
 }

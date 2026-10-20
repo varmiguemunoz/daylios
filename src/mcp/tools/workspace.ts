@@ -48,6 +48,39 @@ const boardOp = z.discriminatedUnion('op', [
   z.object({ op: z.literal('remove_edge'), id: z.string() })
 ])
 
+const layout = z
+  .enum(['flow-down', 'flow-right', 'tree', 'grid'])
+  .describe('acomodo automático de los nodos nuevos sin x/y')
+
+export function diagramOps(
+  nodes: {
+    id: string
+    text: string
+    kind?: 'shape' | 'sticky' | 'text'
+    shape?: string
+    color?: string
+  }[],
+  edges: { from: string; to: string; label?: string; arrow?: 'none' | 'end' | 'both' }[]
+): Record<string, unknown>[] {
+  return [
+    ...nodes.map((n) => ({
+      op: 'add_node',
+      id: n.id,
+      kind: n.kind ?? 'shape',
+      text: n.text,
+      ...((n.kind ?? 'shape') === 'shape' ? { shape: n.shape ?? 'rect' } : {}),
+      ...(n.color ? { color: n.color } : {})
+    })),
+    ...edges.map((e) => ({
+      op: 'add_edge',
+      from: e.from,
+      to: e.to,
+      ...(e.label ? { label: e.label } : {}),
+      ...(e.arrow ? { arrow: e.arrow } : {})
+    }))
+  ]
+}
+
 export function register(server: McpServer): void {
   server.registerTool(
     'workspace_tree',
@@ -168,11 +201,65 @@ export function register(server: McpServer): void {
     {
       description:
         'Edita un board con operaciones en orden: add_node, update_node, remove_node, add_edge, remove_edge. ' +
-        'Pon id propios en add_node para conectarlos en la misma llamada. Sin x/y, los nodos nuevos van a la ' +
-        'derecha de lo que ya hay. Para crear un board vacío usa workspace_create_board.',
-      inputSchema: { board: item, ops: z.array(boardOp).min(1).max(200) }
+        'Pon id propios en add_node para conectarlos en la misma llamada. Si alguna operación falla no se aplica ' +
+        'ninguna y recibes todos los errores con su número. Con layout, los nodos nuevos sin x/y se acomodan solos ' +
+        '(flow-down, flow-right, tree, grid) a la derecha de lo que ya hay; sin layout van en fila. ' +
+        'Responde con los ids creados y los conteos; pide response: "full" solo si necesitas el board entero. ' +
+        'Hasta 500 operaciones por llamada. Para diagramas de flujo completos usa board_diagram.',
+      inputSchema: {
+        board: item,
+        ops: z.array(boardOp).min(1).max(500),
+        layout: layout.optional(),
+        response: z.enum(['compact', 'full']).optional()
+      }
     },
-    ({ board, ops }) => tool(() => api('POST', `/workspace/boards/${enc(board)}/ops`, { ops }))
+    ({ board, ops, layout: l, response }) =>
+      tool(() => api('POST', `/workspace/boards/${enc(board)}/ops`, { ops, layout: l, response }))
+  )
+
+  server.registerTool(
+    'board_diagram',
+    {
+      description:
+        'Dibuja un diagrama completo en un board en una sola llamada: nodos con id propio y conexiones entre ellos. ' +
+        'Se acomoda solo (flow-down por defecto) y las flechas salen del lado correcto. Úsalo para diagramas de ' +
+        'flujo, organigramas, mapas mentales o grafos. Shapes: rect para pasos, diamond para decisiones, ellipse ' +
+        'para inicio y fin. Hasta 250 nodos y 250 conexiones; para más, divide en varias llamadas.',
+      inputSchema: {
+        board: item,
+        layout: layout.optional(),
+        nodes: z
+          .array(
+            z.object({
+              id: z.string().min(1).max(60),
+              text: z.string().max(2000),
+              kind: z.enum(['shape', 'sticky', 'text']).optional().describe('por defecto shape'),
+              shape: z.enum(['rect', 'ellipse', 'diamond']).optional(),
+              color: color.optional()
+            })
+          )
+          .min(1)
+          .max(250),
+        edges: z
+          .array(
+            z.object({
+              from: z.string(),
+              to: z.string(),
+              label: z.string().max(200).optional(),
+              arrow: z.enum(['none', 'end', 'both']).optional()
+            })
+          )
+          .max(250)
+          .optional()
+      }
+    },
+    ({ board, layout: l, nodes, edges }) =>
+      tool(() =>
+        api('POST', `/workspace/boards/${enc(board)}/ops`, {
+          layout: l ?? 'flow-down',
+          ops: diagramOps(nodes, edges ?? [])
+        })
+      )
   )
 
   server.registerTool(

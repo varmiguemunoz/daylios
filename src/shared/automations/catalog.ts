@@ -73,6 +73,7 @@ export interface NodeSpec {
   terminal: boolean
   params: ParamSpec[]
   outputs: { key: string; label: string }[]
+  retired?: string
   ports(params: Params): string[]
   validate?(params: Params): string[]
   sentence(params: Params, names: Names): string
@@ -148,7 +149,7 @@ const action = (
     NodeSpec,
     'kind' | 'ports' | 'terminal' | 'outputs' | 'external' | 'destructive' | 'communication'
   > &
-    Partial<Pick<NodeSpec, 'outputs' | 'external' | 'destructive' | 'communication'>>
+    Partial<Pick<NodeSpec, 'outputs' | 'external' | 'destructive' | 'communication' | 'retired'>>
 ): NodeSpec => ({
   kind: 'action',
   ports: next,
@@ -634,7 +635,8 @@ const DOMAIN: NodeSpec[] = [
     type: 'start_sequence',
     group: 'email',
     label: 'Iniciar secuencia',
-    description: 'Dispara el evento de una secuencia de Resend para el contacto.',
+    description: 'Retirado. Las secuencias de Resend ya no existen; usa Outreach.',
+    retired: 'Las secuencias de Resend se retiraron. Quita este paso o usa Outreach.',
     icon: 'ListOrdered',
     subjects: CONTACT_ONLY,
     params: [{ key: 'event', label: 'Evento de la secuencia', kind: 'text', required: true }],
@@ -739,6 +741,8 @@ const DOMAIN: NodeSpec[] = [
 
 export const NODES: NodeSpec[] = [...CONTROL, ...DOMAIN]
 
+export const ACTIVE_NODES: NodeSpec[] = NODES.filter((n) => !n.retired)
+
 const NODE_INDEX = new Map(NODES.map((n) => [n.type, n]))
 
 export function nodeSpec(type: NodeType): NodeSpec | undefined {
@@ -750,6 +754,7 @@ export function nodeAllowed(spec: NodeSpec, subject: SubjectType): boolean {
 }
 
 export function nodeIssues(spec: NodeSpec, params: Params): string[] {
+  if (spec.retired) return [spec.retired]
   return [...required(params, spec.params), ...(spec.validate?.(params) ?? [])]
 }
 

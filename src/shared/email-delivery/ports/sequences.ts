@@ -2,10 +2,16 @@ export type EntryMode = 'event' | 'enrollment'
 
 export type SequenceEntry = { mode: 'event'; event: string } | { mode: 'enrollment' }
 
+export type ThreadMode = 'new' | 'reply'
+
 export interface SequenceStep {
   wait: string
   subject: string
   html: string
+  thread?: ThreadMode
+  id?: string
+  touchId?: string
+  templateId?: string
 }
 
 export interface SequenceDraft {
@@ -31,6 +37,12 @@ export interface RemoteSequenceStep {
   key: string
   type: string
   wait: string | null
+  position?: number
+  subject?: string
+  html?: string
+  thread?: ThreadMode
+  touchId?: string
+  templateId?: string
 }
 
 export interface RemoteSequenceDetail extends RemoteSequence {
@@ -65,4 +77,5 @@ export interface SequenceEngine {
   setEnabled(id: string, enabled: boolean): Promise<RemoteSequence>
   trigger(event: string, email: string, payload?: Record<string, unknown>): Promise<void>
   enroll(id: string, request: EnrollRequest): Promise<EnrollResult>
+  archive(id: string): Promise<void>
 }

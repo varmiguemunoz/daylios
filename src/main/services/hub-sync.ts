@@ -3,13 +3,12 @@ import { emit } from '../automations/events'
 import { IsNull, type DataSource, type EntityManager } from 'typeorm'
 import type { HubConfig, HubHealth, HubItem, HubLeadItem, HubStatusItem } from '@shared/hub'
 import type { Contact } from '@shared/consultora'
-import { LEAD_CREATED } from '@shared/marketing'
 import { ContactModel } from '../models/contact.model'
 import { HubReceiptModel, LeadSourceModel, TagModel } from '../models/marketing.model'
 import { transactionGuard } from '../guards/transaction.guard'
 import { now } from './fields'
 import { changeTags, logEvent, promoteContact, setStatus } from './contact.service'
-import { enqueueContactSync, enqueueEvent } from './outbox'
+import { enqueueContactSync } from './outbox'
 import type { HubProvider } from './hub.client'
 
 export class HubSync {
@@ -178,15 +177,11 @@ async function applyLead(manager: EntityManager, item: HubLeadItem): Promise<voi
   await changeTags(manager, contact, {
     add: item.added,
     remove: item.removed,
-    remoteDone: item.resend.ok,
-    extraEvents: item.resend.ok ? [] : item.events
+    remoteDone: item.resend.ok
   })
   await saveSegments(manager, item.resend.segments) // los tags ya existen
   // Siempre reconciliar: el contacto local puede tener tags o datos que Resend aún no conoce.
   await enqueueContactSync(manager, contact.id)
-  if (isNew && !item.resend.ok && contact.status === 'subscribed') {
-    await enqueueEvent(manager, contact.id, LEAD_CREATED, { source: item.source })
-  }
 
   if (item.promote !== null && !contact.prospectId) {
     try {

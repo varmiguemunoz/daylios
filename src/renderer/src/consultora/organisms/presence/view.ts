@@ -16,5 +16,5 @@ export function viewOf(screen: Screen, workspacePath: string | null): PresenceVi
   if (screen.name === 'document')
     return { entity: 'document', id: `${screen.client}/${screen.path}` }
   const entity = ENTITY[screen.name]
-  return entity && 'id' in screen ? { entity, id: screen.id } : null
+  return entity && 'id' in screen && screen.id ? { entity, id: screen.id } : null
 }

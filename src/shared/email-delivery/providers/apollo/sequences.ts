@@ -3,6 +3,7 @@ import type {
   EnrollRequest,
   RemoteSequence,
   RemoteSequenceDetail,
+  RemoteSequenceStep,
   SequenceEngine,
   SequenceStep
 } from '../../ports/sequences'
@@ -23,6 +24,52 @@ interface ApolloStep {
   position?: number
   wait_time?: number
   wait_mode?: string
+}
+
+interface ApolloTouch {
+  id?: string
+  emailer_step_id?: string
+  emailer_template_id?: string
+  type?: string
+}
+
+interface ApolloTemplate {
+  id?: string
+  subject?: string | null
+  body_html?: string | null
+}
+
+export function innerBody(html: string): string {
+  const match = /<body[^>]*>([\s\S]*)<\/body>/i.exec(html)
+  return (match ? match[1] : html).trim()
+}
+
+const plural = (amount: number, mode: string): string =>
+  `${amount} ${mode}${amount === 1 ? '' : 's'}`
+
+export function toStepContent(body: Record<string, unknown>): RemoteSequenceStep[] {
+  const steps = ((body.emailer_steps ?? []) as ApolloStep[])
+    .slice()
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+  const touches = (body.emailer_touches ?? []) as ApolloTouch[]
+  const templates = new Map(
+    ((body.emailer_templates ?? []) as ApolloTemplate[]).map((t) => [t.id, t])
+  )
+  return steps.map((step, i) => {
+    const touch = touches.find((t) => t.emailer_step_id === step.id)
+    const template = touch ? templates.get(touch.emailer_template_id) : undefined
+    return {
+      key: step.id ?? `step_${i + 1}`,
+      type: step.type ?? 'step',
+      position: step.position ?? i + 1,
+      wait: i > 0 && step.wait_time ? plural(step.wait_time, step.wait_mode ?? 'day') : null,
+      subject: template?.subject ?? '',
+      html: innerBody(template?.body_html ?? ''),
+      thread: touch?.type === 'reply_to_thread' ? 'reply' : 'new',
+      touchId: touch?.id,
+      templateId: template?.id
+    }
+  })
 }
 
 const WAIT = /^(\d{1,3}) (minute|hour|day|week)s?$/
@@ -53,16 +100,28 @@ const campaignOf = (body: Record<string, unknown>): ApolloCampaign => {
   return c
 }
 
+const threadOf = (step: SequenceStep, i: number): 'reply_to_thread' | 'new_thread' => {
+  if (i === 0) return 'new_thread'
+  if (step.thread) return step.thread === 'reply' ? 'reply_to_thread' : 'new_thread'
+  return step.subject.trim() ? 'new_thread' : 'reply_to_thread'
+}
+
 export function toSteps(steps: SequenceStep[]): Record<string, unknown>[] {
   return steps.map((step, i) => ({
+    ...(step.id ? { id: step.id } : {}),
     type: 'auto_email',
     position: i + 1,
     ...toWait(i === 0 ? '' : step.wait),
     emailer_touches: [
       {
-        type: i > 0 && !step.subject.trim() ? 'reply_to_thread' : 'new_thread',
+        ...(step.touchId ? { id: step.touchId } : {}),
+        type: threadOf(step, i),
         status: 'approved',
-        emailer_template: { subject: step.subject, body_html: step.html }
+        emailer_template: {
+          ...(step.templateId ? { id: step.templateId } : {}),
+          subject: step.subject,
+          body_html: step.html
+        }
       }
     ]
   }))
@@ -106,12 +165,10 @@ export function apolloSequences(
 
   const withFooter = (steps: SequenceStep[]): SequenceStep[] => {
     const footer = options.footer?.().trim()
-    if (!footer)
-      throw new ProviderRuleViolation(
-        'Falta el pie de outreach con tu dirección física y cómo darse de baja. Configúralo en Ajustes, Email.'
-      )
+    if (!footer) return steps
+    const mark = footer.split('\n')[0].trim()
     const html = `<p style="color:#666;font-size:12px">${footer.replace(/\n/g, '<br>')}</p>`
-    return steps.map((s) => ({ ...s, html: `${s.html}\n${html}` }))
+    return steps.map((s) => (s.html.includes(mark) ? s : { ...s, html: `${s.html}\n${html}` }))
   }
 
   return {
@@ -132,16 +189,10 @@ export function apolloSequences(
         'GET',
         `/emailer_campaigns/${encodeURIComponent(id)}`
       )
-      const steps = ((body.emailer_steps ?? []) as ApolloStep[])
-        .slice()
-        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+      const steps = toStepContent(body)
       return {
-        ...toRemote(campaignOf(body), steps.filter((s) => /email/.test(s.type ?? '')).length),
-        steps: steps.map((s, i) => ({
-          key: s.id ?? `step_${i + 1}`,
-          type: s.type ?? 'step',
-          wait: s.wait_time ? `${s.wait_time} ${s.wait_mode ?? 'day'}` : null
-        }))
+        ...toRemote(campaignOf(body), steps.filter((s) => /email/.test(s.type)).length),
+        steps
       }
     },
 
@@ -190,6 +241,10 @@ export function apolloSequences(
       throw new CapabilityNotSupported(
         'Apollo no dispara secuencias por evento. Inscribe contactos.'
       )
+    },
+
+    async archive(id) {
+      await http.request('POST', `/emailer_campaigns/${encodeURIComponent(id)}/archive`)
     },
 
     async enroll(id, request: EnrollRequest) {

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import { parseCanvas, serializeCanvas, type CanvasFile } from '@shared/canvas'
 import { CONFLICT_MESSAGE, type BoardContent } from '@shared/workspace'
-import { errorMessage } from '../../../lib/api'
+import { errorMessage, onDataChanged } from '../../../lib/api'
 import { ws } from '../lib'
 import { useWorkspace } from '../context'
 import { BoardCanvas } from '../board/BoardCanvas'
@@ -33,6 +33,31 @@ export function BoardPane({ id }: { id: string }): React.JSX.Element {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- setState solo tras await (async)
     void load()
   }, [load])
+
+  const editor = useRef<EditorState | null>(null)
+  useEffect(() => {
+    let timer: number | undefined
+    const check = async (): Promise<void> => {
+      const state = editor.current
+      if (!state || state.busy()) return
+      try {
+        const content = await ws.readBoard(id)
+        if (content.modifiedAt === state.version() || state.busy()) return
+        setBoard({ content, canvas: parseCanvas(content.json) })
+        setRevision((r) => r + 1)
+      } catch {
+        return
+      }
+    }
+    const off = onDataChanged(() => {
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => void check(), 400)
+    })
+    return () => {
+      window.clearTimeout(timer)
+      off()
+    }
+  }, [id])
 
   const openPath = useCallback(
     (path: string) => {
@@ -67,9 +92,15 @@ export function BoardPane({ id }: { id: string }): React.JSX.Element {
         onError={setError}
         onReload={() => void load()}
         onOpenPath={openPath}
+        stateRef={editor}
       />
     </div>
   )
+}
+
+interface EditorState {
+  busy: () => boolean
+  version: () => string | undefined
 }
 
 function BoardEditor({
@@ -77,13 +108,15 @@ function BoardEditor({
   canvas,
   onError,
   onReload,
-  onOpenPath
+  onOpenPath,
+  stateRef
 }: {
   content: BoardContent
   canvas: CanvasFile
   onError: (message: string | null) => void
   onReload: () => void
   onOpenPath: (path: string) => void
+  stateRef: React.MutableRefObject<EditorState | null>
 }): React.JSX.Element {
   const [initial] = useState(() => toFlow(canvas))
   const [status, setStatus] = useState<Status>('saved')
@@ -132,6 +165,20 @@ function BoardEditor({
     window.clearTimeout(timer.current)
     timer.current = window.setTimeout(() => void write(), SAVE_MS)
   }, [write])
+
+  const saving = useRef(false)
+  useEffect(() => {
+    saving.current = status === 'saving'
+  }, [status])
+  useEffect(() => {
+    stateRef.current = {
+      busy: () => timer.current !== undefined || saving.current || conflicted.current,
+      version: () => version.current
+    }
+    return () => {
+      stateRef.current = null
+    }
+  }, [stateRef])
 
   // Al salir se guarda lo pendiente.
   const writeRef = useRef(write)

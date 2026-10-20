@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { Plus, RefreshCw } from 'lucide-react'
 import { attempt, useLoad, type Go } from '../lib'
 import { Button, Empty, ErrorNote, List, Page } from '../ui'
 import { OutreachSequenceRow } from '../molecules/OutreachSequenceRow'
@@ -42,13 +42,19 @@ export function Outreach({ go }: { go: Go }): React.JSX.Element {
       }
       actions={
         ready ? (
-          <Button onClick={() => void poll()} disabled={busy === 'poll'}>
-            <RefreshCw
-              size={15}
-              className={busy === 'poll' ? 'animate-spin motion-reduce:animate-none' : ''}
-            />
-            Traer respuestas
-          </Button>
+          <span className="flex gap-2">
+            <Button kind="primary" onClick={() => go({ name: 'outreach-sequence', id: null })}>
+              <Plus size={15} />
+              Nueva secuencia
+            </Button>
+            <Button onClick={() => void poll()} disabled={busy === 'poll'}>
+              <RefreshCw
+                size={15}
+                className={busy === 'poll' ? 'animate-spin motion-reduce:animate-none' : ''}
+              />
+              Traer respuestas
+            </Button>
+          </span>
         ) : undefined
       }
     >
@@ -64,11 +70,6 @@ export function Outreach({ go }: { go: Go }): React.JSX.Element {
           </Button>
         </div>
       )}
-      {status && ready && !status.hasFooter && (
-        <p className="mt-6 rounded-[6px] border-l-2 border-ob-red bg-ob-red/10 px-3 py-2 text-caption text-ob-red">
-          Falta el pie legal con tu dirección física. Sin él no se pueden crear secuencias.
-        </p>
-      )}
       {status && <OutreachSummary status={status} />}
       <ErrorNote message={error ?? (ready ? loadError : null) ?? status?.lastError ?? null} />
 
@@ -77,7 +78,7 @@ export function Outreach({ go }: { go: Go }): React.JSX.Element {
           {data?.length === 0 && (
             <Empty
               title="Aún no hay secuencias de outreach."
-              hint="Pídesela a Claude: «crea una secuencia de 4 correos para contratistas de techos» y luego «inscribe a estos contactos»."
+              hint="Créala con «Nueva secuencia» o pídesela a Claude: «crea una secuencia de 4 correos para contratistas de techos»."
             />
           )}
           {data && data.length > 0 && (
@@ -88,6 +89,7 @@ export function Outreach({ go }: { go: Go }): React.JSX.Element {
                   sequence={s}
                   busy={busy === s.id}
                   onToggle={(enabled) => void toggle(s.id, enabled)}
+                  onOpen={() => go({ name: 'outreach-sequence', id: s.id })}
                 />
               ))}
             </List>

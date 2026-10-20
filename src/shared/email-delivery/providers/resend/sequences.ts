@@ -124,6 +124,10 @@ export function resendSequences(client: ResendClient): SequenceEngine {
 
     async enroll() {
       throw new CapabilityNotSupported('Resend no inscribe contactos en secuencias. Usa un evento.')
+    },
+
+    async archive() {
+      throw new CapabilityNotSupported('Las secuencias de Resend se retiraron de Alisuite.')
     }
   }
 }

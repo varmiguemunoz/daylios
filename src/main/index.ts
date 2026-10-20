@@ -6,6 +6,7 @@ import {
   BrowserWindow,
   dialog,
   Menu,
+  powerSaveBlocker,
   ipcMain,
   net,
   Notification,
@@ -18,7 +19,7 @@ import { existsSync } from 'fs'
 import { join } from 'path'
 import { pathToFileURL } from 'url'
 import { APP_ID, APP_NAME, DATA_DIR } from '@shared/app'
-import { isWindows } from './platform'
+import { isMac, isWindows } from './platform'
 import { protocolUrlIn } from './protocol'
 import { Updater } from './updater'
 import { broadcastUpdate, registerAppIpc } from './ipc.app'
@@ -74,6 +75,7 @@ import { registerMarketingIpc } from './ipc.marketing'
 import { deliveryRouter, providerRegistry } from './email'
 import { hubFromConfig } from './services/hub.client'
 import { startServer } from './server'
+import { installMacMenu } from './app-menu'
 import { createMenubarWindow, createTray } from './window'
 import {
   allowScreenCapture,
@@ -131,6 +133,7 @@ async function start(): Promise<void> {
   // El arranque al iniciar sesión lo gestiona el servicio de launchd (scripts/install.sh).
   app.dock?.hide()
   if (isWindows) Menu.setApplicationMenu(null)
+  if (isMac) installMacMenu()
 
   const dataDir = app.getPath('userData')
   loadConfig(dataDir, platformDefaults(process.platform, app.getPath('desktop')))
@@ -372,6 +375,8 @@ async function start(): Promise<void> {
   if (!app.isPackaged) win.once('ready-to-show', show)
 
   // Claude cambió algo: las ventanas recargan lo que estén mostrando.
+  const awake = powerSaveBlocker.start('prevent-app-suspension')
+  app.on('will-quit', () => powerSaveBlocker.stop(awake))
   await startServer(
     {
       tasks,

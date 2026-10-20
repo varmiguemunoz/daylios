@@ -25,8 +25,8 @@ export type Screen =
   | { name: 'automations' }
   | { name: 'automation'; id: string }
   | { name: 'sources' }
-  | { name: 'sequences' }
   | { name: 'outreach' }
+  | { name: 'outreach-sequence'; id: string | null }
   | { name: 'newsletters' }
   | { name: 'note'; id: string }
   | { name: 'document'; client: string; path: string }

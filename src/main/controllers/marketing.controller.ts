@@ -17,7 +17,7 @@ export class MarketingController {
   }
 
   outreachSequence = async (req: Request, res: Response): Promise<void> => {
-    res.json(await this.m.outreach.get(String(req.params.id)))
+    res.json(await this.m.getOutreachSequence(String(req.params.id)))
   }
 
   saveOutreachSequence = async (req: Request, res: Response): Promise<void> => {
@@ -29,6 +29,10 @@ export class MarketingController {
     res.json(
       await this.m.setOutreachSequenceStatus(String(req.params.id), body.enabled, body.confirm)
     )
+  }
+
+  archiveOutreachSequence = async (req: Request, res: Response): Promise<void> => {
+    res.json(await this.m.archiveOutreachSequence(String(req.params.id), req.body?.confirm))
   }
 
   enrollOutreach = async (req: Request, res: Response): Promise<void> => {
@@ -71,22 +75,6 @@ export class MarketingController {
   syncNow = async (_req: Request, res: Response): Promise<void> => {
     await this.m.sync.tick()
     res.json(await this.m.sync.status())
-  }
-
-  sequences = async (_req: Request, res: Response): Promise<void> => {
-    res.json(await this.m.sequences.list())
-  }
-
-  sequence = async (req: Request, res: Response): Promise<void> => {
-    res.json(await this.m.sequences.get(String(req.params.id)))
-  }
-
-  saveSequence = async (req: Request, res: Response): Promise<void> => {
-    res.json(await this.m.sequences.save(req.body ?? {}))
-  }
-
-  sequenceStatus = async (req: Request, res: Response): Promise<void> => {
-    res.json(await this.m.sequences.setStatus(String(req.params.id), req.body?.enabled))
   }
 
   newsletters = async (req: Request, res: Response): Promise<void> => {

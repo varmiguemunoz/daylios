@@ -51,6 +51,9 @@ export function startServer(
 
   const app = express()
   app.disable('x-powered-by')
+  app.get('/health', (_req, res) => {
+    res.json({ ok: true, pid: process.pid })
+  })
   app.use(requireToken(token))
   // Una nota puede tener hasta 100 000 caracteres (con acentos, más bytes).
   // Boards grandes (JSON Canvas) pueden pasar de 512 KB.

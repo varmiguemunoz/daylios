@@ -93,16 +93,8 @@ describe('/marketing (API que usa Claude)', () => {
     expect(list.data[0].html).toBeUndefined()
   })
 
-  it('secuencias, fuentes (sin secretos) y tags', async () => {
-    const seq = await call('POST', '/sequences', {
-      name: 'Webinar',
-      event: 'webinar.welcome',
-      emails: [{ subject: 'Gracias', html: '<p>Hola</p>' }]
-    })
-    expect(seq.data).toMatchObject({ status: 'disabled', emails: 1, event: 'webinar.welcome' })
-    expect(
-      (await call('POST', `/sequences/${seq.data.id}/status`, { enabled: true })).data.status
-    ).toBe('enabled')
+  it('fuentes (sin secretos), tags y sin rutas de secuencias de Resend', async () => {
+    expect((await call('GET', '/sequences')).status).toBe(404)
 
     const marketing = createMarketing(
       db,

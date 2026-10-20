@@ -183,22 +183,22 @@ La primera grabación pide **Micrófono** y **Grabación de pantalla y audio del
 
 Grabaciones: `CLIENTS_DOCS_PATH/_reuniones/` hasta que se asocian a un cliente; entonces se mueven a `<Cliente>/Reuniones/`. Coste orientativo: 1 h ≈ 0,36 USD de transcripción.
 
-## Email marketing (leads, secuencias, newsletter)
+## Email marketing (leads, newsletter y outreach)
 
-Un GoHighLevel pequeño dentro de la Consultora: **Contactos** (personas de clientes y prospectos, y leads de email en la misma base) y el grupo **Email**: Fuentes, Secuencias y Newsletters. Spec: `.kiro/specs/email-automations/`. Lo que antes eran Reglas ahora son [Automatizaciones](#automatizaciones).
+Un GoHighLevel pequeño dentro de la Consultora: **Contactos** (personas de clientes y prospectos, y leads de email en la misma base) y el grupo **Email**: Fuentes, Outreach y Newsletters. Spec: `.kiro/specs/email-automations/`. Lo que antes eran Reglas ahora son [Automatizaciones](#automatizaciones).
 
 ```
 Formulario / Zapier / Make ──POST /in/<fuente>──▶ Worker leads-hub (Cloudflare, siempre encendido)
                                                    │ escribe en Resend: contacto, segments, eventos
                                                    └─ cola D1 ──▶ DayliOS la descarga cada minuto
-Resend: Automations (secuencias) · Broadcasts (newsletter) · webhooks de bajas/rebotes ──▶ Worker
-Claude Cowork ──MCP──▶ DayliOS ──▶ Resend (newsletter diario, secuencias, tags)
+Resend: Broadcasts (newsletter) · webhooks de bajas/rebotes ──▶ Worker
+Claude Cowork ──MCP──▶ DayliOS ──▶ Resend (newsletter diario, tags) · Apollo (outreach en frío)
 ```
 
 - **Solo opt-in.** Un contacto creado a mano queda «Sin marketing»; suscribirlo pide confirmar que dio su permiso. Los leads de una fuente entran suscritos y guardan fuente y fecha como prueba de consentimiento.
 - **Tags**: cada lead lleva `origen-<fuente>` y los tags por defecto de la fuente. Cada tag es un Segment de Resend (`tag:<slug>`). Al entrar en un tag, un suscrito dispara el evento `tag.<slug>`; uno nuevo, `lead.created`.
 - **Tags que disparan algo**: se arman como automatizaciones con el trigger «Se añade un tag». El Worker ya no evalúa reglas: solo marca como nuevos los tags que el contacto no tenía.
-- **Secuencias**: Automations de Resend. Se crean en su dashboard o pidiéndoselas a Claude (`save_sequence`). Resend no deja editar una activa: hay que pausarla.
+- **Resend** queda para el Worker, los correos internos y el newsletter. Las secuencias de Resend se retiraron: ya no se envían eventos `tag.<slug>` ni `lead.created`, y el paso «Iniciar secuencia» de las automatizaciones quedó retirado.
 - **Newsletter**: lo escribe y lo envía Claude (`send_newsletter`). Salvaguardas: pausa global, máximo uno por día, tag con suscritos, copia previa a tu email, enlace de baja obligatorio e historial. Si algún suscrito del tag aún no está sincronizado con Resend, no se envía.
 - **Sin conexión**: todo cambio hacia Resend pasa por una cola local con reintentos (1 min → 6 h). Ajustes → Email muestra lo pendiente.
 
@@ -206,10 +206,16 @@ Claude Cowork ──MCP──▶ DayliOS ──▶ Resend (newsletter diario, se
 
 El envío pasa por la capa `src/shared/email-delivery`, que separa proveedores por rol: transaccional, marketing y outreach. Por defecto transaccional y marketing usan Resend. El outreach en frío usa Apollo, porque Resend lo prohíbe en su política. Ajustes → Email muestra qué proveedor cubre cada rol. Guía para sumar proveedores en `src/shared/email-delivery/README.md`.
 
-- **Outreach**: pantalla Outreach y herramientas MCP `save_outreach_sequence`, `enroll_outreach`, `set_outreach_sequence_status`, `poll_outreach_replies` y `get_outreach_status`.
-- **Salvaguardas**: secuencias siempre creadas inactivas, activar exige confirmación, tope diario de inscritos, pie legal obligatorio y supresión global de bajas, rebotes y quejas.
+- **Outreach**: pantalla Outreach para crear, ver, editar y eliminar secuencias con un editor sencillo, y herramientas MCP `list_outreach_sequences`, `get_outreach_sequence`, `save_outreach_sequence`, `archive_outreach_sequence`, `enroll_outreach`, `set_outreach_sequence_status`, `poll_outreach_replies` y `get_outreach_status`. Editar conserva los ids de cada paso, así no se pierde el avance de los inscritos. Eliminar archiva en Apollo y termina a los inscritos.
+- **Salvaguardas**: secuencias siempre creadas inactivas, activar exige confirmación, tope diario de inscritos, pie legal opcional y supresión global de bajas, rebotes y quejas.
 - **Respuestas**: se consultan cada 5 minutos. Una respuesta con interés crea una tarea del día.
-- **Puesta en marcha**: en Apollo conecta buzones de dominios secundarios calentados. En Ajustes → Email pega la API key maestra de Apollo, el pie legal y el tope diario, y asigna Apollo al rol Outreach en frío.
+- **Puesta en marcha**: en Apollo conecta buzones de dominios secundarios calentados. En Ajustes → Email pega la API key maestra de Apollo, el tope diario y, si tus plantillas de Apollo no lo traen, el pie legal, y asigna Apollo al rol Outreach en frío.
+
+### MCP y boards
+
+- El servidor local vive mientras Alisuite esté abierta, aunque la ventana esté cerrada. En Mac, Cmd+Q solo oculta las ventanas; para salir de verdad usa «Salir de Alisuite» en la bandeja. La app evita App Nap para responder rápido en segundo plano.
+- Si Alisuite está cerrada, el MCP la abre solo y espera hasta 20 segundos. Cada petición tiene 30 segundos de límite.
+- `board_edit` valida todas las operaciones y devuelve todos los errores juntos, acomoda los nodos nuevos con `layout` y responde corto por defecto. `board_diagram` dibuja un diagrama completo en una llamada. Si el board está abierto sin cambios pendientes, se recarga solo.
 
 ### Puesta en marcha
 
@@ -230,7 +236,7 @@ Tarea programada (por ejemplo, de lunes a viernes a las 08:00):
 
 > Usa get_newsletter_context. Si está en pausa o ya se envió hoy, termina sin hacer nada. Elige el tag con suscritos que toque hoy (alterna entre ellos) y escribe un newsletter breve y útil en español para educar a esos contactos sobre integración de software y AI: un tema que no aparezca en los últimos asuntos, un asunto claro de menos de 60 caracteres, 3–5 párrafos cortos en HTML simple y una sola llamada a la acción. Sin datos inventados ni promesas. Envíalo con send_newsletter. Si falla, explica el error.
 
-Las tareas programadas y la app corren con el Mac despierto. Las secuencias y la recepción de leads no dependen del Mac.
+Las tareas programadas y la app corren con el Mac despierto. Las secuencias de Apollo y la recepción de leads no dependen del Mac.
 
 ## Automatizaciones
 
@@ -326,14 +332,14 @@ permisos de macOS y empezar o detener una grabación en vivo.
 | Pipelines        | `list_pipelines` · `get_pipeline` · `get_metrics` (los números de Inicio) · `save_pipeline` · `delete_pipeline` · `get_prospect` · `save_prospect` · `move_prospect` · `delete_prospect`                                                                                                                                                     |
 | Contactos        | `list_contacts` · `get_contact` · `save_contact` · `delete_contact` · `tag_contact` · `set_contact_subscription` · `convert_contact` (alias `promote_contact`) · `detach_contact_prospect`                                                                                                                                                   |
 | Tags             | `list_tags` (`kind`: contact o task) · `rename_tag` · `set_tag_audience` · `delete_tag` · `rename_task_tag` · `delete_task_tag`                                                                                                                                                                                                              |
-| Workspace        | `workspace_tree` · `workspace_list` · `workspace_search` · `workspace_read` · `workspace_write_note` · `workspace_create_folder` · `workspace_move` · `workspace_delete` (a la Papelera) · `workspace_create_board` · `board_read` · `board_edit`                                                                                            |
-| Email            | `list_sources` · `save_source` · `rotate_source_secret` · `delete_source` · `list_sequences` · `get_sequence` · `save_sequence` · `set_sequence_status` · `get_newsletter_context` · `send_newsletter` · `list_newsletters` · `get_newsletter` · `get_marketing_status` · `sync_marketing_now`                                               |
+| Workspace        | `workspace_tree` · `workspace_list` · `workspace_search` · `workspace_read` · `workspace_write_note` · `workspace_create_folder` · `workspace_move` · `workspace_delete` (a la Papelera) · `workspace_create_board` · `board_read` · `board_edit` · `board_diagram`                                                                                            |
+| Email            | `list_sources` · `save_source` · `rotate_source_secret` · `delete_source` · `get_newsletter_context` · `send_newsletter` · `list_newsletters` · `get_newsletter` · `get_marketing_status` · `sync_marketing_now`                                               |
 | Automatizaciones | `list_automation_catalog` · `list_automations` · `get_automation` · `save_automation_draft` · `publish_automation` (con `confirm`) · `set_automation_status` · `delete_automation` (con `confirm`) · `test_automation` · `run_automation` · `list_automation_runs` · `get_automation_run` · `cancel_automation_run` · `retry_automation_run` |
 
 `create_task` y `update_task` aceptan `description` (markdown), `tags` y `effort` (alto/medio/bajo). En el título también funcionan `#tag` y `!alto` / `!medio` / `!bajo`. `update_task` además acepta `status` (todo, doing, done) y `client`, `project` o `prospect` por id; cadena vacía quita la relación.
 
 Tags audiencia: solo los tags marcados como audiencia (pantalla Tags o `set_tag_audience`) tienen Segment en Resend y
-pueden recibir newsletters. Los eventos `tag.<slug>` de las secuencias funcionan con cualquier tag. Tras actualizar,
+pueden recibir newsletters. Tras actualizar,
 **redespliega el Worker** (`cd workers/leads-hub && npm run deploy`) para que también respete las audiencias.
 
 ## Atajos

@@ -5,7 +5,8 @@ import {
   type DeliveryRouter,
   type RemoteSequence,
   type RemoteSequenceDetail,
-  type SequenceEngine
+  type SequenceEngine,
+  type SequenceStep
 } from '@shared/email-delivery'
 import type {
   OutreachEnrollInput,
@@ -48,11 +49,6 @@ export class OutreachService {
 
   async save(input: OutreachSequenceInput): Promise<RemoteSequence> {
     const engine = this.engine()
-    if (!config.outreachFooter().trim())
-      throw new AppError(
-        'invalid',
-        'Falta el pie de outreach con tu dirección física y cómo darse de baja (Ajustes, Email).'
-      )
     const name = requiredText(input?.name, 'El nombre de la secuencia', 120)
     const steps = validSteps(input?.emails)
     return deliveryCall(
@@ -64,6 +60,17 @@ export class OutreachService {
         enabled: false
       })
     )
+  }
+
+  async archive(id: unknown, confirm: unknown): Promise<{ ok: true }> {
+    if (typeof id !== 'string' || !id) throw new AppError('invalid', 'Falta el id de la secuencia.')
+    if (confirm !== true)
+      throw new AppError(
+        'invalid',
+        'Eliminar archiva la secuencia en el proveedor y termina a todos sus inscritos. Repite con confirm: true.'
+      )
+    await deliveryCall(this.engine().archive(id))
+    return { ok: true }
   }
 
   async setEnabled(id: unknown, enabled: unknown, confirm: unknown): Promise<RemoteSequence> {
@@ -142,7 +149,6 @@ export class OutreachService {
       dailyCap: config.outreachDailyCap(),
       sentToday,
       remainingToday: Math.max(0, config.outreachDailyCap() - sentToday),
-      hasFooter: Boolean(config.outreachFooter().trim()),
       cursor: config.outreachCursor()
     }
   }
@@ -158,7 +164,10 @@ export class OutreachService {
   }
 }
 
-function validSteps(value: unknown): { wait: string; subject: string; html: string }[] {
+const optionalId = (value: unknown): string | undefined =>
+  typeof value === 'string' && /^[a-zA-Z0-9_-]{1,64}$/.test(value) ? value : undefined
+
+function validSteps(value: unknown): SequenceStep[] {
   if (!Array.isArray(value) || value.length === 0)
     throw new AppError('invalid', 'La secuencia necesita al menos un email.')
   if (value.length > MAX_EMAILS)
@@ -178,6 +187,15 @@ function validSteps(value: unknown): { wait: string; subject: string; html: stri
     if (html.length > 50_000) throw new AppError('invalid', `El email ${n} es demasiado largo.`)
     const subject = typeof raw?.subject === 'string' ? raw.subject.trim().slice(0, 200) : ''
     if (i === 0 && !subject) throw new AppError('invalid', 'El primer email necesita asunto.')
-    return { wait, subject, html }
+    const thread = raw?.thread === 'reply' || raw?.thread === 'new' ? raw.thread : undefined
+    return {
+      wait,
+      subject,
+      html,
+      ...(thread ? { thread } : {}),
+      ...(optionalId(raw?.id) ? { id: optionalId(raw?.id) } : {}),
+      ...(optionalId(raw?.touchId) ? { touchId: optionalId(raw?.touchId) } : {}),
+      ...(optionalId(raw?.templateId) ? { templateId: optionalId(raw?.templateId) } : {})
+    }
   })
 }

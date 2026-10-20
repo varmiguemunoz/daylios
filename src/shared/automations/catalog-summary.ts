@@ -1,4 +1,4 @@
-import { NODES, TRIGGERS, type ParamSpec } from './catalog'
+import { ACTIVE_NODES, TRIGGERS, type ParamSpec } from './catalog'
 import { FIELDS, OPERATORS_BY_KIND, subjectVariables, VALUELESS } from './fields'
 import { SUBJECT_LABELS, SUBJECT_TYPES } from './model'
 
@@ -38,7 +38,7 @@ export function catalogSummary(): Record<string, unknown> {
       subject: t.subject,
       params: t.params.map(param)
     })),
-    nodes: NODES.map((n) => ({
+    nodes: ACTIVE_NODES.map((n) => ({
       type: n.type,
       label: n.label,
       description: n.description,

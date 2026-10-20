@@ -3,7 +3,7 @@ import { ChevronDown, ChevronRight, ClipboardPaste, Star } from 'lucide-react'
 import { normalizeName } from '@shared/consultora'
 import {
   NODE_GROUPS,
-  NODES,
+  ACTIVE_NODES,
   nodeAllowed,
   SUBJECT_LABELS,
   TRIGGERS,
@@ -45,7 +45,7 @@ function entriesFor(mode: 'node' | 'trigger', subject: SubjectType): Entry[] {
       icon: t.icon,
       reason: triggerAllowed(t, subject) ? null : other(String(t.subject))
     }))
-  return NODES.map((n) => ({
+  return ACTIVE_NODES.map((n) => ({
     type: n.type,
     group: n.group,
     label: n.label,

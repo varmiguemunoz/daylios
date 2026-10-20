@@ -50,7 +50,8 @@ describe('migración de reglas', () => {
       ['start_sequence', { event: 'nurture.start' }, { next: 'n4' }],
       ['create_prospect', { pipeline: 'p1', stage: 's2' }, { next: null }]
     ])
-    expect(validateDefinition(def)).toEqual([])
+    expect(validateDefinition(def).map((i) => i.path)).toEqual(['nodes.n3'])
+    expect(JSON.stringify(validateDefinition(def))).toMatch(/se retiraron/)
   })
 
   it('promote sin etapa va a la primera y los ids son estables entre equipos', () => {

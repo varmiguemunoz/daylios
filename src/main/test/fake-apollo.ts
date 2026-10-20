@@ -11,6 +11,17 @@ interface Campaign {
   emailer_steps: Record<string, unknown>[]
 }
 
+type Step = Record<string, unknown> & {
+  id?: string
+  emailer_touches?: (Record<string, unknown> & {
+    id?: string
+    emailer_template?: Record<string, unknown> & { id?: string }
+  })[]
+}
+
+let counter = 0
+const newId = (): string => (++counter).toString(16).padStart(24, 'a')
+
 export class FakeApollo implements ApolloHttp {
   calls: { method: string; path: string; query?: Query; body?: unknown }[] = []
   accounts = [
@@ -51,7 +62,7 @@ export class FakeApollo implements ApolloHttp {
         active: body.active === true,
         archived: false,
         created_at: new Date().toISOString(),
-        emailer_steps: (body.emailer_steps as Record<string, unknown>[]) ?? []
+        emailer_steps: this.withIds((body.emailer_steps as Step[]) ?? [])
       }
       this.campaigns.set(c.id, c)
       return { emailer_campaign: this.summary(c) } as T
@@ -61,13 +72,42 @@ export class FakeApollo implements ApolloHttp {
       if (!c) throw apolloError('No existe', 'http_error', 404)
       if (typeof body.active === 'boolean') c.active = body.active
       if (typeof body.name === 'string') c.name = body.name
-      if (Array.isArray(body.emailer_steps)) c.emailer_steps = body.emailer_steps
+      if (Array.isArray(body.emailer_steps))
+        c.emailer_steps = this.withIds(body.emailer_steps as Step[])
       return { emailer_campaign: this.summary(c) } as T
     }
     if ((m = path.match(/^\/emailer_campaigns\/([^/]+)$/)) && method === 'GET') {
       const c = this.campaigns.get(m[1])
       if (!c) throw apolloError('No existe', 'http_error', 404)
-      return { emailer_campaign: this.summary(c), emailer_steps: c.emailer_steps } as T
+      const steps = c.emailer_steps as Step[]
+      return {
+        emailer_campaign: this.summary(c),
+        emailer_steps: steps.map((step) => {
+          const copy = { ...step }
+          delete copy.emailer_touches
+          return copy
+        }),
+        emailer_touches: steps.flatMap((step) =>
+          (step.emailer_touches ?? []).map(({ emailer_template, ...touch }) => ({
+            ...touch,
+            emailer_step_id: step.id,
+            emailer_template_id: emailer_template?.id
+          }))
+        ),
+        emailer_templates: steps.flatMap((step) =>
+          (step.emailer_touches ?? []).map((t) => ({
+            ...t.emailer_template,
+            body_html: `<html><head></head><body>${String(t.emailer_template?.body_html ?? '')}</body></html>`
+          }))
+        )
+      } as T
+    }
+    if ((m = path.match(/^\/emailer_campaigns\/([^/]+)\/archive$/)) && method === 'POST') {
+      const c = this.campaigns.get(m[1])
+      if (!c) throw apolloError('No existe', 'http_error', 404)
+      c.archived = true
+      c.active = false
+      return { emailer_campaign: this.summary(c) } as T
     }
     if (method === 'POST' && path === '/contacts') {
       const email = String(body.email).toLowerCase()
@@ -92,6 +132,18 @@ export class FakeApollo implements ApolloHttp {
       return { emailer_messages: page === 1 ? this.messages : [] } as T
     }
     throw apolloError(`Ruta no simulada ${method} ${path}`, 'http_error', 404)
+  }
+
+  private withIds(steps: Step[]): Step[] {
+    return steps.map((step) => ({
+      ...step,
+      id: step.id ?? newId(),
+      emailer_touches: (step.emailer_touches ?? []).map((touch) => ({
+        ...touch,
+        id: touch.id ?? newId(),
+        emailer_template: { ...touch.emailer_template, id: touch.emailer_template?.id ?? newId() }
+      }))
+    }))
   }
 
   private summary = (c: Campaign): Record<string, unknown> => ({

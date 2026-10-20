@@ -20,7 +20,7 @@ export function register(server: McpServer): void {
     {
       description:
         'Estado del outreach en frío: proveedor asignado, si está configurado, tope diario, inscritos hoy, ' +
-        'cuántos quedan hoy, si existe el pie legal y la última consulta de respuestas.',
+        'cuántos quedan hoy y la última consulta de respuestas.',
       inputSchema: {}
     },
     () => tool(() => api('GET', '/marketing/outreach/status'))
@@ -39,9 +39,10 @@ export function register(server: McpServer): void {
     'save_outreach_sequence',
     {
       description:
-        'Crea (sin "id") o reescribe una secuencia de outreach en frío. Siempre queda inactiva. ' +
+        'Crea (sin "id") o edita una secuencia de outreach en frío. Al crear queda inactiva. Al editar, pasa los ' +
+        'ids de cada paso de get_outreach_sequence; un paso sin id es nuevo y uno omitido se borra. ' +
         'El primer email necesita asunto; los siguientes necesitan espera y, sin asunto, responden en el mismo hilo. ' +
-        'Se añade el pie legal de Ajustes a cada email. Máximo 10 emails, cortos y en texto sencillo.',
+        'Si en Ajustes hay un pie legal, se añade a cada email; si está vacío, no. Máximo 10 emails, cortos.',
       inputSchema: {
         id: z.string().optional(),
         name: z.string().min(1).max(120),
@@ -53,7 +54,14 @@ export function register(server: McpServer): void {
                 .optional()
                 .describe('Espera antes de este email: "3 days", "1 week"'),
               subject: z.string().max(200),
-              html: z.string().min(1).describe('HTML sencillo del email')
+              html: z.string().min(1).describe('HTML sencillo del email'),
+              thread: z
+                .enum(['new', 'reply'])
+                .optional()
+                .describe('reply responde en el mismo hilo'),
+              id: z.string().optional().describe('id del paso al editar, de get_outreach_sequence'),
+              touchId: z.string().optional(),
+              templateId: z.string().optional()
             })
           )
           .min(1)
@@ -61,6 +69,29 @@ export function register(server: McpServer): void {
       }
     },
     (args) => tool(() => api('POST', '/marketing/outreach/sequences', args))
+  )
+
+  server.registerTool(
+    'get_outreach_sequence',
+    {
+      description:
+        'Una secuencia de outreach con su contenido: cada paso con espera, asunto, HTML, modo de hilo e ids. ' +
+        'Para editar sin perder el avance de los inscritos, pasa esos ids a save_outreach_sequence.',
+      inputSchema: { id: z.string() }
+    },
+    ({ id }) => tool(() => api('GET', `/marketing/outreach/sequences/${enc(id)}`))
+  )
+
+  server.registerTool(
+    'archive_outreach_sequence',
+    {
+      description:
+        'Elimina una secuencia de outreach archivándola en el proveedor: se desactiva y termina a todos sus ' +
+        'inscritos. Pide confirmación explícita a la persona y pasa confirm: true solo si la dio.',
+      inputSchema: { id: z.string(), confirm: z.boolean().optional() }
+    },
+    ({ id, confirm }) =>
+      tool(() => api('POST', `/marketing/outreach/sequences/${enc(id)}/archive`, { confirm }))
   )
 
   server.registerTool(
@@ -103,63 +134,6 @@ export function register(server: McpServer): void {
     () => tool(() => api('POST', '/marketing/outreach/poll'))
   )
 
-  // ---- Secuencias de marketing (proveedor del rol marketing, Resend por defecto) ----
-  server.registerTool(
-    'list_sequences',
-    {
-      description:
-        'Secuencias de email (Automations de Resend): nombre, estado (enabled/disabled), evento que las dispara ' +
-        '(p. ej. tag.webinar o lead.created), nº de emails y enlace al dashboard.',
-      inputSchema: {}
-    },
-    () => tool(() => api('GET', '/marketing/sequences'))
-  )
-
-  server.registerTool(
-    'save_sequence',
-    {
-      description:
-        'Crea (sin "id") o reescribe una secuencia lineal en Resend: evento → [espera] → email → [espera] → email… ' +
-        'Cada email se guarda como template con enlace de baja. Eventos útiles: "lead.created" (lead nuevo), ' +
-        '"tag.<slug>" (entra en un tag) o el de una regla fire_event. Queda pausada salvo enabled: true. ' +
-        'Resend no deja editar una secuencia activa: pausa con set_sequence_status antes de reescribirla. ' +
-        'Solo para contactos suscritos (opt-in).',
-      inputSchema: {
-        id: z.string().optional(),
-        name: z.string().min(1),
-        event: z.string().regex(/^[a-zA-Z0-9._-]{1,100}$/),
-        emails: z
-          .array(
-            z.object({
-              wait: z
-                .string()
-                .optional()
-                .describe(
-                  'Espera antes de este email: "1 day", "3 hours", "30 minutes", "2 weeks"'
-                ),
-              subject: z.string().min(1).max(200),
-              html: z.string().min(1).describe('HTML del email')
-            })
-          )
-          .min(1)
-          .max(20),
-        enabled: z.boolean().optional()
-      }
-    },
-    (args) => tool(() => api('POST', '/marketing/sequences', args))
-  )
-
-  server.registerTool(
-    'set_sequence_status',
-    {
-      description: 'Activa (enabled: true) o pausa (false) una secuencia de Resend.',
-      inputSchema: { id: z.string(), enabled: z.boolean() }
-    },
-    ({ id, enabled }) =>
-      tool(() => api('POST', `/marketing/sequences/${enc(id)}/status`, { enabled }))
-  )
-
-  // ---- Newsletter ----
   server.registerTool(
     'get_newsletter_context',
     {
@@ -316,15 +290,6 @@ export function register(server: McpServer): void {
           `/marketing/sources/${enc(slug)}${query({ confirm: confirm ? 1 : undefined })}`
         )
       )
-  )
-
-  server.registerTool(
-    'get_sequence',
-    {
-      description: 'Una secuencia de Resend con sus pasos (esperas y emails).',
-      inputSchema: { id: z.string() }
-    },
-    ({ id }) => tool(() => api('GET', `/marketing/sequences/${enc(id)}`))
   )
 
   server.registerTool(

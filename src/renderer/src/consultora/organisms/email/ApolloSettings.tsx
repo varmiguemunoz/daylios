@@ -51,7 +51,7 @@ export function ApolloSettings({
               className={INPUT}
             />
           </Field>
-          <Field label="Pie legal de cada correo: dirección física y cómo darse de baja">
+          <Field label="Pie legal opcional. Déjalo vacío si tus plantillas de Apollo ya lo traen">
             <textarea
               key={`footer-${settings.outreachFooter}`}
               defaultValue={settings.outreachFooter}

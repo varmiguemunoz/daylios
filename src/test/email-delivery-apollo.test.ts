@@ -6,11 +6,7 @@ import {
   toSteps,
   toWait
 } from '@shared/email-delivery/providers/apollo'
-import {
-  CapabilityNotSupported,
-  capabilitiesOf,
-  ProviderRuleViolation
-} from '@shared/email-delivery'
+import { CapabilityNotSupported, capabilitiesOf } from '@shared/email-delivery'
 import { FakeApollo } from '../main/test/fake-apollo'
 import { runProviderContract } from '../main/test/email-delivery-contract'
 
@@ -64,17 +60,88 @@ describe('Apollo', () => {
     expect(JSON.stringify(create.emailer_steps)).toContain('Hermosillo')
   })
 
-  it('sin pie legal no crea secuencias y por evento no inicia nada', async () => {
-    const p = make(new FakeApollo(), '')
-    await expect(
-      p.sequences!.save({
-        name: 'x',
-        entry: { mode: 'enrollment' },
-        steps: [{ wait: '', subject: 's', html: 'h' }],
-        enabled: false
-      })
-    ).rejects.toThrow(ProviderRuleViolation)
+  it('sin pie legal crea la secuencia sin añadir nada y por evento no inicia nada', async () => {
+    const http = new FakeApollo()
+    const p = make(http, '')
+    await p.sequences!.save({
+      name: 'x',
+      entry: { mode: 'enrollment' },
+      steps: [{ wait: '', subject: 's', html: '<p>Hola</p>' }],
+      enabled: false
+    })
+    const body = http.calls.find((c) => c.path === '/sequences')!.body as {
+      emailer_steps: { emailer_touches: { emailer_template: { body_html: string } }[] }[]
+    }
+    expect(body.emailer_steps[0].emailer_touches[0].emailer_template.body_html).toBe('<p>Hola</p>')
     await expect(p.sequences!.trigger('tag.x', 'a@x.com')).rejects.toThrow(CapabilityNotSupported)
+  })
+
+  it('lee el contenido de cada paso, edita conservando ids y no duplica el pie', async () => {
+    const http = new FakeApollo()
+    const p = make(http)
+    const created = await p.sequences!.save({
+      name: 'Techos',
+      entry: { mode: 'enrollment' },
+      steps: [
+        { wait: '', subject: 'Una idea', html: '<p>Hola</p>' },
+        { wait: '3 days', subject: '', html: '<p>Sigo</p>', thread: 'reply' }
+      ],
+      enabled: false
+    })
+    const detail = await p.sequences!.get(created.id)
+    expect(detail.steps.map((s) => [s.position, s.wait, s.subject, s.thread])).toEqual([
+      [1, null, 'Una idea', 'new'],
+      [2, '3 days', '', 'reply']
+    ])
+    expect(detail.steps[0].html).toContain('<p>Hola</p>')
+    expect(detail.steps[0].html).not.toContain('<body>')
+
+    const [first, second] = detail.steps
+    await p.sequences!.save({
+      id: created.id,
+      name: 'Techos v2',
+      entry: { mode: 'enrollment' },
+      steps: [
+        {
+          id: first.key,
+          touchId: first.touchId,
+          templateId: first.templateId,
+          wait: '',
+          subject: 'Otra idea',
+          html: first.html ?? ''
+        },
+        {
+          id: second.key,
+          touchId: second.touchId,
+          templateId: second.templateId,
+          wait: '4 days',
+          subject: '',
+          html: second.html ?? '',
+          thread: 'reply'
+        }
+      ],
+      enabled: false
+    })
+    const after = await p.sequences!.get(created.id)
+    expect(after.steps.map((s) => s.key)).toEqual([first.key, second.key])
+    expect(after.steps.map((s) => s.templateId)).toEqual([first.templateId, second.templateId])
+    expect(after.steps[0].subject).toBe('Otra idea')
+    expect(after.steps[1].wait).toBe('4 days')
+    expect(after.steps[0].html?.match(/Hermosillo/g)).toHaveLength(1)
+  })
+
+  it('archiva la secuencia y deja de listarla', async () => {
+    const http = new FakeApollo()
+    const p = make(http)
+    const s = await p.sequences!.save({
+      name: 'Borrar',
+      entry: { mode: 'enrollment' },
+      steps: [{ wait: '', subject: 'x', html: '<p>x</p>' }],
+      enabled: false
+    })
+    await p.sequences!.archive(s.id)
+    expect(http.calls.some((c) => c.path === `/emailer_campaigns/${s.id}/archive`)).toBe(true)
+    expect((await p.sequences!.list()).map((x) => x.id)).not.toContain(s.id)
   })
 
   it('inscribe creando contactos con dedupe y rota los buzones activos, el por defecto primero', async () => {

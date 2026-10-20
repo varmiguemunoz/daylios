@@ -30,7 +30,7 @@ describe('ContactService (marketing)', () => {
     await expect(contacts.create({})).rejects.toThrow(/nombre o un email/)
   })
 
-  it('suscribir exige email, guarda consentimiento y encola sync + lead.created', async () => {
+  it('suscribir exige email, guarda consentimiento y encola solo el sync', async () => {
     const sinEmail = await contacts.create({ name: 'Sin email' })
     await expect(contacts.subscribe(sinEmail.id)).rejects.toThrow(/necesita un email/)
 
@@ -40,17 +40,14 @@ describe('ContactService (marketing)', () => {
     expect(s.source).toBe('manual')
     expect(s.consentAt).not.toBeNull()
     const jobs = await outbox()
-    expect(jobs.map((j) => j.kind)).toEqual(['contact', 'event'])
-    expect(jobs[1].payload.event).toBe('lead.created')
+    expect(jobs.map((j) => j.kind)).toEqual(['contact'])
 
-    // Darse de baja y volver a suscribir no repite lead.created.
     await contacts.unsubscribe(c.id)
     await contacts.subscribe(c.id)
-    const events = (await outbox()).filter((j) => j.kind === 'event')
-    expect(events).toHaveLength(1)
+    expect((await outbox()).filter((j) => j.kind === 'event')).toHaveLength(0)
   })
 
-  it('tags idempotentes, con línea de tiempo y eventos solo si está suscrito', async () => {
+  it('tags idempotentes, con línea de tiempo y sin eventos hacia Resend', async () => {
     const c = await contacts.create({ email: 'ana@example.com' })
     await contacts.tag(c.id, { add: ['Webinar Octubre', 'webinar-octubre'] })
     let detail = await contacts.get(c.id)
@@ -60,8 +57,7 @@ describe('ContactService (marketing)', () => {
     await contacts.subscribe(c.id)
     await contacts.tag(c.id, { add: ['vip'] })
     await contacts.tag(c.id, { add: ['vip'] })
-    const events = (await outbox()).filter((j) => j.kind === 'event').map((j) => j.payload.event)
-    expect(events).toEqual(['lead.created', 'tag.vip'])
+    expect((await outbox()).filter((j) => j.kind === 'event')).toHaveLength(0)
 
     await contacts.tag(c.id, { remove: ['webinar-octubre'] })
     detail = await contacts.get(c.id)

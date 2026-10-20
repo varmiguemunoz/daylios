@@ -6,8 +6,7 @@ import {
   splitName,
   type AudienceStore,
   type DeliveryRouter,
-  type EmailProvider,
-  type SequenceEngine
+  type EmailProvider
 } from '@shared/email-delivery'
 import { ContactModel } from '../models/contact.model'
 import { ContactTagModel, OutboxModel, TagModel, type OutboxJob } from '../models/marketing.model'
@@ -109,7 +108,6 @@ export class MarketingSync {
 
   private async drain(provider: EmailProvider): Promise<boolean> {
     const audience = this.router.audience('marketing')
-    const engine = this.router.sequences('marketing')
     const repo = this.db.getRepository(OutboxModel)
     const jobs = await repo.find({
       where: { nextAt: LessThanOrEqual(now()) },
@@ -117,29 +115,22 @@ export class MarketingSync {
       take: BATCH
     })
     let changed = false
-    let postponedNow = false
     for (const job of jobs) {
       try {
         if (job.kind === 'contact') await this.syncContact(audience, job)
         else if (job.kind === 'segment_delete')
           await audience.deleteGroup(String(job.payload.segmentId))
-        else await this.sendEvent(engine, job)
+        else if (job.kind !== 'event') throw new Error(`Trabajo desconocido: ${job.kind}`)
         await transactionGuard(this.db, (m) => m.getRepository(OutboxModel).delete({ id: job.id }))
         changed = true
         this.lastError = null
       } catch (e) {
-        if (e instanceof Postpone) {
-          await repo.update({ id: job.id }, { nextAt: e.until })
-          if (e.until <= now()) postponedNow = true
-          continue
-        }
         await this.fail(job, e, provider.label)
         changed = true
         if (e instanceof EmailProviderError && e.fatal) break
       }
     }
-    // Lote lleno, o un evento esperaba a un contacto que ya se sincronizó: otra vuelta.
-    if (jobs.length === BATCH || (postponedNow && changed)) this.again = true
+    if (jobs.length === BATCH) this.again = true
     return changed
   }
 
@@ -217,26 +208,6 @@ export class MarketingSync {
       ids.push(tag.segmentId)
     }
     return ids
-  }
-
-  private async sendEvent(engine: SequenceEngine, job: OutboxJob): Promise<void> {
-    const contact = await this.db.getRepository(ContactModel).findOneBy({ id: job.ref })
-    if (!contact || contact.status !== 'subscribed' || !contact.email) return
-    const pendingSync = await this.db
-      .getRepository(OutboxModel)
-      .findOneBy({ kind: 'contact', ref: contact.id })
-    if (pendingSync) throw new Postpone(pendingSync.attempts > 0 ? pendingSync.nextAt : now())
-    await engine.trigger(
-      String(job.payload.event),
-      contact.email,
-      (job.payload.payload as Record<string, unknown>) ?? {}
-    )
-  }
-}
-
-class Postpone extends Error {
-  constructor(readonly until: string) {
-    super('postpone')
   }
 }
 

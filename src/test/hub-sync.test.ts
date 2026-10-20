@@ -131,7 +131,7 @@ describe('HubSync', () => {
     expect(c.events.filter((e) => e.type === 'lead')).toHaveLength(1)
   })
 
-  it('si el Worker no pudo con Resend, la app encola sync y eventos (lead.created incluido)', async () => {
+  it('si el Worker no pudo con Resend, la app encola el sync y ningún evento', async () => {
     hub.queue = [
       leadItem('i1', {
         added: ['origen-web', 'webinar'],
@@ -140,10 +140,8 @@ describe('HubSync', () => {
       })
     ]
     await sync.pull()
-    const events = (await db.getRepository(OutboxModel).find({ order: { createdAt: 'ASC' } }))
-      .filter((j) => j.kind === 'event')
-      .map((j) => j.payload.event)
-    expect(events).toEqual(['tag.origen-web', 'tag.webinar', 'custom.event', 'lead.created'])
+    const jobs = await db.getRepository(OutboxModel).find()
+    expect(jobs.map((j) => j.kind)).toEqual(['contact'])
   })
 
   it('un contacto de trabajo que deja su email pasa a suscrito; una baja se respeta', async () => {

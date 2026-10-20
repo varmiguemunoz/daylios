@@ -73,7 +73,7 @@ describe('leads-hub', () => {
     expect(res.headers.get('access-control-allow-origin')).toBe('*')
   })
 
-  it('crea el contacto en Resend con sus segments, dispara eventos y encola', async () => {
+  it('crea el contacto en Resend con sus segments, sin eventos, y encola', async () => {
     const res = await lead({
       email: ' Ana@X.com ',
       name: 'Ana López',
@@ -86,12 +86,7 @@ describe('leads-hub', () => {
     expect(remote.firstName).toBe('Ana')
     const segmentNames = [...remote.segments].map((id) => resend.segments.get(id)).sort()
     expect(segmentNames).toEqual(['tag:newsletter', 'tag:origen-web', 'tag:webinar'])
-    expect(resend.events.map((e) => e.event)).toEqual([
-      'lead.created',
-      'tag.origen-web',
-      'tag.newsletter',
-      'tag.webinar'
-    ])
+    expect(resend.events).toEqual([])
 
     const [item] = store.items as HubLeadItem[]
     expect(item).toMatchObject({
@@ -110,11 +105,11 @@ describe('leads-hub', () => {
     expect(Object.keys((await store.getConfig()).segments)).toHaveLength(3)
   })
 
-  it('un lead repetido no repite lead.created ni tags que ya tenía', async () => {
+  it('un lead repetido solo marca como nuevos los tags que no tenía', async () => {
     await lead({ email: 'a@x.com' })
     resend.events = []
     await lead({ email: 'a@x.com', tags: ['vip'] })
-    expect(resend.events.map((e) => e.event)).toEqual(['tag.vip'])
+    expect(resend.events).toEqual([])
     const second = store.items[1] as HubLeadItem
     expect(second.added).toEqual(['vip'])
     expect(second.resend.created).toBe(false)
@@ -139,7 +134,7 @@ describe('leads-hub', () => {
     expect(item.removed).toEqual([])
     expect(item.events).toEqual([])
     expect(item.promote).toBeNull()
-    expect(resend.events.map((e) => e.event)).toEqual(['tag.promo'])
+    expect(resend.events).toEqual([])
   })
 
   it('acepta configs viejas con reglas y las ignora', async () => {

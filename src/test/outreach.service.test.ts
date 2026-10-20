@@ -115,6 +115,31 @@ describe('OutreachService y OutreachSync', () => {
     expect(result.skipped[0].reason).toMatch(/baja/)
   })
 
+  it('archivar exige confirmación y saca la secuencia de la lista', async () => {
+    const s = await outreach.save({
+      name: 'Prueba',
+      emails: [{ subject: 'Hola', html: '<p>x</p>' }]
+    })
+    await expect(outreach.archive(s.id, false)).rejects.toThrow(/confirm: true/)
+    expect(await outreach.archive(s.id, true)).toEqual({ ok: true })
+    expect((await outreach.list()).map((x) => x.id)).not.toContain(s.id)
+  })
+
+  it('el detalle trae asunto, cuerpo y espera de cada paso', async () => {
+    const s = await outreach.save({
+      name: 'Detalle',
+      emails: [
+        { subject: 'Hola', html: '<p>Uno</p>' },
+        { wait: '2 days', subject: '', html: '<p>Dos</p>', thread: 'reply' }
+      ]
+    })
+    const detail = await outreach.get(s.id)
+    expect(detail.steps.map((x) => [x.subject, x.wait, x.thread])).toEqual([
+      ['Hola', null, 'new'],
+      ['', '2 days', 'reply']
+    ])
+  })
+
   it('distingue respuestas con interés', () => {
     expect(isInterested('willing_to_meet')).toBe(true)
     expect(isInterested('follow_up_question')).toBe(true)

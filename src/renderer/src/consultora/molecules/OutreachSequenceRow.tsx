@@ -6,11 +6,13 @@ import { Button, Pill, Row } from '../ui'
 export function OutreachSequenceRow({
   sequence,
   busy,
-  onToggle
+  onToggle,
+  onOpen
 }: {
   sequence: OutreachSequence
   busy: boolean
   onToggle: (enabled: boolean) => void
+  onOpen: () => void
 }): React.JSX.Element {
   const [confirming, setConfirming] = useState(false)
   const activate = (): void => {
@@ -21,7 +23,13 @@ export function OutreachSequenceRow({
   return (
     <Row>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-list font-medium">{sequence.name}</span>
+        <button
+          type="button"
+          onClick={onOpen}
+          className="block max-w-full truncate text-left text-list font-medium hover:text-ob-link"
+        >
+          {sequence.name}
+        </button>
         <span className="block truncate text-caption text-ob-muted">
           {sequence.emails} {sequence.emails === 1 ? 'email' : 'emails'}
           {confirming && ' · Activarla envía correos reales desde tus buzones'}

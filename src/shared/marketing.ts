@@ -88,31 +88,6 @@ export type LeadSourceInput = Partial<Pick<LeadSource, 'name' | 'defaultTags'>> 
 
 // ---- Secuencias (Automations de Resend) ----
 
-export interface SequenceSummary {
-  id: string
-  name: string
-  status: 'enabled' | 'disabled'
-
-  event: string | null
-  emails: number
-  createdAt: string
-  url: string
-}
-
-export interface SequenceEmailInput {
-  wait?: string
-  subject: string
-  html: string
-}
-
-export interface SequenceInput {
-  name: string
-  event: string
-  emails: SequenceEmailInput[]
-
-  enabled?: boolean
-}
-
 // ---- Newsletter ----
 
 export type NewsletterStatus = 'sending' | 'scheduled' | 'sent' | 'failed'
@@ -168,10 +143,20 @@ export interface EmailProviderSummary {
   roles: EmailRoleStatus['role'][]
 }
 
+export interface OutreachStep {
+  id?: string
+  touchId?: string
+  templateId?: string
+  wait?: string
+  subject: string
+  html: string
+  thread?: 'new' | 'reply'
+}
+
 export interface OutreachSequenceInput {
   id?: string
   name: string
-  emails: { wait?: string; subject: string; html: string }[]
+  emails: OutreachStep[]
 }
 
 export interface OutreachEnrollInput {
@@ -192,7 +177,6 @@ export interface OutreachStatus extends EmailRoleStatus {
   dailyCap: number
   sentToday: number
   remainingToday: number
-  hasFooter: boolean
   cursor: string | null
   lastPollAt?: string | null
   lastError?: string | null
@@ -205,6 +189,10 @@ export interface OutreachSequence {
   emails: number
   createdAt: string
   url: string
+}
+
+export interface OutreachSequenceDetail extends OutreachSequence {
+  steps: (OutreachStep & { position: number })[]
 }
 
 export interface MarketingStatus {
@@ -239,6 +227,8 @@ export interface MarketingApi {
   outreachStatus(): Promise<OutreachStatus>
   listOutreachSequences(): Promise<OutreachSequence[]>
   saveOutreachSequence(input: OutreachSequenceInput): Promise<OutreachSequence>
+  getOutreachSequence(id: string): Promise<OutreachSequenceDetail>
+  archiveOutreachSequence(id: string, confirm: boolean): Promise<{ ok: true }>
   setOutreachSequenceStatus(
     id: string,
     enabled: boolean,
@@ -255,9 +245,6 @@ export interface MarketingApi {
   removeSource(slug: string): Promise<void>
 
   testHub(): Promise<{ ok: boolean; message: string }>
-
-  listSequences(): Promise<SequenceSummary[]>
-  setSequenceStatus(id: string, enabled: boolean): Promise<SequenceSummary>
 
   listNewsletters(): Promise<NewsletterBrief[]>
   getNewsletter(id: string): Promise<Newsletter>

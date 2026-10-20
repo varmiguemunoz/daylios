@@ -12,10 +12,10 @@ Capa de proveedores de email de Alisuite. Spec: `.impeccable/.kiro/specs/email-d
 
 ## Proveedores
 
-| Proveedor | Capacidades | Correo en frío | Envía desde |
-| --- | --- | --- | --- |
-| Resend | send, audience, sequences por evento, broadcasts, events por webhook | no | dominio verificado |
-| Apollo | sequences por inscripción, events por consulta | sí | buzones conectados en Apollo |
+| Proveedor | Capacidades                                                          | Correo en frío | Envía desde                  |
+| --------- | -------------------------------------------------------------------- | -------------- | ---------------------------- |
+| Resend    | send, audience, sequences por evento, broadcasts, events por webhook | no             | dominio verificado           |
+| Apollo    | sequences por inscripción, events por consulta                       | sí             | buzones conectados en Apollo |
 
 ## Cómo añadir un proveedor
 

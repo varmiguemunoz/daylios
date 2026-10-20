@@ -179,113 +179,270 @@ const SIZE: Record<NodeKind, [number, number]> = {
   group: [600, 400]
 }
 
-export function applyBoardOps(
+export type BoardLayout = 'flow-down' | 'flow-right' | 'tree' | 'grid'
+
+export const BOARD_LAYOUTS: BoardLayout[] = ['flow-down', 'flow-right', 'tree', 'grid']
+
+export interface BoardOpError {
+  index: number
+  message: string
+}
+
+export interface BoardEditResult {
+  canvas: CanvasFile
+  created: string[]
+  errors: BoardOpError[]
+}
+
+export function planBoardOps(
   canvas: CanvasFile,
-  ops: BoardOp[]
-): { canvas: CanvasFile; created: string[] } {
+  ops: BoardOp[],
+  options: { layout?: BoardLayout } = {}
+): BoardEditResult {
   const nodes = canvas.nodes.map((n) => ({ ...n }))
   let edges = canvas.edges.map((e) => ({ ...e }))
   const created: string[] = []
+  const unplaced: string[] = []
+  const errors: BoardOpError[] = []
   const find = (id: string): CanvasNode => {
     const node = nodes.find((n) => n.id === id)
     if (!node) throw new Error(`No hay ningún nodo con id «${id}».`)
     return node
   }
 
-  for (const op of ops) {
-    switch (op.op) {
-      case 'add_node': {
-        const [w, h] = SIZE[op.kind]
-        // Sin posición: a la derecha de todo lo que ya hay.
-        const right = nodes.length ? Math.max(...nodes.map((n) => n.x + n.width)) + 60 : 0
-        const node: CanvasNode = {
-          id: op.id ?? canvasId(),
-          type:
-            op.kind === 'group'
-              ? 'group'
-              : op.kind === 'file'
-                ? 'file'
-                : op.kind === 'link'
-                  ? 'link'
-                  : 'text',
-          x: Math.round(op.x ?? right),
-          y: Math.round(op.y ?? 0),
-          width: Math.round(op.width ?? w),
-          height: Math.round(op.height ?? h)
-        }
-        if (nodes.some((n) => n.id === node.id)) throw new Error(`Ya existe un nodo «${node.id}».`)
-        if (node.type === 'text') {
-          node.text = op.text ?? ''
-          node.daylios = {
-            kind: op.kind as DayliosNodeMeta['kind'],
-            ...(op.kind === 'shape' ? { shape: op.shape ?? 'rect' } : {})
+  ops.forEach((op, index) => {
+    try {
+      switch (op.op) {
+        case 'add_node': {
+          const [w, h] = SIZE[op.kind] ?? SIZE.sticky
+          const right = nodes.length ? Math.max(...nodes.map((n) => n.x + n.width)) + 60 : 0
+          const node: CanvasNode = {
+            id: op.id ?? canvasId(),
+            type:
+              op.kind === 'group'
+                ? 'group'
+                : op.kind === 'file'
+                  ? 'file'
+                  : op.kind === 'link'
+                    ? 'link'
+                    : 'text',
+            x: Math.round(op.x ?? right),
+            y: Math.round(op.y ?? 0),
+            width: Math.round(op.width ?? w),
+            height: Math.round(op.height ?? h)
           }
+          if (nodes.some((n) => n.id === node.id))
+            throw new Error(`Ya existe un nodo «${node.id}».`)
+          if (node.type === 'text') {
+            node.text = op.text ?? ''
+            node.daylios = {
+              kind: op.kind as DayliosNodeMeta['kind'],
+              ...(op.kind === 'shape' ? { shape: op.shape ?? 'rect' } : {})
+            }
+          }
+          if (node.type === 'file') {
+            if (!op.file)
+              throw new Error('Un nodo de archivo necesita `file` (ruta en el workspace).')
+            node.file = op.file
+          }
+          if (node.type === 'link') {
+            if (!op.url) throw new Error('Un nodo de enlace necesita `url`.')
+            node.url = op.url
+          }
+          if (node.type === 'group') node.label = op.label ?? 'Grupo'
+          if (op.color) node.color = op.color
+          else if (op.kind === 'sticky') node.color = '3'
+          nodes.push(node)
+          created.push(node.id)
+          if (op.x === undefined && op.y === undefined && node.type !== 'group')
+            unplaced.push(node.id)
+          break
         }
-        if (node.type === 'file') {
-          if (!op.file)
-            throw new Error('Un nodo de archivo necesita `file` (ruta en el workspace).')
-          node.file = op.file
+        case 'update_node': {
+          const node = find(op.id)
+          if (op.text !== undefined) node.text = op.text
+          if (op.label !== undefined) node.label = op.label
+          if (op.color === null) delete node.color
+          else if (op.color !== undefined) node.color = op.color
+          if (op.shape && node.daylios?.kind === 'shape')
+            node.daylios = { ...node.daylios, kind: 'shape', shape: op.shape }
+          for (const k of ['x', 'y', 'width', 'height'] as const) {
+            const v = op[k]
+            if (typeof v === 'number' && Number.isFinite(v)) node[k] = Math.round(v)
+          }
+          break
         }
-        if (node.type === 'link') {
-          if (!op.url) throw new Error('Un nodo de enlace necesita `url`.')
-          node.url = op.url
+        case 'remove_node': {
+          find(op.id)
+          nodes.splice(
+            nodes.findIndex((n) => n.id === op.id),
+            1
+          )
+          edges = edges.filter((e) => e.fromNode !== op.id && e.toNode !== op.id)
+          break
         }
-        if (node.type === 'group') node.label = op.label ?? 'Grupo'
-        if (op.color) node.color = op.color
-        else if (op.kind === 'sticky') node.color = '3'
-        nodes.push(node)
-        created.push(node.id)
-        break
-      }
-      case 'update_node': {
-        const node = find(op.id)
-        if (op.text !== undefined) node.text = op.text
-        if (op.label !== undefined) node.label = op.label
-        if (op.color === null) delete node.color
-        else if (op.color !== undefined) node.color = op.color
-        if (op.shape && node.daylios?.kind === 'shape')
-          node.daylios = { ...node.daylios, kind: 'shape', shape: op.shape }
-        for (const k of ['x', 'y', 'width', 'height'] as const) {
-          const v = op[k]
-          if (typeof v === 'number' && Number.isFinite(v)) node[k] = Math.round(v)
+        case 'add_edge': {
+          find(op.from)
+          find(op.to)
+          const edge: CanvasEdge = {
+            id: op.id ?? canvasId(),
+            fromNode: op.from,
+            toNode: op.to,
+            fromEnd: op.arrow === 'both' ? 'arrow' : 'none',
+            toEnd: op.arrow === 'none' ? 'none' : 'arrow'
+          }
+          if (edges.some((e) => e.id === edge.id))
+            throw new Error(`Ya existe una conexión «${edge.id}».`)
+          if (op.label) edge.label = op.label
+          edges.push(edge)
+          created.push(edge.id)
+          break
         }
-        break
-      }
-      case 'remove_node': {
-        find(op.id)
-        nodes.splice(
-          nodes.findIndex((n) => n.id === op.id),
-          1
-        )
-        edges = edges.filter((e) => e.fromNode !== op.id && e.toNode !== op.id)
-        break
-      }
-      case 'add_edge': {
-        find(op.from)
-        find(op.to)
-        const edge: CanvasEdge = {
-          id: op.id ?? canvasId(),
-          fromNode: op.from,
-          toNode: op.to,
-          fromEnd: op.arrow === 'both' ? 'arrow' : 'none',
-          toEnd: op.arrow === 'none' ? 'none' : 'arrow'
+        case 'remove_edge': {
+          if (!edges.some((e) => e.id === op.id))
+            throw new Error(`No hay ninguna conexión con id «${op.id}».`)
+          edges = edges.filter((e) => e.id !== op.id)
+          break
         }
-        if (op.label) edge.label = op.label
-        edges.push(edge)
-        created.push(edge.id)
-        break
+        default:
+          throw new Error('Operación desconocida.')
       }
-      case 'remove_edge': {
-        if (!edges.some((e) => e.id === op.id))
-          throw new Error(`No hay ninguna conexión con id «${op.id}».`)
-        edges = edges.filter((e) => e.id !== op.id)
-        break
-      }
-      default:
-        throw new Error('Operación desconocida.')
+    } catch (error) {
+      errors.push({ index, message: error instanceof Error ? error.message : String(error) })
+    }
+  })
+
+  if (options.layout && unplaced.length) layoutNodes(nodes, edges, unplaced, options.layout)
+  return { canvas: { ...canvas, nodes, edges }, created, errors }
+}
+
+export const describeErrors = (errors: BoardOpError[], max = 20): string =>
+  errors
+    .slice(0, max)
+    .map((e) => `Operación ${e.index + 1}: ${e.message}`)
+    .concat(errors.length > max ? [`Y ${errors.length - max} errores más.`] : [])
+    .join('\n')
+
+export function applyBoardOps(
+  canvas: CanvasFile,
+  ops: BoardOp[],
+  options: { layout?: BoardLayout } = {}
+): { canvas: CanvasFile; created: string[] } {
+  const result = planBoardOps(canvas, ops, options)
+  if (result.errors.length) throw new Error(describeErrors(result.errors))
+  return { canvas: result.canvas, created: result.created }
+}
+
+const GAP_X = 80
+const GAP_Y = 100
+const MARGIN = 160
+
+const SIDES: Record<BoardLayout, [Side, Side] | null> = {
+  'flow-down': ['bottom', 'top'],
+  tree: ['bottom', 'top'],
+  'flow-right': ['right', 'left'],
+  grid: null
+}
+
+function layers(ids: string[], edges: CanvasEdge[]): string[][] {
+  const inSet = new Set(ids)
+  const inner = edges.filter(
+    (e) => inSet.has(e.fromNode) && inSet.has(e.toNode) && e.fromNode !== e.toNode
+  )
+  const incoming = new Map(ids.map((id) => [id, 0]))
+  for (const e of inner) incoming.set(e.toNode, (incoming.get(e.toNode) ?? 0) + 1)
+  const level = new Map<string, number>()
+  const queue = ids.filter((id) => incoming.get(id) === 0)
+  if (!queue.length && ids.length) queue.push(ids[0])
+  queue.forEach((id) => level.set(id, 0))
+  const seen = new Set<string>()
+  while (queue.length) {
+    const id = queue.shift() as string
+    if (seen.has(id)) continue
+    seen.add(id)
+    for (const e of inner.filter((x) => x.fromNode === id)) {
+      if (seen.has(e.toNode)) continue
+      level.set(e.toNode, Math.max(level.get(e.toNode) ?? 0, (level.get(id) ?? 0) + 1))
+      queue.push(e.toNode)
     }
   }
-  return { canvas: { ...canvas, nodes, edges }, created }
+  let extra = Math.max(0, ...level.values()) + 1
+  for (const id of ids) if (!level.has(id)) level.set(id, extra++)
+  const rows: string[][] = []
+  for (const id of ids) (rows[level.get(id) as number] ??= []).push(id)
+  const result = rows.filter(Boolean)
+  for (let i = 1; i < result.length; i++) {
+    const order = new Map(result[i - 1].map((id, idx) => [id, idx]))
+    const score = (id: string): number => {
+      const parents = inner.filter((e) => e.toNode === id && order.has(e.fromNode))
+      return parents.length
+        ? parents.reduce((sum, e) => sum + (order.get(e.fromNode) as number), 0) / parents.length
+        : Number.MAX_SAFE_INTEGER
+    }
+    result[i].sort((a, b) => score(a) - score(b))
+  }
+  return result
+}
+
+export function layoutNodes(
+  nodes: CanvasNode[],
+  edges: CanvasEdge[],
+  ids: string[],
+  layout: BoardLayout
+): void {
+  const byId = new Map(nodes.map((n) => [n.id, n]))
+  const targets = ids.map((id) => byId.get(id)).filter((n): n is CanvasNode => Boolean(n))
+  if (!targets.length) return
+  const fixed = nodes.filter((n) => !ids.includes(n.id))
+  const originX = fixed.length ? Math.max(...fixed.map((n) => n.x + n.width)) + MARGIN : 0
+  const originY = fixed.length ? Math.min(...fixed.map((n) => n.y)) : 0
+
+  if (layout === 'grid') {
+    const cols = Math.ceil(Math.sqrt(targets.length))
+    const cellW = Math.max(...targets.map((n) => n.width)) + GAP_X
+    const cellH = Math.max(...targets.map((n) => n.height)) + GAP_Y
+    targets.forEach((n, i) => {
+      n.x = originX + (i % cols) * cellW
+      n.y = originY + Math.floor(i / cols) * cellH
+    })
+    return
+  }
+
+  const rows = layers(
+    targets.map((n) => n.id),
+    edges
+  ).map((row) => row.map((id) => byId.get(id) as CanvasNode))
+  const horizontal = layout === 'flow-right'
+  const along = (n: CanvasNode): number => (horizontal ? n.height : n.width)
+  const across = (n: CanvasNode): number => (horizontal ? n.width : n.height)
+  const spans = rows.map(
+    (row) => row.reduce((sum, n) => sum + along(n), 0) + GAP_X * (row.length - 1)
+  )
+  const widest = Math.max(...spans)
+  let depth = 0
+  rows.forEach((row, r) => {
+    let offset = (widest - spans[r]) / 2
+    for (const n of row) {
+      if (horizontal) {
+        n.x = Math.round(originX + depth)
+        n.y = Math.round(originY + offset)
+      } else {
+        n.x = Math.round(originX + offset)
+        n.y = Math.round(originY + depth)
+      }
+      offset += along(n) + GAP_X
+    }
+    depth += Math.max(...row.map(across)) + GAP_Y
+  })
+
+  const sides = SIDES[layout]
+  if (!sides) return
+  const placed = new Set(ids)
+  for (const e of edges) {
+    if (!placed.has(e.fromNode) || !placed.has(e.toNode)) continue
+    e.fromSide ??= sides[0]
+    e.toSide ??= sides[1]
+  }
 }
 
 export function summarizeCanvas(canvas: CanvasFile): {

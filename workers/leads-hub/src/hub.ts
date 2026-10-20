@@ -1,11 +1,4 @@
-import {
-  LEAD_CREATED,
-  cleanTags,
-  parseLeadPayload,
-  segmentName,
-  sourceTag,
-  tagEvent
-} from '../../../src/shared/marketing'
+import { cleanTags, parseLeadPayload, segmentName, sourceTag } from '../../../src/shared/marketing'
 import {
   splitName,
   type DeliveryEvent,
@@ -124,8 +117,7 @@ async function toResend(
   const bySegment = new Map(Object.entries(config.segments).map(([slug, id]) => [id, slug]))
   let outcome = arriving([], incoming)
   const g = deps.provider?.audience
-  const engine = deps.provider?.sequences
-  if (!g || !engine) {
+  if (!g) {
     result.error = 'El hub no tiene RESEND_API_KEY.'
     return { ...pick(outcome), resend: result }
   }
@@ -157,11 +149,6 @@ async function toResend(
     }
     await deps.store.mergeSegments(segments)
 
-    if (!result.unsubscribed) {
-      if (result.created) await engine.trigger(LEAD_CREATED, lead.email, { source: incoming[0] })
-      for (const slug of outcome.added) await engine.trigger(tagEvent(slug), lead.email)
-      for (const event of outcome.events) await engine.trigger(event, lead.email)
-    }
     result.ok = true
   } catch (error) {
     result.error = error instanceof Error ? error.message : String(error)

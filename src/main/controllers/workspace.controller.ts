@@ -90,9 +90,14 @@ export class WorkspaceController {
     const item = await this.item(req)
     const result = await this.service.editBoard(
       item.id,
-      Array.isArray(req.body?.ops) ? req.body.ops : []
+      Array.isArray(req.body?.ops) ? req.body.ops : [],
+      { layout: req.body?.layout }
     )
-    res.json({ created: result.created, ...(await this.service.boardSummary(item.id)) })
+    if (req.body?.response === 'full') {
+      res.json({ created: result.created, ...(await this.service.boardSummary(item.id)) })
+      return
+    }
+    res.json({ created: result.created, nodes: result.nodes, edges: result.edges })
   }
 
   remove = async (req: Request, res: Response): Promise<void> => {
